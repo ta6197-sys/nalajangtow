@@ -1,0 +1,115 @@
+{
+  "source": "user-provided static Docktimize design screenshots, 2026-11-03",
+  "notice": "All values below are on-screen design examples, not operational facts or solver outputs.",
+  "header": {
+    "terminal": "Ulsan Terminal",
+    "display_clock": "10/29 13:40 KST",
+    "display_deadline": "15:00"
+  },
+  "screen_1": {
+    "title": "10/29 오후~10/30 접안 순서 정하기",
+    "affected_vessels": [
+      "PACIFIC ROSE",
+      "BLUE MARLIN",
+      "NORTH CAPE",
+      "HANA SPIRIT",
+      "GULF PEARL"
+    ],
+    "forecast_hours": 24
+  },
+  "screen_2": {
+    "selected_candidate": 2,
+    "candidates": [
+      {
+        "id": "candidate_1",
+        "label": "최소 비용",
+        "total_demurrage_usd_display": 39000,
+        "saving_vs_baseline_usd_display": 22000,
+        "constraint_violations_display": 0,
+        "risk": "강풍 장기화 시 급증"
+      },
+      {
+        "id": "candidate_2",
+        "label": "추천·균형 비용",
+        "total_demurrage_usd_display": 42000,
+        "saving_vs_baseline_usd_display": 19000,
+        "constraint_violations_display": 0,
+        "risk": "야간 접안 집중(1건)",
+        "stability": "1위"
+      },
+      {
+        "id": "baseline",
+        "label": "도착순(FIFO)",
+        "total_demurrage_usd_display": 61000,
+        "saving_vs_baseline_usd_display": 0,
+        "constraint_violations_display": 0,
+        "risk": "낮음(비용 확대)"
+      }
+    ],
+    "timeline_hours": 48,
+    "berth_labels": [
+      "2Buoy (원유)",
+      "SK8 (제품)",
+      "SK7 (제품)",
+      "SK6 (제품)"
+    ],
+    "vessel_statuses": [
+      {
+        "vessel": "PACIFIC ROSE",
+        "berth": "2Buoy",
+        "status": "체선 11h"
+      },
+      {
+        "vessel": "GULF PEARL",
+        "berth": "SK8",
+        "status": "정상"
+      },
+      {
+        "vessel": "NORTH CAPE",
+        "berth": "SK7",
+        "status": "체선 6h"
+      },
+      {
+        "vessel": "BLUE MARLIN",
+        "berth": "SK6",
+        "status": "정상"
+      },
+      {
+        "vessel": "HANA SPIRIT",
+        "berth": "SK6",
+        "status": "정상"
+      }
+    ],
+    "buoy_deadline_display": "14:40"
+  },
+  "screen_3": {
+    "selected_candidate": 2,
+    "risk_count": 2,
+    "normal_item_count": 2,
+    "risks": [
+      {
+        "name": "날씨 급변",
+        "description": "강풍 시작이 앞당겨질 수 있음",
+        "mitigation": "HANA SPIRIT 내일 07:00로 연기 대응 준비"
+      },
+      {
+        "name": "저장 탱크 여유율 18%",
+        "description": "저장 한계 도달 가능",
+        "mitigation": "출하팀 실시간 공유 및 모니터링 유지"
+      }
+    ],
+    "default_confirm_reason": "현장 안전 및 VLCC 우선 접안 (기본값)",
+    "report_subject": "[Docktimize] 10/29 울산 원유부두 접안 순서 확정 안내 (후보 2)",
+    "report_comparison": "후보 2 ($42k) vs 후보 1 ($39k) vs 도착순 ($61k)",
+    "report_export_display": "PDF/Excel"
+  },
+  "not_inferable_from_screens": [
+    "actual backend",
+    "Figma frame hierarchy",
+    "user roles/permissions",
+    "real schedule freeze policy",
+    "actual vessel ETA feed",
+    "actual berth restrictions",
+    "button click outcomes"
+  ]
+}

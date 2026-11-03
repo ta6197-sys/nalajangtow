@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# 실행 결과
+outputs/
+results/
+
+# 입력 데이터 (공개 여부 확인 전)
+input/
+
+# Frontend
+node_modules/
+dist/
+.next/
+
+# Logs
+*.log

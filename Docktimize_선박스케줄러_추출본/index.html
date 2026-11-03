@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Docktimize | 선박 스케줄러 추출본</title>
+<style>:root{font-family:system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;color:#17212e;background:#f7f8fa}*{box-sizing:border-box}body{margin:0}header{background:white;border-bottom:1px solid #ddd;padding:18px max(calc((100vw - 1100px)/2),20px)}h1{margin:0;font-size:23px;color:#c7002b}.sub{color:#576273;font-size:13px}main{max-width:1100px;margin:28px auto;padding:0 18px}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{border:1px solid #d7dbe2;background:white;padding:11px 17px;border-radius:9px;cursor:pointer;font-weight:650}.tabs button[aria-selected="true"]{background:#c8002d;color:#fff;border-color:#c8002d}.panel{display:none;background:white;padding:19px;margin-top:13px;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 2px 12px #1a263009}.panel.active{display:block}.panel img{width:100%;height:auto;display:block;border:1px solid #eee;border-radius:8px}h2{margin:0 0 10px;font-size:20px}p{line-height:1.65}.note{background:#fff5f0;padding:12px;border-radius:8px;border-left:4px solid #df6b39;font-size:13px}ul{line-height:1.8}footer{font-size:12px;color:#657181;margin:28px 0}a{color:#9b002b}</style></head>
+<body><header><h1>Docktimize — 선박 스케줄러</h1><div class="sub">제공된 Figma 화면 캡처 기반 추출본 · 총 3개 화면 · 오프라인 열람용</div></header>
+<main><div class="tabs" role="tablist" aria-label="선박 스케줄러 화면 선택">
+<button role="tab" aria-selected="true" aria-controls="panel1" onclick="show(1)">1. 상황 확인</button>
+<button role="tab" aria-selected="false" aria-controls="panel2" onclick="show(2)">2. 후보 비교</button>
+<button role="tab" aria-selected="false" aria-controls="panel3" onclick="show(3)">3. 확정·보고서</button></div>
+<section class="panel active" id="panel1" role="tabpanel"><h2>상황 확인</h2><p>변경 조건, 가용·추정 조건, 앞으로 24시간 기상·시간 제약, 영향 선박 5척을 검토합니다.</p><img alt="상황 확인 화면" src="screens/01_상황확인.png"></section>
+<section class="panel" id="panel2" role="tabpanel"><h2>후보 비교</h2><p>후보 1($39k), 추천 후보 2($42k), 기존 도착순($61k)을 체선료·잔여 위험·제약 위반·48시간 접안 타임라인으로 비교합니다.</p><img alt="후보 비교 화면" src="screens/02_후보비교.png"></section>
+<section class="panel" id="panel3" role="tabpanel"><h2>확정·보고서</h2><p>경고 2건, 대응 방안, 확정 사유, 보고서 초안을 검토하고 후보 2를 확정하는 화면입니다.</p><img alt="확정 보고서 화면" src="screens/03_확정_보고서.png"></section>
+<p class="note"><strong>주의:</strong> 이미지는 정적 캡처이며 아래 버튼처럼 보이는 요소는 작동하지 않습니다. 표시된 수치·마감시각은 디자인 예시입니다. 원본 Figma 편집 데이터는 포함되지 않습니다.</p>
+<p><a href="spec/화면별_기능명세.md">화면별 기능 명세</a> · <a href="spec/UI_요소목록.csv">UI 요소 목록</a> · <a href="spec/샘플_화면값.json">예시 데이터 JSON</a> · <a href="spec/사용자흐름.mmd">사용자 흐름</a></p>
+<footer>Docktimize Vessel Scheduler Extract · User-provided captures</footer></main>
+<script>function show(i){document.querySelectorAll('.panel').forEach((el,n)=>el.classList.toggle('active',n===i-1));document.querySelectorAll('[role="tab"]').forEach((el,n)=>el.setAttribute('aria-selected',String(n===i-1)));}</script>
+</body></html>
