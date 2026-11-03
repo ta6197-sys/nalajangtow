@@ -37,7 +37,7 @@ from src.daily_planning.validator import normalize_contract, time_value
 
 EXPERIMENT = os.environ.get('WEB_EXPERIMENT_KEY', 'web-scenario')
 INDEX = (ROOT / 'web' / 'index.html').read_bytes()
-TEMPLATE = ROOT / 'outputs' / 'clx_web_input' / 'input_template.xlsx'
+TEMPLATE = ROOT / 'templates' / 'input_template.xlsx'
 UPLOADS = ROOT / 'results' / 'daily' / 'uploads'
 CONTRACT_COLUMNS = ('contract_id', 'allowed_minutes', 'daily_demurrage_usd',
     'notice_hours', 'nor_valid', 'early_start_if_work', 'day_mode', 'weather_policy',
