@@ -13,6 +13,7 @@ from rolling_horizon import RULE, SHIFTS, baseline, simulate_call
 
 from .context import engine_calls, local_time
 from .daylight import simulator_for_policy
+from .berth_phases import apply_phase_policy, occupancy_bounds
 from .evaluation import evaluate_baseline, interval_overlap, price_until
 
 
@@ -30,7 +31,8 @@ def build_domain(snapshot, weather):
     for c in snapshot['commits']:
         assert_eligible(snapshot, c["call_id"], c["berth_id"])
         row = new_simulate(by_call[c['call_id']],local_time(c['start_at']),weather,RULE)
-        fixed.append(dict(row,berth_id=c['berth_id']))
+        fixed.append(apply_phase_policy(snapshot.get('berth_phase'),
+            dict(row,berth_id=c['berth_id']), available_at=by_call[c['call_id']]['available_at']))
     # Existing baseline helpers assume one ongoing job per berth. Collapse only
     # for heuristic seed construction; the actual model keeps every interval.
     occupied = {}
@@ -72,7 +74,8 @@ def build_domain(snapshot, weather):
             if cost < 0:
                 raise ValueError('Negative future contract increment')
             for bid in eligible_berths(snapshot, cid, berths):
-                assigned = dict(row,berth_id=bid)
+                assigned = apply_phase_policy(snapshot.get('berth_phase'),
+                    dict(row,berth_id=bid), available_at=call['available_at'])
                 if any(interval_overlap(assigned,r) for r in fixed):
                     continue
                 group.append(len(options))
@@ -132,15 +135,17 @@ def make_master(domain, objective, cost_cap=None, stability=None):
         row = option['row']
         if row is None:
             continue
-        start = int((local_time(row['work_start_at'])-domain['begin']).total_seconds()/60)
-        length = int((local_time(row['completion_at'])-local_time(row['work_start_at'])).total_seconds()/60)
-        intervals[row['berth_id']].append(model.NewOptionalIntervalVar(start,length,start+length,selected[j],f'work_{j}'))
+        occupancy_start, occupancy_end = occupancy_bounds(row)
+        start = int((local_time(occupancy_start)-domain['begin']).total_seconds()/60)
+        length = int((local_time(occupancy_end)-local_time(occupancy_start)).total_seconds()/60)
+        intervals[row['berth_id']].append(model.NewOptionalIntervalVar(start,length,start+length,selected[j],f'occupancy_{j}'))
     for i, row in enumerate(domain['fixed']):
         bid = row['berth_id']
         if bid not in intervals:
             continue  # An inactive berth can finish protected work but takes no new work.
-        start = int((local_time(row['work_start_at'])-domain['begin']).total_seconds()/60)
-        end = int((local_time(row['completion_at'])-domain['begin']).total_seconds()/60)
+        occupancy_start, occupancy_end = occupancy_bounds(row)
+        start = int((local_time(occupancy_start)-domain['begin']).total_seconds()/60)
+        end = int((local_time(occupancy_end)-domain['begin']).total_seconds()/60)
         intervals[bid].append(model.NewIntervalVar(start,end-start,end,f'fixed_{i}'))
     for values in intervals.values():
         model.AddNoOverlap(values)
