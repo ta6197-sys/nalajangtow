@@ -173,12 +173,19 @@ def read_snapshot(connection, experiment_key, as_of, weather_path, *, berthing_p
     physical = build_sk_snapshot_for_experiment(experiment_key, active, berths)
     if physical is not None:
         snapshot["sk_physical"] = physical
+    from .berth_phases import phase_policy_for_experiment
+    phase_policy = phase_policy_for_experiment(experiment_key)
+    if phase_policy is not None:
+        snapshot["berth_phase"] = phase_policy
 
     snapshot["snapshot_hash"] = signature(snapshot)
     return snapshot
 
 
 def verify_snapshot(snapshot):
+    if snapshot.get("berth_phase") is not None:
+        from .berth_phases import validate_zero_phase_policy
+        validate_zero_phase_policy(snapshot["berth_phase"])
     body = {k: v for k, v in snapshot.items() if k != 'snapshot_hash'}
     if signature(body) != snapshot.get('snapshot_hash'):
         raise ValueError('Frozen input snapshot hash mismatch')
