@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "purpose": "FORMAT_ONLY_NOT_REAL_DATA",
+  "calls": [
+    {
+      "call_id": "EXAMPLE-ONLY-DO-NOT-IMPORT",
+      "vessel_id": null,
+      "draft_m": null,
+      "dwt": null,
+      "loa_m": null,
+      "gt": null,
+      "cargo_type": null,
+      "data_origin": "UNVERIFIED"
+    }
+  ]
+}
