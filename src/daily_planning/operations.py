@@ -110,6 +110,8 @@ def advance_in_transaction(connection,run_id):
     for key in ('calls','contracts','berths','call_states','source_state_ids','weather'):
         if operation_input[key]!=frozen[key]:
             raise ValueError('Operating state changed after confirmation; operation must not overwrite it')
+    if operation_input.get('sk_physical') != frozen.get('sk_physical'):
+        raise ValueError('SK physical input changed after confirmation')
     end=run['freeze_end_at']
     if end-run['planning_as_of']!=timedelta(hours=24):
         raise ValueError('Operation step must be exactly 24h')

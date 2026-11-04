@@ -109,6 +109,16 @@ def summary_for(connection, run):
             compared_tentative_call_count=evaluation['summary']['compared_tentative_call_count'],
             assignments=listed,
             vessel_results=vessel_results))
+        if snapshot.get('sk_physical'):
+            physical=snapshot['sk_physical']
+            candidates[-1]['physical_validation']=dict(
+                mode=physical['mode'],
+                data_origin='SYNTHETIC',
+                scope='DOCUMENTED_PHYSICAL_ONLY',
+                not_evaluated=physical['not_evaluated'])
+            for vessel_result in vessel_results:
+                vessel_result['data_origin']='SYNTHETIC'
+                vessel_result['vessel_profile']=physical['profiles'].get(vessel_result['call_id'])
     operation = config.get('operation')
     return dict(run_id=str(run['run_id']), date=run['planning_as_of'].date().isoformat(),
                 solver_status=run['solver_status'], candidates=candidates,

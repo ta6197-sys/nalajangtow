@@ -154,6 +154,14 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03'):
         cost_slack_fraction=str(slack),cost_cap_cents=cap,strategies=records,
         cost_definition='Demurrage increment from planning_as_of to completion for known active calls',
         stability_enabled=True,pending=[])
+    if snapshot.get('sk_physical'):
+        physical=snapshot['sk_physical']
+        summary['sk_physical']=dict(
+            mode=physical['mode'],
+            data_origin='SYNTHETIC',
+            compatibility_scope='DOCUMENTED_PHYSICAL_ONLY',
+            profile_count=len(physical['profiles']),
+            not_evaluated=physical['not_evaluated'])
     prepared=[]
     for index,strategy,result,record in generated:
         rows=[r for r in result['evaluation']['vessel_results'] if r['assignment_kind']=='PLANNED']
