@@ -154,6 +154,8 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03'):
         cost_slack_fraction=str(slack),cost_cap_cents=cap,strategies=records,
         cost_definition='Demurrage increment from planning_as_of to completion for known active calls',
         stability_enabled=True,pending=[])
+    if snapshot.get('berth_phase'):
+        summary['berth_phase_policy'] = snapshot['berth_phase']
     if snapshot.get('sk_physical'):
         physical=snapshot['sk_physical']
         summary['sk_physical']=dict(
