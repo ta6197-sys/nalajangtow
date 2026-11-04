@@ -112,7 +112,7 @@ def summary_for(connection, run):
         if snapshot.get('sk_physical'):
             physical=snapshot['sk_physical']
             candidates[-1]['physical_validation']=dict(
-                mode=physical['mode'],
+                mode=physical['policy'],
                 data_origin='SYNTHETIC',
                 scope='DOCUMENTED_PHYSICAL_ONLY',
                 not_evaluated=physical['not_evaluated'])

@@ -6,7 +6,7 @@ from rolling_horizon import workload_remaining
 from .bootstrap_db import kst_time, remaining_kg
 from .context import engine_calls,local_time,plain
 from .evaluation import price_until,replay_row,interval_overlap
-from .sk_physical_v3 import require_compatible
+from .sk_physical_v3 import assert_eligible
 
 
 def execute_committed_window(snapshot,end,weather):
@@ -23,7 +23,7 @@ def execute_committed_window(snapshot,end,weather):
         protected=commits.get(cid)
         row=None
         if protected and local_time(protected['start_at'])<cut:
-            require_compatible(snapshot, cid, protected['berth_id'])
+            assert_eligible(snapshot, cid, protected['berth_id'])
             row=replay_row(call,protected['berth_id'],protected['start_at'],weather,policy=snapshot.get('berthing_policy'))
             if (local_time(row['completion_at'])!=local_time(protected['completion_at'])
                     or local_time(protected['locked_from_at'])>local_time(row['work_start_at'])

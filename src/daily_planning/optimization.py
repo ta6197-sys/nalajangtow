@@ -157,7 +157,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03'):
     if snapshot.get('sk_physical'):
         physical=snapshot['sk_physical']
         summary['sk_physical']=dict(
-            mode=physical['mode'],
+            mode=physical['policy'],
             data_origin='SYNTHETIC',
             compatibility_scope='DOCUMENTED_PHYSICAL_ONLY',
             profile_count=len(physical['profiles']),
