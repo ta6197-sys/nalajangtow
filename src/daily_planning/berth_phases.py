@@ -8,6 +8,7 @@ No numeric duration here is claimed to be an actual SK CLX operational limit.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 
 KST = timezone(timedelta(hours=9))
@@ -91,3 +92,46 @@ def occupancy_overlap(a, b):
     if a_end <= a_start or b_end <= b_start:
         raise ValueError("Berth occupancy intervals must have positive duration")
     return max(a_start, b_start) < min(a_end, b_end)
+
+
+ZERO_PHASE_POLICY = "BERTH_PHASE_ZERO_V1"
+ZERO_PHASE_CONFIG = {
+    "policy": ZERO_PHASE_POLICY,
+    "berthing_minutes": 0,
+    "unberthing_minutes": 0,
+    "origin": "EXPLICIT_ZERO_DURATION_BASELINE_NOT_OBSERVED",
+}
+
+
+def phase_policy_for_experiment(experiment_key):
+    """Opt-in only; legacy snapshots remain byte-for-byte unchanged."""
+    enabled = os.environ.get("BERTH_PHASE_EXPERIMENT_KEY", "").strip()
+    if not enabled or enabled != experiment_key:
+        return None
+    if experiment_key == "source-daywork-v2":
+        raise ValueError("Refusing Stage 4 opt-in on historical experiment")
+    return dict(ZERO_PHASE_CONFIG)
+
+
+def validate_zero_phase_policy(policy):
+    """Fail closed for any nonzero, unknown or mutated phase parameters."""
+    if policy != ZERO_PHASE_CONFIG:
+        raise ValueError("Unsupported berth phase policy: only zero-duration V1 is implemented")
+
+
+def apply_phase_policy(policy, row, *, available_at=None):
+    """Add occupancy timestamps without changing cargo work or the contract clock."""
+    if policy is None:
+        return row
+    validate_zero_phase_policy(policy)
+    phase = build_phase_timeline(row, available_at=available_at)
+    return dict(row, **phase)
+
+
+def occupancy_bounds(row):
+    """Return physical berth occupation, falling back to legacy cargo boundaries."""
+    start = row.get("berthing_start_at", row["work_start_at"])
+    end = row.get("berth_release_at", row["completion_at"])
+    if _at(end, "berth_release_at") <= _at(start, "berthing_start_at"):
+        raise ValueError("Invalid berth occupancy interval")
+    return start, end
