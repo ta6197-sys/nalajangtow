@@ -1,141 +1,68 @@
 <!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>울산 CLX 일별 선석 계획</title>
-  <style>
-    :root{font-family:system-ui,-apple-system,sans-serif;color:#192735;background:#f5f7f9}
-    *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#102d43;color:white;padding:22px max(20px,calc((100vw - 1100px)/2))}
-    h1{font-size:24px;margin:0 0 5px}h2{font-size:18px;margin:0 0 14px}h3{font-size:17px;margin:0 0 8px}p{line-height:1.5}
-    main{max-width:1100px;margin:24px auto;padding:0 20px 40px}.sub{color:#c9dbe7;margin:0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-    .panel,.candidate{background:white;border:1px solid #dce4e9;border-radius:12px;padding:20px;box-shadow:0 2px 8px #122c3d0a}
-    .wide{grid-column:1/-1}.muted{color:#617180}.small{font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    label{display:block;font-size:13px;font-weight:650;margin:10px 0 4px}input,select{width:100%;height:39px;border:1px solid #bfcdd5;border-radius:7px;padding:7px 9px;background:white;color:#192735}
-    input:focus,select:focus,button:focus{outline:2px solid #3486ab;outline-offset:1px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
-    button{border:0;border-radius:8px;background:#08749c;color:white;font-size:14px;font-weight:700;padding:10px 15px;cursor:pointer}
-    button:hover{background:#075f80}button:disabled{cursor:not-allowed;opacity:.5}.secondary{background:#e6eff3;color:#174057}.secondary:hover{background:#d8e8ee}
-    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.candidate{min-height:182px}.candidate.blank{background:#f8fafb;box-shadow:none}
-    .metric{font-size:25px;font-weight:750;letter-spacing:-.03em;margin:8px 0}.pill{display:inline-block;background:#e4f2ec;color:#11634b;border-radius:99px;padding:3px 9px;font-size:12px;font-weight:700}
-    .warn{background:#fff3e0;color:#815200}.error{background:#fff1f1;color:#a13030;padding:12px;border-radius:8px;margin-bottom:16px;white-space:pre-wrap}.notice{background:#eaf4f8;padding:12px;border-radius:8px;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e2e8ec}th{color:#526675;font-weight:700}.scroll{overflow-x:auto}
-    details{margin-top:12px}summary{cursor:pointer;color:#08749c}.actions{margin-top:16px}.busy{opacity:.65;pointer-events:none}
-    @media(max-width:760px){.grid,.cards{grid-template-columns:1fr}.wide{grid-column:auto}.fields{grid-template-columns:1fr}header{padding:20px}}
-  </style>
-</head>
-<body>
-  <header><h1>울산 CLX 일별 선석 계획</h1><p class="sub">XLSX 업로드 → 72시간 A/B/C 계획 → 00:00 확정 → 24시간 운영 → 다음 날 후보</p></header>
-  <main id="app">
-    <div id="message"></div>
-    <section class="panel" style="margin-bottom:16px"><div class="row"><div><h2>시나리오 상태</h2><div id="status" class="muted">연결 중...</div><p class="small muted">제공해주신 일반 울산항 선석회의 기준: 평일 14:00, 토요일·공휴일 필요시 10:00. SK CLX 내부 확정 기준은 미확인으로, 이 실험의 당일 확정은 00:00으로 설정했습니다.</p></div><span class="pill">Docker 로컬 실험</span></div></section>
-    <div class="grid">
-      <section class="panel wide"><h2>1. 입력 스프레드시트</h2>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#cf002e"><title>Docktimize | 선박 스케줄러</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head><body>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="brandbar"><strong>Docktimize <span class="brand-ai">AI</span></strong><span class="brand-client">Ulsan CLX</span></div>
+  <div class="terminal-pill"><span class="red-dot"></span><strong>Ulsan Terminal</strong><small>가상 선석 8개</small></div>
+  <div class="menu-label">선박 스케줄러</div>
+  <nav aria-label="선박 스케줄러 메뉴">
+    <button class="nav-item current" data-page="situation"><span>◎</span> 상황 확인</button>
+    <button class="nav-item" data-page="compare"><span>✣</span> 후보 비교</button>
+    <button class="nav-item" data-page="confirm"><span>☑</span> 확정 · 보고서</button>
+  </nav>
+  <div class="sidebar-bottom"><div class="small-muted">계산 엔진 <b class="orange">CP-SAT</b></div><p class="small-muted">72시간 계획 · 24시간 운영</p><div class="small-muted" id="engine-status">서버 연결 중</div></div>
+</aside>
+<div class="work-area">
+  <header class="topbar"><div class="topbar-left"><span class="status-chip"><i class="red-dot"></i> 일별 선석 계획</span><span class="timestamp" id="timestamp">Ulsan Terminal · KST</span></div><span class="demo-tag">로컬 운영 시뮬레이션</span></header>
+  <main class="main" id="app" aria-busy="false">
+    <div class="page-notice">기존 보유 계약·SOF 입력 · 가상 선석 8개 · 일출 전·일몰 이후 작업 중단. 기상은 과거 관측 시나리오입니다.</div>
+    <div id="message" role="status" aria-live="polite"></div>
+    <section class="page active" id="page-situation" aria-labelledby="situation-title">
+      <div class="page-heading"><div><h1 id="situation-title">울산 터미널 · 접안 상황 확인</h1><p>입력 항차와 작업 조건을 확인하고 일별 계획을 시작합니다.</p></div><button class="outline" id="refresh-status">↻ 상태 새로고침</button></div>
+      <div class="brief-bar" id="status">서버에 연결하는 중입니다.</div>
+      <div class="situation-grid">
+        <div class="panel"><div class="panel-title"><h2>계획과 운영</h2><span class="warning-tag" id="day-status">연결 중</span></div><div id="scenario-summary"></div></div>
+        <div class="panel"><div class="panel-title"><h2>접안 시작 조건</h2><span class="subtle-label">KST 기준</span></div><div id="daylight-summary"></div><p class="small muted">기상이 허용하는 일출 이후부터 일몰 전까지 접안·하역을 시작합니다. 일몰에 하역을 중단하고 다음 날 일출 이후 기상이 허용하면 잔여 작업을 재개합니다. 야간에는 선석을 계속 점유합니다.</p></div>
+      </div>
+      <section class="panel"><div class="panel-title"><h2>연결된 입력 파일</h2><span class="subtle-label">원본 출처</span></div><div id="source-summary" class="small muted">입력 출처를 불러오는 중입니다.</div></section>
+      <section class="panel wide"><h2>입력 스프레드시트</h2>
         <p class="small muted">템플릿의 <b>contracts</b>·<b>calls</b> 시트에 데이터를 채워 업로드하세요. 모든 행을 검증한 뒤 한 번에 저장합니다. 입력 시각은 KST, 금액은 USD/일입니다.</p>
         <div class="row"><a class="secondary" href="/input-template.xlsx" download style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 15px;font-weight:700">XLSX 템플릿 다운로드</a><a id="currentWorkbook" class="secondary" href="/current-input.xlsx" download style="display:inline-block;text-decoration:none;border-radius:8px;padding:10px 15px;font-weight:700">현재 입력 XLSX 다운로드·수정</a>
           <form id="uploadForm" class="row"><label for="workbook" style="margin:0">수정한 XLSX</label><input id="workbook" type="file" accept=".xlsx" required style="width:auto"><button id="uploadButton" type="submit">파일 검증·등록</button></form></div>
         <div id="uploadPreview"></div>
         <p id="uploadStatus" class="small muted">NOR 날짜 00:00에 항차가 공개됩니다. 기상 시나리오 범위는 2026-11-01~2027-03-31입니다.</p>
       </section>
-      <section class="panel wide"><div class="row"><div><h2>2. 업로드한 항차</h2><div id="counts" class="small muted"></div></div></div><div id="inputTable" class="scroll"></div></section>
+      <section class="panel wide"><div class="row"><div><h2>등록된 항차</h2><div id="counts" class="small muted"></div></div></div><div id="inputTable" class="scroll"></div></section>
       <section class="panel wide" id="editPanel"><details><summary>항차 수정·취소 (필요할 때 열기)</summary><p class="small muted">미착수·미확정 항차를 변경합니다. 사유를 남기면 다음 후보를 다시 계산할 수 있습니다. 확정된 당일 작업은 수정할 수 없습니다.</p>
         <form id="editForm" class="fields"><label>항차<select id="editCall" required></select></label><label>계약<select id="editContract" required></select></label><label>NOR<input id="editNor" type="datetime-local" required></label><label>작업 가능<input id="editAvailable" type="datetime-local" required></label><label>화물량 kg<input id="editQuantity" type="number" min="1" required></label><label>작업분<input id="editWork" type="number" min="1" required></label><label class="wide">변경·취소 사유<input id="editReason" required></label><div class="row wide"><button type="submit">항차 수정</button><button id="cancelCallButton" type="button" class="secondary">항차 취소</button></div></form></details>
       </section>
       <section class="panel wide"><details><summary>새 항차 추가</summary><p class="small muted">기존 계약을 선택해 새로 접수된 항차를 등록합니다. 공개 시각이 비어 있으면 NOR 날짜 00:00으로 처리합니다.</p><form id="newCallForm" class="fields"><label>항차 ID<input id="newCallId" required></label><label>계약<select id="newContract" required></select></label><label>공개 시각 (선택)<input id="newKnown" type="datetime-local"></label><label>NOR<input id="newNor" type="datetime-local" required></label><label>작업 가능<input id="newAvailable" type="datetime-local" required></label><label>화물량 kg<input id="newQuantity" type="number" min="1" required></label><label>작업분<input id="newWork" type="number" min="1" required></label><div class="wide"><button type="submit">새 항차 등록</button></div></form></details></section>
-      <section class="panel wide"><div class="row"><div><h2>3. 일별 후보 계산</h2><p class="small muted">매일 A/B/C를 각각 탐색합니다. 후보당 최대 180초가 걸릴 수 있습니다.</p></div><button id="planButton">현재 날짜 후보 계산</button></div>
-        <div id="planStatus" class="small muted"></div><div class="cards" id="candidates"></div>
-        <div id="tradeoffSummary" class="scroll"></div>
-        <div id="tradeoffDetails"></div>
-        <div class="actions"><button id="operateButton" hidden>확정된 일정으로 당일 운영·다음 날 후보 계산</button></div>
-      </section>
-      <section class="panel wide"><h2>4. 지난 운영 결과</h2><div id="history" class="scroll muted small">아직 운영한 날짜가 없습니다.</div></section>
-    </div>
+
+      <div class="actionbar"><span>입력을 확인한 뒤 후보별 비용과 일정을 비교하세요.</span><button class="primary" data-page="compare">최적화 후보 비교 →</button></div>
+    </section>
+    <section class="page" id="page-compare" aria-labelledby="compare-title">
+      <div class="page-heading"><div><h1 id="compare-title">접안 후보 비교</h1><p>계획 기준시각부터 모든 대상 항차의 완료까지 평가한 결과입니다.</p></div><button class="primary" id="planButton">현재 날짜 후보 계산</button></div>
+      <div class="brief-bar" id="planStatus">입력을 불러오는 중입니다.</div>
+      <div class="panel-title between"><h2>후보별 핵심 비교</h2><span class="small-muted">카드를 선택하면 일정이 표시됩니다.</span></div>
+      <div class="candidate-grid" id="candidates"></div>
+      <div class="panel timeline-panel"><div class="panel-title"><div><h2>접안 타임라인 <span class="subtle-label">72시간 전망</span></h2><p>색 막대: 실제 작업 · 빗금: 야간 작업 중단 · 외곽선: 선석 점유. 72시간 이후 구간은 잘라 표시</p></div><label class="inline-checkbox"><input id="compare-baseline" type="checkbox"> A와 비교 표시</label></div><div class="timeline" id="timeline"></div><div id="assignment-table" class="scroll"></div></div>
+      <div class="panel"><div id="tradeoffSummary" class="scroll"></div><div id="tradeoffDetails"></div></div>
+      <div class="bottom-footnote">A: 체선료 최소 탐색 · B: 대기시간 최소 탐색 · C: 잠정 일정 변경 최소 탐색. 서로 다른 실행 가능 후보가 없으면 해당 칸은 비어 있습니다.</div>
+      <div class="actionbar sticky"><span id="selection-message">후보를 선택하세요.</span><button class="primary" id="go-confirm" disabled>확정하러 가기 →</button></div>
+    </section>
+    <section class="page" id="page-confirm" aria-labelledby="confirm-title">
+      <div class="confirm-heading"><div class="confirm-symbol">✓</div><div><h1 id="confirm-title">접안 순서 확정 및 보고서</h1><p>당일 00:00 일정을 확정하고 24시간 운영합니다.</p></div><span class="selected-badge" id="selected-badge">후보 선택 전</span></div>
+      <div class="confirmation-grid">
+        <div class="panel"><div class="panel-title"><h2>① 확정 전 확인</h2><span class="warning-tag" id="confirm-status"></span></div><div id="confirmation-summary"></div><p class="panel-intro">확정 후 당일 확정 작업은 수정할 수 없습니다. 다음 날 후보는 당일 운영 이후 계산합니다.</p><button class="primary wide" id="confirm-action" disabled>✓ 선택한 후보로 당일 확정</button><p class="small muted" id="confirmed-status"></p><button class="primary wide" id="operateButton" hidden>당일 운영 · 다음 날 후보 계산</button></div>
+        <div class="panel"><div class="panel-title"><h2>② 일정 보고서</h2><span class="tag-orange">계산 결과</span></div><div class="report-subject"><small>계획 결과</small><b id="report-subject"></b></div><div class="report-outline" id="report-outline"></div><div class="report-actions"><button class="secondary-btn" id="copy-report" disabled>보고서 복사</button><button class="secondary-btn" id="download-report" disabled>작업·중단 구간 CSV 다운로드</button></div></div>
+      </div>
+      <section class="panel"><h2>지난 운영 결과</h2><div id="history" class="scroll small muted">아직 운영한 날짜가 없습니다.</div></section>
+    </section>
   </main>
-  <script>
-    let state=null, busy=false, compareLabel='B', showAllRows=false, pendingWorkbook=null;
-    const $=id=>document.getElementById(id);
-    const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const money=x=>x==null?'—':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(x/100);
-    const deltaMoney=x=>x===0?'동일':`${x>0?'+':''}${money(x)}`;
-    const deltaMinutes=x=>x===0?'동일':`${x>0?'+':''}${x.toLocaleString()}분`;
-    const time=x=>x?String(x).replace('T',' ').slice(0,16):'—';
-    function message(text,error=false){$('message').innerHTML=text?`<div class="${error?'error':'notice'}">${esc(text)}</div>`:''}
-    async function api(path,body){const response=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await response.json();if(!response.ok)throw Error(data.error||'요청 실패');return data}
-    async function act(path,body,working){if(busy)return;busy=true;$('app').classList.add('busy');message(working);try{state=await api(path,body);message(state.next_plan_error?`24시간 운영은 완료했습니다. 다음 날짜 후보 계산 오류: ${state.next_plan_error}`:'완료했습니다.',!!state.next_plan_error);render()}catch(e){message(e.message,true)}finally{busy=false;$('app').classList.remove('busy')}}
-    function render(){if(!state)return;
-      const current=state.current, counts=state.status_counts;
-      $('status').textContent=state.as_of?`계획 기준 ${time(state.as_of)} KST · ${state.latest_state_at?'다음 날짜 준비':'첫 계획 준비'} · 완료 ${counts.COMPLETED||0}척 / 진행 ${counts.IN_PROGRESS||0}척`:'계약과 항차를 등록해 시작하세요.';
-      if(state.sunrise_at&&state.sunset_at) $('status').textContent+=` · 당일 접안 가능 ${time(state.sunrise_at).slice(11)}~${time(state.sunset_at).slice(11)} (기상 허용 시)`;
-      const inputDates=[...new Set(state.calls.map(c=>String(c.nor_at).slice(0,10)))].sort();
-      $('counts').textContent=`계약 ${state.contracts.length}건 · 항차 ${state.calls.length}건 · 입력 날짜 ${inputDates.length}일${inputDates.length?` (${inputDates[0]}~${inputDates.at(-1)})`:''} · 선석 8개`;
-      $('currentWorkbook').hidden=!state.upload_locked;
-      $('uploadButton').textContent=state.upload_locked?'변경 미리보기':'파일 검증·등록';
-      $('uploadStatus').textContent=state.uploaded_files?.length?`원본 SHA-256: ${state.uploaded_files[0].replace('.xlsx','')}`:'NOR 날짜 00:00에 항차가 공개됩니다. 기상 시나리오 범위는 2026-11-01~2027-03-31입니다.';
-      $('inputTable').innerHTML=state.calls.length?`<table><thead><tr><th>항차</th><th>계약</th><th>공개 시각</th><th>NOR</th><th>작업 가능</th><th>작업분</th><th>상태</th></tr></thead><tbody>${state.calls.map(c=>`<tr><td>${esc(c.id)}</td><td>${esc(c.contract_id)}</td><td>${esc(time(c.known_at))}</td><td>${esc(time(c.nor_at))}</td><td>${esc(time(c.available_at))}</td><td>${c.work_minutes}</td><td>${esc(c.status)}</td></tr>`).join('')}</tbody></table>`:'XLSX를 업로드하면 항차가 여기에 표시됩니다.';
-      const editable=state.calls.filter(c=>!['CANCELLED','COMPLETED','IN_PROGRESS'].includes(c.status));
-      $('editPanel').hidden=!editable.length;
-      $('editCall').innerHTML=editable.map(c=>`<option value="${esc(c.id)}">${esc(c.id)}</option>`).join('');
-      $('editContract').innerHTML=state.contracts.map(c=>`<option value="${esc(c.id)}">${esc(c.id)}</option>`).join('');
-      $('newContract').innerHTML=$('editContract').innerHTML;
-      fillEdit();
-      $('planButton').textContent=state.as_of?`${String(state.as_of).slice(0,10)} 후보 계산`:'현재 날짜 후보 계산';
-      const allDone=(counts.COMPLETED||0)+(counts.CANCELLED||0)>=state.calls.length;
-      $('planButton').disabled=!state.calls.length||allDone||!!(current&&current.candidates.length)||busy;
-      $('planStatus').textContent=allDone?'등록된 모든 항차의 가상 운영이 끝났습니다.':current?`${current.date} · ${current.solver_status} · 후보 ${current.candidates.length}개`:'현재 날짜의 후보를 아직 계산하지 않았습니다.';
-      $('operateButton').hidden=!current?.applied_candidate_id||current?.actual_day_cents!=null;
-      const byLabel=Object.fromEntries((current?.candidates||[]).map(c=>[c.label,c]));
-      const names={A:'체선료 최소 탐색',B:'대기시간 최소 탐색',C:'잠정 일정 변경 최소 탐색'};
-      $('candidates').innerHTML='ABC'.split('').map(label=>{const c=byLabel[label];if(!c)return `<article class="candidate blank"><h3>${label} · ${names[label]}</h3></article>`;
-        const assigned=(c.assignments||[]).map(a=>`<tr><td>${esc(a.call_id)}</td><td>${esc(a.berth_id)}</td><td>${esc(time(a.start_at))}</td><td>${esc(time(a.completion_at))}</td></tr>`).join('');
-        const fixedWait=c.vessel_results.filter(r=>r.assignment_kind==='COMMITTED').reduce((n,r)=>n+r.total_wait_minutes,0);
-        return `<article class="candidate"><h3>${label} · ${names[label]}</h3><div class="metric">${money(c.cost_cents)}</div><div class="small muted">총 대기 ${c.wait_minutes.toLocaleString()}분 (기존 확정 ${fixedWait.toLocaleString()}분 · 이번 후보 ${(c.wait_minutes-fixedWait).toLocaleString()}분) · ${esc(c.status)} · 기상 중단 ${c.weather_pause_minutes}분</div><details><summary>항차 일정 ${c.assignments.length}건</summary><div class="scroll"><table><thead><tr><th>항차</th><th>선석</th><th>시작</th><th>완료</th></tr></thead><tbody>${assigned}</tbody></table></div></details>${current.applied_candidate_id?`<p class="small">${current.applied_candidate_id===c.candidate_id?'00:00 확정 완료':''}</p>`:`<div class="actions"><button data-apply="${label}">이 후보 확정</button></div>`}</article>`}).join('');
-      document.querySelectorAll('[data-apply]').forEach(b=>b.onclick=()=>act('/api/apply',{label:b.dataset.apply},'당일 00:00 일정을 확정합니다...'));
-      renderTradeoff(current);
-      const done=state.history.filter(r=>r.actual_day_cents!=null);
-      $('history').innerHTML=done.length?`<p>기존 날짜의 결과는 당시 정책으로 보존됩니다. '기존'은 일출·일몰 제한 적용 전 계산입니다.</p><table><thead><tr><th>날짜</th><th>정책</th><th>A 평가</th><th>B 평가</th><th>C 평가</th><th>적용</th><th>당일 실제</th><th>누적 실제</th><th>완료</th></tr></thead><tbody>${done.map(r=>{const a=Object.fromEntries(r.candidates.map(c=>[c.label,c]));const applied=r.candidates.find(c=>c.candidate_id===r.applied_candidate_id);return `<tr><td>${r.date}</td><td>${r.berthing_policy==='DAYLIGHT_WEATHER_V1'?'일출·일몰':'기존'}</td><td>${money(a.A?.cost_cents)}</td><td>${money(a.B?.cost_cents)}</td><td>${money(a.C?.cost_cents)}</td><td>${applied?.label||'—'}</td><td>${money(r.actual_day_cents)}</td><td>${money(r.accumulated_cents)}</td><td>${r.completed_count}</td></tr>`}).join('')}</tbody></table>`:'아직 운영한 날짜가 없습니다.';
-    }
-    function renderTradeoff(current){
-      const by=Object.fromEntries((current?.candidates||[]).map(c=>[c.label,c]));
-      const base=by.A;
-      if(!base){$('tradeoffSummary').innerHTML='';$('tradeoffDetails').innerHTML='';return}
-      const baseRows=Object.fromEntries(base.vessel_results.map(r=>[r.call_id,r]));
-      const compare=c=>{let berth=0,shift=0;for(const r of c.vessel_results){const a=baseRows[r.call_id];if(!a)continue;berth+=Number(a.berth_id!==r.berth_id);shift+=Math.abs((Date.parse(r.work_start_at)-Date.parse(a.work_start_at))/60000)}return {berth,shift}};
-      const costsEqual=Object.values(by).every(c=>c.cost_cents===base.cost_cents);
-      $('tradeoffSummary').innerHTML=`<h3>A 대비 후보별 트레이드오프</h3><p class="small muted">비용은 계획 기준시각부터 모든 대상 항차의 완료까지 정확 평가한 체선료 증가분입니다. 대기는 항차별 작업 가능 시각부터 시작까지의 합계이며, 기존 확정 항차도 포함합니다. 72시간 밖의 미착수 항차는 공통 FCFS로 평가합니다. OPTIMAL은 생성된 시작시각·선석 선택지 안에서의 최적성입니다. +는 A보다 증가, −는 감소입니다.</p>${costsEqual?'<p class="notice small">이 날짜의 후보들은 평가 체선료가 같습니다. 계약 허용시간 이내라면 대기가 있어도 체선료는 0입니다. 대기시간과 선석·시작 변경에서 차이를 확인하세요.</p>':''}<table><thead><tr><th>후보</th><th>체선료</th><th>A 대비 비용</th><th>총 대기</th><th>A 대비 대기</th><th>A 대비 선석 변경</th><th>A 대비 시작 이동</th><th>전날 잠정 대비 변경</th></tr></thead><tbody>${'ABC'.split('').map(label=>{const c=by[label];if(!c)return `<tr><td>${label}</td><td colspan="7">후보 없음</td></tr>`;const d=compare(c);return `<tr><td><b>${label}</b> ${esc(c.status)}</td><td>${money(c.cost_cents)}</td><td>${deltaMoney(c.cost_cents-base.cost_cents)}</td><td>${c.wait_minutes.toLocaleString()}분</td><td>${deltaMinutes(c.wait_minutes-base.wait_minutes)}</td><td>${d.berth}건</td><td>${d.shift.toLocaleString()}분</td><td>${c.compared_tentative_call_count?`${c.berth_change_count}건 · ${c.start_shift_minutes.toLocaleString()}분`:'비교 일정 없음'}</td></tr>`}).join('')}</tbody></table><p class="small muted">FEASIBLE은 시간 제한 안에 찾은 후보이며 최적성 증명은 아닙니다. 이 경우 B/C 비용이 A보다 낮을 수 있습니다.</p>`;
-      const available=['B','C'].filter(label=>by[label]);
-      if(!available.length){$('tradeoffDetails').innerHTML='';return}
-      if(!available.includes(compareLabel))compareLabel=available[0];
-      const other=by[compareLabel],otherRows=Object.fromEntries(other.vessel_results.map(r=>[r.call_id,r]));
-      const allIds=[...new Set([...Object.keys(baseRows),...Object.keys(otherRows)])].sort((x,y)=>{
-        const dx=Math.abs((otherRows[x]?.demurrage_increment_to_completion_cents||0)-(baseRows[x]?.demurrage_increment_to_completion_cents||0));
-        const dy=Math.abs((otherRows[y]?.demurrage_increment_to_completion_cents||0)-(baseRows[y]?.demurrage_increment_to_completion_cents||0));
-        return dy-dx||x.localeCompare(y)});
-      const changed=allIds.filter(id=>{const a=baseRows[id],b=otherRows[id];return !a||!b||a.berth_id!==b.berth_id||a.work_start_at!==b.work_start_at||a.total_wait_minutes!==b.total_wait_minutes||a.demurrage_increment_to_completion_cents!==b.demurrage_increment_to_completion_cents});
-      const ids=showAllRows?allIds:changed;
-      $('tradeoffDetails').innerHTML=`<details open><summary>항차별 차이 보기 (${changed.length}척 변경)</summary><div class="row"><p class="small muted">비용 차이가 큰 항차부터 표시합니다. ‘이월’은 72시간 이후 공통 규칙으로 배정한 평가용 일정입니다.</p><label>비교 후보 <select id="compareTarget">${available.map(label=>`<option value="${label}" ${label===compareLabel?'selected':''}>A ↔ ${label}</option>`).join('')}</select></label><label><input id="showAllRows" type="checkbox" ${showAllRows?'checked':''} style="width:auto;height:auto"> 변화 없는 항차도 보기</label></div>${ids.length?`<div class="scroll"><table><thead><tr><th>항차</th><th>A 선석·시작</th><th>${compareLabel} 선석·시작</th><th>대기 A → ${compareLabel}</th><th>체선료 A → ${compareLabel}</th></tr></thead><tbody>${ids.map(id=>{const a=baseRows[id],b=otherRows[id];if(!a||!b)return '';return `<tr><td>${esc(id)}</td><td>${esc(a.berth_id)} · ${esc(time(a.work_start_at))}${a.assignment_kind==='EVALUATION_TAIL'?' (이월)':''}</td><td>${esc(b.berth_id)} · ${esc(time(b.work_start_at))}${b.assignment_kind==='EVALUATION_TAIL'?' (이월)':''}</td><td>${a.total_wait_minutes.toLocaleString()} → ${b.total_wait_minutes.toLocaleString()}분<br><b>${deltaMinutes(b.total_wait_minutes-a.total_wait_minutes)}</b></td><td>${money(a.demurrage_increment_to_completion_cents)} → ${money(b.demurrage_increment_to_completion_cents)}<br><b>${deltaMoney(b.demurrage_increment_to_completion_cents-a.demurrage_increment_to_completion_cents)}</b></td></tr>`}).join('')}</tbody></table></div>`:'<p class="small muted">A와 같은 항차 일정·대기·비용입니다.</p>'}</details>`;
-      $('tradeoffDetails').innerHTML+=`<details><summary>A 항차별 계약시간·체선료 확인</summary><p class="small muted">산입시간은 NOR와 통지기간, 계약별 휴일·기상 제외 규칙을 적용해 완료 시점까지 계산합니다. 허용시간을 넘긴 시간에 일일 요율을 적용합니다.</p><div class="scroll"><table><thead><tr><th>항차</th><th>구분</th><th>대기</th><th>산입 / 허용</th><th>초과</th><th>체선료 증가분</th></tr></thead><tbody>${base.vessel_results.map(r=>`<tr><td>${esc(r.call_id)}</td><td>${r.assignment_kind==='COMMITTED'?'기존 확정':r.assignment_kind==='EVALUATION_TAIL'?'이월':'이번 후보'}</td><td>${r.total_wait_minutes.toLocaleString()}분</td><td>${Number(r.laytime_used_minutes).toLocaleString()} / ${Number(r.allowed_minutes).toLocaleString()}분</td><td>${Number(r.demurrage_minutes).toLocaleString()}분</td><td>${money(r.demurrage_increment_to_completion_cents)}</td></tr>`).join('')}</tbody></table></div></details>`;
-      $('compareTarget').onchange=e=>{compareLabel=e.target.value;renderTradeoff(current)};
-      $('showAllRows').onchange=e=>{showAllRows=e.target.checked;renderTradeoff(current)};
-    }
-    function fillEdit(){const c=state?.calls.find(x=>x.id===$('editCall').value);if(!c)return;$('editContract').value=c.contract_id;$('editNor').value=c.nor_at.slice(0,16);$('editAvailable').value=c.available_at.slice(0,16);$('editQuantity').value=c.cargo_quantity_kg;$('editWork').value=c.work_minutes}
-    $('editCall').onchange=fillEdit;
-    $('editForm').onsubmit=e=>{e.preventDefault();act('/api/call/edit',{call_id:$('editCall').value,contract_id:$('editContract').value,nor_at:$('editNor').value,available_at:$('editAvailable').value,cargo_quantity_kg:$('editQuantity').value,work_minutes:$('editWork').value,reason:$('editReason').value},'항차를 수정하고 변경 이력을 저장합니다...')};
-    $('newCallForm').onsubmit=e=>{e.preventDefault();act('/api/call',{call_id:$('newCallId').value,contract_id:$('newContract').value,known_at:$('newKnown').value,nor_at:$('newNor').value,available_at:$('newAvailable').value,cargo_quantity_kg:$('newQuantity').value,work_minutes:$('newWork').value},'새 항차를 등록합니다...')};
-    $('cancelCallButton').onclick=()=>{const cid=$('editCall').value;if(cid&&confirm(`${cid} 항차를 취소하시겠습니까?`))act('/api/call/cancel',{call_id:cid,reason:$('editReason').value},'항차 취소를 기록합니다...')};
-    $('uploadForm').onsubmit=async e=>{e.preventDefault();const file=$('workbook').files[0];if(!file)return;
-      if(file.size>5000000){message('XLSX 파일은 5 MB 이하여야 합니다.',true);return}
-      try{const encoded=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file)});
-        const payload={filename:file.name,base64:encoded};
-        if(!state.upload_locked){await act('/api/upload',payload,'전체 계약·항차를 검증하고 저장합니다...');return}
-        if(busy)return;busy=true;$('app').classList.add('busy');message('XLSX 변경 내용을 검증합니다...');
-        const preview=await api('/api/upload/preview',payload);pendingWorkbook={...payload,token:preview.token};
-        $('uploadPreview').innerHTML=`<div class="notice"><b>변경 미리보기 · ${preview.changes.length}건</b><p class="small">파일에서 빠진 항차는 유지합니다. 기존 계약과 확정·진행·완료 항차는 변경하지 않습니다.</p>${preview.changes.length?`<div class="scroll"><table><thead><tr><th>종류</th><th>ID</th><th>변경 내용</th></tr></thead><tbody>${preview.changes.map(c=>`<tr><td>${c.kind==='CONTRACT_ADDED'?'새 계약':c.kind==='CALL_ADDED'?'새 항차':'항차 수정'}</td><td>${esc(c.id)}</td><td>${c.kind==='CALL_UPDATED'?esc(['contract_id','nor_at','available_at','cargo_quantity_kg','work_minutes'].filter(k=>String(c.before?.[k])!==String(c.after?.[k])).map(k=>`${k}: ${c.before[k]} → ${c.after[k]}`).join(' · ')):'추가'}</td></tr>`).join('')}</tbody></table></div>`:'변경 사항이 없습니다.'}<div class="actions"><button id="applyWorkbook" ${preview.changes.length?'':'disabled'}>이 변경 적용</button></div></div>`;
-        $('applyWorkbook').onclick=()=>{const body=pendingWorkbook;pendingWorkbook=null;$('uploadPreview').innerHTML='';act('/api/upload/apply',body,'미리보기 변경을 적용합니다...')};message('변경 내용을 확인한 뒤 적용 버튼을 누르세요.');
-      }catch(error){message(error.message,true)}
-      finally{busy=false;$('app').classList.remove('busy')}
-    };
-    $('planButton').onclick=()=>act('/api/plan',{},'A/B/C 후보를 계산합니다. 복잡한 날은 몇 분 걸릴 수 있습니다...');
-    $('operateButton').onclick=()=>act('/api/operate',{},'당일 24시간을 운영하고 다음 날짜 A/B/C를 계산합니다. 최대 몇 분 걸릴 수 있습니다...');
-    api('/api/status').then(x=>{state=x;render()}).catch(e=>message(e.message,true));
-  </script>
-</body>
-</html>
+</div></div>
+<script src="/assets/app.js" defer></script>
+</body></html>

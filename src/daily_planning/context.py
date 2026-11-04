@@ -84,7 +84,7 @@ def previous_tentative(connection, experiment_key, as_of, active_ids, committed_
     return []
 
 
-def read_snapshot(connection, experiment_key, as_of, weather_path):
+def read_snapshot(connection, experiment_key, as_of, weather_path, *, berthing_policy='DAYLIGHT_WORK_V2'):
     as_of = kst_time(as_of)
     local_time(as_of)
     cancelled_ids = set(connection.execute(sa.select(operation_event.c.call_id).where(
@@ -154,7 +154,7 @@ def read_snapshot(connection, experiment_key, as_of, weather_path):
     weather_path = Path(weather_path).resolve()
     tentative=previous_tentative(connection,experiment_key,as_of,ids,{c['call_id'] for c in commits})
     snapshot = plain(dict(experiment_key=experiment_key, as_of_at=as_of,
-                          berthing_policy='DAYLIGHT_WEATHER_V1',
+                          berthing_policy=berthing_policy,
                           daylight_windows=fingerprint(ROOT/'src/daily_planning/daylight_windows.csv'),
                           calls=active, contracts=contracts, berths=berths, call_states=states,
                           source_state_ids=[s['state_id'] for s in stored_states], commits=commits,

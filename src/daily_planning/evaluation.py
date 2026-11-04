@@ -10,7 +10,7 @@ from weather_optimizer import price_contract
 
 from .bootstrap_db import kst_time, remaining_kg
 from .context import engine_calls, local_time, plain, signature
-from .daylight import daylight_window, simulate_new_call
+from .daylight import WORK_POLICY, daylight_window, simulator_for_policy
 
 
 def interval_overlap(a, b):
@@ -19,7 +19,7 @@ def interval_overlap(a, b):
             < min(local_time(a['completion_at']), local_time(b['completion_at'])))
 
 
-def replay_row(call, berth_id, start_at, weather, *, committed=False, daylight=False):
+def replay_row(call, berth_id, start_at, weather, *, committed=False, daylight=False, policy=None):
     start = local_time(start_at)
     if start < local_time(call['available_at']):
         raise ValueError(f'Start before availability: {call["call_id"]}')
@@ -27,7 +27,7 @@ def replay_row(call, berth_id, start_at, weather, *, committed=False, daylight=F
         sunrise, sunset = daylight_window(start)
         if not sunrise <= start < sunset:
             raise ValueError(f'Berthing outside sunrise/sunset: {call["call_id"]}')
-    row = simulate_call(call, start, weather, RULE)
+    row = simulator_for_policy(policy)(call, start, weather, RULE)
     if local_time(row['work_start_at']) != start:
         raise ValueError(f'Planned start is weather-blocked: {call["call_id"]}')
     return dict(row, berth_id=berth_id)
@@ -52,7 +52,8 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
     begin = local_time(snapshot['as_of_at'])
     end = begin + timedelta(hours=72)
     freeze = begin + timedelta(hours=24)
-    daylight = snapshot.get('berthing_policy') == 'DAYLIGHT_WEATHER_V1'
+    policy = snapshot.get('berthing_policy')
+    daylight = policy in ('DAYLIGHT_WEATHER_V1', WORK_POLICY)
     calls = {c['call_id']: c for c in engine_calls(snapshot)}
     states = {s['call_id']: s for s in snapshot['call_states']}
     berths = {b['berth_id']: b for b in snapshot['berths']}
@@ -64,7 +65,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
         cid = commit['call_id']
         if cid not in calls or cid in rows or commit['berth_id'] not in berths:
             raise ValueError('Invalid or duplicate committed call')
-        row = replay_row(calls[cid], commit['berth_id'], commit['start_at'], weather, committed=True)
+        row = replay_row(calls[cid], commit['berth_id'], commit['start_at'], weather, committed=True, policy=policy)
         if (local_time(row['completion_at']) != local_time(commit['completion_at'])
                 or local_time(commit['locked_from_at']) > local_time(row['work_start_at'])
                 or local_time(commit['locked_until_at']) < local_time(row['completion_at'])):
@@ -78,7 +79,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
             raise ValueError(f'Unknown, duplicate or already committed call: {cid}')
         if bid not in active_berths or not begin <= start < end:
             raise ValueError('New decisions must use active berths and start inside the 72h horizon')
-        row = replay_row(calls[cid], bid, start, weather, daylight=daylight)
+        row = replay_row(calls[cid], bid, start, weather, daylight=daylight, policy=policy)
         if item.get('completion_at') and local_time(item['completion_at']) != local_time(row['completion_at']):
             raise ValueError('Planned completion differs from weather/work replay')
         rows[cid], kinds[cid] = row, 'PLANNED'
@@ -103,7 +104,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
                            if r['berth_id'] == b]) for b in active_berths}
     for cid in sorted(deferred, key=lambda c: (local_time(calls[c]['available_at']), c)):
         bid = min(active_berths, key=lambda b: (free[b], b))
-        simulate = simulate_new_call if daylight else simulate_call
+        simulate = simulator_for_policy(policy)
         row = simulate(calls[cid], max(free[bid], end, local_time(calls[cid]['available_at'])), weather, RULE)
         rows[cid] = dict(row, berth_id=bid)
         kinds[cid] = 'EVALUATION_TAIL'
@@ -135,6 +136,10 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
             berth_release_at=kst_time(finish).isoformat(),
             weather_pause_intervals=[[kst_time(a).isoformat(), kst_time(b).isoformat()]
                                      for a, b in row['weather_pause_intervals']],
+            work_intervals=[[kst_time(a).isoformat(), kst_time(b).isoformat()] for a,b in row.get('work_intervals', [])],
+            work_pause_intervals=[[kst_time(a).isoformat(), kst_time(b).isoformat()] for a,b in row.get('work_pause_intervals', row['weather_pause_intervals'])],
+            night_pause_intervals=[[kst_time(a).isoformat(), kst_time(b).isoformat()] for a,b in row.get('night_pause_intervals', [])],
+            night_pause_minutes=sum(max(0, int((local_time(b)-max(local_time(a), begin)).total_seconds()/60)) for a,b in row.get('night_pause_intervals', [])),
             total_wait_minutes=int((start-local_time(call['available_at'])).total_seconds()/60),
             remaining_wait_minutes=max(0, int((start-max(begin, local_time(call['available_at']))).total_seconds()/60)),
             weather_pause_minutes=pauses_future, weather_pause_minutes_72h=pause72,
@@ -155,7 +160,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
     totals = ('demurrage_increment_24h_cents', 'demurrage_increment_72h_cents',
               'demurrage_increment_to_completion_cents', 'total_settlement_demurrage_cents',
               'despatch_to_completion_cents', 'total_wait_minutes', 'remaining_wait_minutes',
-              'weather_pause_minutes', 'weather_pause_minutes_72h', 'remaining_work_kg_at_72h')
+              'weather_pause_minutes', 'weather_pause_minutes_72h', 'night_pause_minutes', 'remaining_work_kg_at_72h')
     summary = {key: sum(r[key] for r in details) for key in totals}
     summary.update(unfinished_calls_at_72h=sum(not r['completed_at_72h'] for r in details),
                    last_completion_at=max((r['completion_at'] for r in details), default=None),

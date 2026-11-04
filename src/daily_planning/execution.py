@@ -22,7 +22,7 @@ def execute_committed_window(snapshot,end,weather):
         protected=commits.get(cid)
         row=None
         if protected and local_time(protected['start_at'])<cut:
-            row=replay_row(call,protected['berth_id'],protected['start_at'],weather)
+            row=replay_row(call,protected['berth_id'],protected['start_at'],weather,policy=snapshot.get('berthing_policy'))
             if (local_time(row['completion_at'])!=local_time(protected['completion_at'])
                     or local_time(protected['locked_from_at'])>local_time(row['work_start_at'])
                     or local_time(protected['locked_until_at'])<local_time(row['completion_at'])):
@@ -51,6 +51,9 @@ def execute_committed_window(snapshot,end,weather):
             completion_at=kst_time(row['completion_at']).isoformat() if row else None,
             weather_pause_intervals=[[kst_time(a).isoformat(),kst_time(b).isoformat()]
                                      for a,b in row['weather_pause_intervals']] if row else [],
+            work_intervals=row.get('work_intervals', []) if row else [],
+            work_pause_intervals=row.get('work_pause_intervals', row['weather_pause_intervals']) if row else [],
+            night_pause_intervals=row.get('night_pause_intervals', []) if row else [],
             accrued_before_cents=before['demurrage_cents'],demurrage_increment_24h_cents=delta,
             despatch_to_completion_cents=after['despatch_cents'] if completed else 0,
             remaining_work_minutes_at_24h=remaining,

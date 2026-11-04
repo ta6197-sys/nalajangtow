@@ -34,7 +34,7 @@ def kst(at):
 def workload_remaining(row, call, cut):
     a, b = dt(row['work_start_at']), min(dt(row['completion_at']), cut)
     worked = max(0, int((b-a).total_seconds()/60))
-    for x, y in row['weather_pause_intervals']:
+    for x, y in row.get('work_pause_intervals', row['weather_pause_intervals']):
         worked -= max(0, int((min(dt(y), b)-max(dt(x), a)).total_seconds()/60))
     remaining = call['processing_minutes']-worked
     if not 0 <= remaining <= call['processing_minutes']:

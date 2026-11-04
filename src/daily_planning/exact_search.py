@@ -11,7 +11,7 @@ from ortools.sat.python import cp_model
 from rolling_horizon import RULE, SHIFTS, baseline, simulate_call
 
 from .context import engine_calls, local_time
-from .daylight import simulate_new_call
+from .daylight import simulator_for_policy
 from .evaluation import evaluate_baseline, interval_overlap, price_until
 
 
@@ -19,7 +19,7 @@ def build_domain(snapshot, weather):
     """Reuse existing heuristic anchors/shifts without changing bundled caches."""
     begin = local_time(snapshot['as_of_at'])
     end = begin+timedelta(hours=72)
-    new_simulate = simulate_new_call if snapshot.get('berthing_policy') == 'DAYLIGHT_WEATHER_V1' else simulate_call
+    new_simulate = simulator_for_policy(snapshot.get('berthing_policy'))
     calls = engine_calls(snapshot)
     fixed_ids = {c['call_id'] for c in snapshot['commits']}
     pending = [c for c in calls if c['call_id'] not in fixed_ids]
@@ -27,7 +27,7 @@ def build_domain(snapshot, weather):
     by_call = {c['call_id']: c for c in calls}
     fixed = []
     for c in snapshot['commits']:
-        row = simulate_call(by_call[c['call_id']],local_time(c['start_at']),weather,RULE)
+        row = new_simulate(by_call[c['call_id']],local_time(c['start_at']),weather,RULE)
         fixed.append(dict(row,berth_id=c['berth_id']))
     # Existing baseline helpers assume one ongoing job per berth. Collapse only
     # for heuristic seed construction; the actual model keeps every interval.

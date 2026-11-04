@@ -26,7 +26,7 @@ from rolling_horizon import RULE, simulate_call
 from src.daily_planning.bootstrap_db import KST, exact_integer, kst_time
 from src.daily_planning.context import ROOT, engine_calls, local_time, plain, prepare_run
 from src.daily_planning.database import get_engine
-from src.daily_planning.daylight import daylight_window
+from src.daily_planning.daylight import WORK_POLICY, daylight_window, simulator_for_policy
 from src.daily_planning.input_loader import xlsx_rows
 from src.daily_planning.models import (berth, call_state, contract, operation_event, planning_run,
                                        port_call, schedule_assignment, schedule_candidate, schedule_commit)
@@ -35,7 +35,7 @@ from src.daily_planning.optimization import optimize_run
 from src.daily_planning.evaluation import price_until
 from src.daily_planning.validator import normalize_contract, time_value
 
-EXPERIMENT = os.environ.get('WEB_EXPERIMENT_KEY', 'web-scenario')
+EXPERIMENT = os.environ.get('WEB_EXPERIMENT_KEY', 'source-daywork-v2')
 INDEX = (ROOT / 'web' / 'index.html').read_bytes()
 TEMPLATE = ROOT / 'templates' / 'input_template.xlsx'
 UPLOADS = ROOT / 'results' / 'daily' / 'uploads'
@@ -80,7 +80,7 @@ def summary_for(connection, run):
                     if replay_calls is None:
                         replay_calls = {call['call_id']: call for call in engine_calls(snapshot)}
                         replay_weather = WeatherSeries.from_csv(Path(snapshot['weather']['path']))
-                    replay_cache[key] = simulate_call(replay_calls[item['call_id']],
+                    replay_cache[key] = simulator_for_policy(snapshot.get('berthing_policy'))(replay_calls[item['call_id']],
                         local_time(item['work_start_at']), replay_weather, RULE)['contract_cost']
                 clock = replay_cache[key]
             vessel_results.append({**{key: item[key] for key in (
@@ -90,7 +90,12 @@ def summary_for(connection, run):
                 'allowed_minutes': clock['allowed_minutes'],
                 'laytime_used_minutes': clock['laytime_used_minutes'],
                 'demurrage_minutes': clock['demurrage_minutes'],
-                'clock_start_at': clock['clock_start_at']})
+                'clock_start_at': clock['clock_start_at'],
+                'work_intervals': item.get('work_intervals', []),
+                'night_pause_intervals': item.get('night_pause_intervals', []),
+                'weather_pause_intervals': item.get('weather_pause_intervals', []),
+                'night_pause_minutes': item.get('night_pause_minutes', 0),
+                'weather_pause_minutes': item.get('weather_pause_minutes', 0)})
         candidates.append(dict(rank=row['candidate_rank'], label='ABC'[row['candidate_rank'] - 1],
             candidate_id=str(row['candidate_id']), strategy=row['strategy'],
             cost_cents=row['simulated_demurrage_cents'],
@@ -98,6 +103,7 @@ def summary_for(connection, run):
             status=metrics['solver']['solver_status'],
             gap=metrics['solver']['relative_gap'],
             weather_pause_minutes=evaluation['summary']['weather_pause_minutes'],
+            night_pause_minutes=evaluation['summary'].get('night_pause_minutes', 0),
             berth_change_count=evaluation['summary']['berth_change_count'],
             start_shift_minutes=evaluation['summary']['start_shift_minutes'],
             compared_tentative_call_count=evaluation['summary']['compared_tentative_call_count'],
@@ -156,16 +162,38 @@ def current_state():
                 call_state.c.experiment_key == EXPERIMENT,
                 call_state.c.state_at == latest)).all())
         status_counts['CANCELLED'] = len(cancelled_ids)
+        contract_by_id = {c['contract_id']: c for c in contract_rows}
         for c in calls:
+            c['vessel_name'] = contract_by_id[c['contract_id']]['contract_terms'].get('vessel_name', c['id'])
             c['status'] = 'CANCELLED' if c['cancelled'] else by_status.get(c['id'], 'REGISTERED')
     try:
         sunrise, sunset = daylight_window(as_of) if as_of else (None, None)
     except ValueError:
         sunrise, sunset = None, None
-    return plain(dict(experiment_key=EXPERIMENT, contracts=contracts, calls=calls,
+    for c in calls:
+        c['night_paused'] = bool(c['status'] == 'IN_PROGRESS' and as_of and sunrise and sunset
+                                 and not sunrise <= local_time(as_of) < sunset)
+    windows = []
+    if as_of:
+        for i in range(3):
+            try:
+                rise, setting = daylight_window(as_of+timedelta(days=i))
+                windows.append(dict(sunrise_at=kst_time(rise).isoformat(), sunset_at=kst_time(setting).isoformat()))
+            except ValueError:
+                break
+    source_path = ROOT / 'results/daily/source_import_audit.json'
+    source = json.loads(source_path.read_text()) if source_path.exists() else None
+    selection_path = ROOT / 'input/source_selection.json'
+    selection = json.loads(selection_path.read_text()) if selection_path.exists() else {}
+    source_info = dict(filename=selection.get('original_filename', Path(source['source']['path']).name),sha256=source['source']['sha256'],
+                       validation=source['validation'],manual_review=source['manual_review']) if source else None
+    return plain(dict(api_version='daily-planning-v2',operating_policy=WORK_POLICY,
+                      input_source=source_info,daylight_windows=windows,
+                      disclosed_call_count=sum(bool(as_of) and kst_time(c['known_at'])<=as_of and c['status'] not in ('CANCELLED','COMPLETED') for c in calls),
+                      experiment_key=EXPERIMENT, contracts=contracts, calls=calls,
                       upload_locked=bool(contract_rows or calls), as_of=as_of.isoformat() if as_of else None,
-                      sunrise_at=sunrise.isoformat() if sunrise else None,
-                      sunset_at=sunset.isoformat() if sunset else None,
+                      sunrise_at=kst_time(sunrise).isoformat() if sunrise else None,
+                      sunset_at=kst_time(sunset).isoformat() if sunset else None,
                       latest_state_at=latest.isoformat() if latest else None,
                       uploaded_files=uploaded_hashes,
                       status_counts=status_counts, current=current,
@@ -684,9 +712,23 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
-        if path == '/':
+        static_files = {
+            '/assets/app.css': ('app.css', 'text/css; charset=utf-8'),
+            '/assets/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+        }
+        if path in static_files:
+            name, content_type = static_files[path]
+            raw = (ROOT / 'web' / name).read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Content-Length', str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+        elif path == '/':
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Cache-Control', 'no-cache')
             self.send_header('Content-Length', str(len(INDEX)))
             self.end_headers()
             self.wfile.write(INDEX)

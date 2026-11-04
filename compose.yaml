@@ -22,15 +22,15 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_HOST: web-postgres
-      POSTGRES_DB: ulsan_clx_web
+      POSTGRES_DB: ulsan_clx_source_daywork_v2
       POSTGRES_USER: ulsan_clx
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env before starting PostgreSQL}
-      WEB_EXPERIMENT_KEY: web-daylight-v1
+      WEB_EXPERIMENT_KEY: source-daywork-v2
     ports:
       - "127.0.0.1:8765:8765"
     volumes:
       - ./input:/app/input:ro
-      - ./results/web:/app/results/daily
+      - ./results/source-daywork-v2:/app/results/daily
 
 volumes:
   web_postgres_data:

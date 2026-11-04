@@ -30,7 +30,8 @@ def _locked_run(connection, run_id):
 def _check_current(connection,run):
     frozen=run['run_config']['input_snapshot']
     verify_snapshot(frozen)
-    fresh=read_snapshot(connection,run['experiment_key'],run['planning_as_of'],run['weather_file_path'])
+    fresh=read_snapshot(connection,run['experiment_key'],run['planning_as_of'],run['weather_file_path'],
+        berthing_policy=frozen.get('berthing_policy', 'LEGACY_UNRESTRICTED'))
     if 'berthing_policy' not in frozen:
         fresh.pop('berthing_policy', None)
         fresh.pop('daylight_windows', None)
@@ -104,7 +105,8 @@ def advance_in_transaction(connection,run_id):
     verify_snapshot(frozen)
     # Fresh commitments now include the user's selection. The source state,
     # contracts, calls and weather must still be exactly the frozen inputs.
-    operation_input=read_snapshot(connection,run['experiment_key'],run['planning_as_of'],run['weather_file_path'])
+    operation_input=read_snapshot(connection,run['experiment_key'],run['planning_as_of'],run['weather_file_path'],
+        berthing_policy=frozen.get('berthing_policy', 'LEGACY_UNRESTRICTED'))
     for key in ('calls','contracts','berths','call_states','source_state_ids','weather'):
         if operation_input[key]!=frozen[key]:
             raise ValueError('Operating state changed after confirmation; operation must not overwrite it')
@@ -125,7 +127,7 @@ def advance_in_transaction(connection,run_id):
                    accrued_despatch_cents=row['despatch_to_completion_cents'] if completed else 0,
                    source_run_id=str(run_id),operation_input_hash=operation_input['snapshot_hash'])
         if started:
-            clock['schedule']={k:row[k] for k in ('work_start_at','completion_at','berth_id','weather_pause_intervals')}
+            clock['schedule']={k:row[k] for k in ('work_start_at','completion_at','berth_id','weather_pause_intervals','work_intervals','work_pause_intervals','night_pause_intervals')}
         next_states.append(dict(state_id=uuid.uuid5(run_id,'state:'+row['call_id']),call_id=row['call_id'],
             berth_id=row['berth_id'] if status=='IN_PROGRESS' else None,experiment_key=run['experiment_key'],state_at=end,
             status=status,remaining_work_kg=row['remaining_work_kg_at_24h'],
