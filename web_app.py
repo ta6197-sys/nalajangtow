@@ -715,8 +715,15 @@ class Handler(BaseHTTPRequestHandler):
         static_files = {
             '/assets/app.css': ('app.css', 'text/css; charset=utf-8'),
             '/assets/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+            '/docs': ('docs.html', 'text/html; charset=utf-8'),
+            '/docs/': ('docs.html', 'text/html; charset=utf-8'),
+            '/docs/init.js': ('swagger-init.js', 'text/javascript; charset=utf-8'),
+            '/docs/swagger-ui.css': ('vendor/swagger-ui/swagger-ui.css', 'text/css; charset=utf-8'),
+            '/docs/swagger-ui-bundle.js': ('vendor/swagger-ui/swagger-ui-bundle.js', 'text/javascript; charset=utf-8'),
         }
-        if path in static_files:
+        if path == '/openapi.json':
+            self.respond(200, json.loads((ROOT / 'api/openapi.json').read_text()))
+        elif path in static_files:
             name, content_type = static_files[path]
             raw = (ROOT / 'web' / name).read_bytes()
             self.send_response(200)

@@ -41,3 +41,11 @@ docker compose -p solver-daily exec -T web python -m src.daily_planning.source_w
 엔진 회귀 검증: `python -m unittest discover -s tests -p 'test_daylight_work.py' -v`. `DAYLIGHT_WORK_V2`는 작업 전체를 주간에만 수행한다. `DAYLIGHT_WEATHER_V1`은 과거 결과 재생을 위한 시작시간 제한 규칙으로 보존한다. API `/api/status`는 `api_version`, `input_source`, `operating_policy`, `daylight_windows`, 후보별 `work_intervals`·`night_pause_intervals`·`weather_pause_intervals`를 제공한다. 화면의 색 막대는 `work_intervals`를 사용한다.
 
 접속 주소는 `http://127.0.0.1:8765/`, 백엔드 상태는 `http://127.0.0.1:8765/api/status`다. 이 서버는 ZIP의 별도 FastAPI 서버(`8000/docs`) 대신 현재 프로젝트의 일별 계획 API를 제공한다. 야간에 `IN_PROGRESS` 상태인 항차는 계속 접안 중인 항차이며, `night_paused=true`로 작업 중단을 명시한다.
+
+## Swagger에서 백엔드 확인
+
+`http://127.0.0.1:8765/docs`를 연 뒤 `GET /api/status`를 펼쳐 **Try it out → Execute**를 누른다. 응답 코드 `200`과 계약·항차 수, 기준시각, `DAYLIGHT_WORK_V2` 정책, 후보의 작업·중단 구간을 확인할 수 있다. 스케줄러 사이드바의 **백엔드 API · Swagger** 링크로도 열 수 있다.
+
+명세는 `api/openapi.json`이며 `/openapi.json`에서 동일한 내용을 제공한다. 기존 조회·다운로드·계산·확정·운영·입력 API 13개를 문서화했다. `POST /api/plan`은 후보를 저장하고, 확정·운영·입력 API는 현재 DB 상태를 실제로 바꾼다. `/api/operate`는 다음 후보 계산만 실패해도 운영은 이미 완료되어 `200`과 `next_plan_error`를 반환할 수 있으므로 해당 필드를 확인한다. XLSX 업로드는 `contracts/calls` 템플릿의 파일 바이트를 base64로 인코딩한 JSON을 받는다.
+
+Swagger UI는 공식 npm `swagger-ui-dist` 5.34.1의 정적 자산을 `web/vendor/swagger-ui/`에서 제공한다. 패키지 버전·다운로드 무결성·파일 SHA-256은 `manifest.json`, 라이선스·고지는 `LICENSE`·`NOTICE`에 보존한다. 외부 CDN·외부 명세 검증 서버를 호출하지 않는다. 문서 경로와 실제 POST 라우트의 일치 검증: `python -m unittest discover -s tests -p 'test_api_docs.py' -v`.

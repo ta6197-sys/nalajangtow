@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docktimize API · Swagger</title>
+  <link rel="stylesheet" href="/docs/swagger-ui.css">
+  <style>
+    body{margin:0;background:#fafafa;color:#25303b;font-family:system-ui,sans-serif}
+    .docs-header{padding:16px 24px;background:#fff;border-bottom:1px solid #e6e6e6;line-height:1.6}
+    .docs-header strong{color:#cc0030}.docs-header a{color:#894151;margin-right:20px}
+    .docs-header p{margin:6px 0;font-size:14px}.docs-status{font-size:13px;color:#67717d}
+    .swagger-ui .info{margin:26px 0}.swagger-ui .wrapper{max-width:1440px}
+    .load-error{padding:24px;color:#a30029}.docs-status:empty{display:none}
+  </style>
+</head>
+<body>
+  <header class="docs-header">
+    <strong>Docktimize · 백엔드 API 테스트</strong>
+    <p><a href="/">스케줄러 화면</a><a href="/openapi.json">OpenAPI JSON</a></p>
+    <p>먼저 <b>GET /api/status → Try it out → Execute</b>를 실행하세요. POST의 확정·운영·입력 변경은 현재 DB에 반영됩니다.</p>
+    <div class="docs-status" id="docs-status" role="status" aria-live="polite"></div>
+  </header>
+  <div id="swagger-ui"><p style="padding:24px">Swagger UI를 불러오는 중입니다.</p></div>
+  <noscript><p class="load-error">Swagger를 사용하려면 JavaScript를 활성화하세요.</p></noscript>
+  <script src="/docs/swagger-ui-bundle.js" defer></script>
+  <script src="/docs/init.js" defer></script>
+</body>
+</html>
