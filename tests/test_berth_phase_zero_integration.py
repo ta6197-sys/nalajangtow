@@ -6,7 +6,6 @@ is still required before the experimental feature can be considered complete.
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
 from unittest.mock import patch
 
 from ortools.sat.python import cp_model
@@ -17,6 +16,7 @@ from src.daily_planning.berth_phases import (
 )
 from src.daily_planning.evaluation import interval_overlap
 from src.daily_planning.exact_search import make_master
+from src.daily_planning.context import local_time
 
 
 class ZeroPhaseIntegrationTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class ZeroPhaseIntegrationTests(unittest.TestCase):
 
     def domain(self, a, b):
         return {
-            "begin": datetime.fromisoformat("2026-11-04T00:00:00+09:00"),
+            "begin": local_time("2026-11-04T00:00:00+09:00"),
             "berths": ["BERTH-01"], "fixed": [], "fixed_cost": 0, "fixed_wait": 0,
             "options": [{"row": row, "cost_lb": 0, "wait_lb": 0} for row in (a, b)],
             "groups": [[0], [1]],
