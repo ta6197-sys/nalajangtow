@@ -66,6 +66,11 @@ def save_evaluated_candidate(connection, run_id, *, candidate_id, strategy, cand
         for row in evaluation['vessel_results']:
             if row['assignment_kind'] == 'EVALUATION_TAIL':
                 continue
+            if snapshot.get('berth_phase') and (
+                kst_time(row['berthing_start_at']) != kst_time(row['work_start_at'])
+                or kst_time(row['berth_release_at']) != kst_time(row['completion_at'])
+            ):
+                raise ValueError('Cannot store nonzero berth phases in legacy assignment schema')
             connection.execute(schedule_assignment.insert().values(
                 candidate_id=candidate_id, call_id=row['call_id'], berth_id=row['berth_id'],
                 start_at=kst_time(row['work_start_at']), completion_at=kst_time(row['completion_at'])))
