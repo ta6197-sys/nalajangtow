@@ -1,0 +1,27 @@
+# Additional opt-in service; original 8765 web stays untouched.
+# Run only after strict independent SYNTHETIC preflight reports blocked=0.
+services:
+  web-skphysical:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      web-postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: web-postgres
+      POSTGRES_DB: ulsan_clx_source_daywork_v2
+      POSTGRES_USER: ulsan_clx
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env first}
+      WEB_EXPERIMENT_KEY: sk-physical-v3
+      SK_PHYSICAL_EXPERIMENT_KEY: sk-physical-v3
+      SK_PHYSICAL_PROFILES_FILE: /app/input/vessel_profiles.sk-v3-independent.json
+      SK_PHYSICAL_MAPPING_FILE: /app/config/berth_mapping.json
+      SK_PHYSICAL_FACILITIES_FILE: /app/data/sk_facilities.json
+    ports:
+      - "127.0.0.1:8766:8765"
+    volumes:
+      - ./input:/app/input:ro
+      - ./config:/app/config:ro
+      - ./data:/app/data:ro
+      - ./results/sk-physical-v3:/app/results/daily
