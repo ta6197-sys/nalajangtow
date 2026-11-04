@@ -12,6 +12,7 @@ from src.daily_planning.berth_rules import load_facilities, load_mapping, check_
 from src.daily_planning.sk_physical_v3 import (
     EXPECTED_MAPPING, POLICY, read_profiles, build_sk_snapshot_for_experiment,
     verify_sk_snapshot, eligible_berths, assert_eligible,
+    preflight_full_source_scenario,
 )
 from scripts.generate_synthetic_vessel_profiles import generate, make_profile
 from scripts.audit_sk_physical_v3 import audit
@@ -199,6 +200,36 @@ class TestPhysicalV3(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "max_attempts"):
             generate(self.ids, mode="conditioned", max_attempts=0,
                      mapping=self.mapping, facilities=self.facilities)
+
+    def test_26_full_preflight_blocks_future_incompatible_call(self):
+        # The first call is compatible; an undisclosed later call is not.
+        last = self.conditioned["calls"][-1]
+        last.update(cargo_type="LPG", dwt=120000, loa_m=290, draft_m=15)
+        self.profile_file.write_text(
+            json.dumps(self.conditioned, ensure_ascii=False), encoding="utf-8"
+        )
+        with patch.dict(os.environ, self.env):
+            active = build_sk_snapshot_for_experiment(
+                "sk-physical-v3-test", self.calls[:1], self.berths
+            )
+            self.assertEqual(active["synthetic_call_count"], 1)
+            with self.assertRaisesRegex(ValueError, "NO_COMPATIBLE_BERTH_IN_MODEL"):
+                preflight_full_source_scenario(
+                    "sk-physical-v3-test", self.ids, self.berths
+                )
+
+    def test_27_full_preflight_requires_exact_source_ids(self):
+        with patch.dict(os.environ, self.env):
+            with self.assertRaisesRegex(ValueError, "V3_FULL_SOURCE_PROFILE_MISMATCH"):
+                preflight_full_source_scenario(
+                    "sk-physical-v3-test", self.ids[:-1], self.berths
+                )
+
+    def test_28_full_preflight_is_noop_for_legacy_experiment(self):
+        with patch.dict(os.environ, self.env):
+            self.assertIsNone(preflight_full_source_scenario(
+                "source-daywork-v2", self.ids, self.berths
+            ))
 
 
 if __name__ == "__main__":

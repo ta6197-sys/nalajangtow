@@ -148,6 +148,31 @@ def build_sk_snapshot_for_experiment(experiment_key, calls, berths):
     }
 
 
+
+def preflight_full_source_scenario(experiment_key, source_call_ids, berths):
+    """Read-only fail-fast audit of ALL source calls, even those not disclosed yet.
+
+    This validates the fixed SYNTHETIC experiment population. Planning still
+    receives only its active (known, unfinished) calls, preserving the
+    rolling-horizon information boundary.
+    """
+    enabled = os.environ.get("SK_PHYSICAL_EXPERIMENT_KEY", "").strip()
+    if not enabled or enabled != experiment_key:
+        return None
+    ids = list(source_call_ids)
+    profiles = read_profiles(_source_files()["profiles"])
+    missing = sorted(set(ids) - set(profiles))
+    extra = sorted(set(profiles) - set(ids))
+    if missing or extra:
+        raise ValueError(
+            f"V3_FULL_SOURCE_PROFILE_MISMATCH: source={len(ids)}, profiles={len(profiles)}, "
+            f"missing={missing[:15]}, extra={extra[:15]}"
+        )
+    return build_sk_snapshot_for_experiment(
+        experiment_key, [{"call_id": cid} for cid in ids], berths
+    )
+
+
 def verify_sk_snapshot(physical):
     if not isinstance(physical, dict) or physical.get("policy") != POLICY:
         raise ValueError("Unknown SK physical snapshot policy")

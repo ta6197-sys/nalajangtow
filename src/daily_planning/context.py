@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -160,7 +161,15 @@ def read_snapshot(connection, experiment_key, as_of, weather_path, *, berthing_p
                           source_state_ids=[s['state_id'] for s in stored_states], commits=commits,
                           previous_tentative_assignments=tentative,
                           weather=fingerprint(weather_path)))
-    from .sk_physical_v3 import build_sk_snapshot_for_experiment
+    from .sk_physical_v3 import (build_sk_snapshot_for_experiment,
+                                  preflight_full_source_scenario)
+    # Strict A: validate the full fixed source population before each V3 run,
+    # including future-not-yet-disclosed calls; never assign them in this plan.
+    if experiment_key and os.environ.get("SK_PHYSICAL_EXPERIMENT_KEY", "").strip() == experiment_key:
+        source_call_ids = connection.execute(
+            sa.select(port_call.c.call_id).order_by(port_call.c.call_id)
+        ).scalars().all()
+        preflight_full_source_scenario(experiment_key, source_call_ids, berths)
     physical = build_sk_snapshot_for_experiment(experiment_key, active, berths)
     if physical is not None:
         snapshot["sk_physical"] = physical

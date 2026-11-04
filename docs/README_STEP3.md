@@ -181,3 +181,23 @@ git push -u origin feat/sk-single-berth-v3
 ## Known limitations
 
 A PASS is **only** for documented DWT, LOA, draft and cargo checks. GT/night berthing/mooring weather/unmooring/tide+UKC/pilot/tugs/line/tank/pipeline/actual SK terminal approval are intentionally not certified. No multi-berth occupancy is modeled. Existing global `DAYLIGHT_WORK_V2` remains unrelated to specific SK mooring permission; Stage 4 must separate berthing, cargo work, and unberthing and introduce trusted environmental limits.
+
+## Stage 3 strict-A full-source preflight (post-merge follow-up)
+
+The opt-in `sk-physical-v3` planner performs a **read-only compatibility check
+across every `port_call` record in the shared source PostgreSQL database**
+before building the active-call planning snapshot. It requires an exact match
+between source call IDs and the SYNTHETIC profile file. Any non-PASS call,
+including one not yet disclosed by its `known_at` time, blocks the new V3
+run before CP-SAT. This is intentional for the fixed 140-call benchmark and
+does not modify contracts, states, or prior runs.
+
+The per-day optimizer still receives only known, non-completed calls. It does
+not schedule future-undisclosed calls. The original
+`source-daywork-v2` experiment is unaffected unless explicitly opted in,
+which is forbidden by the V3 guard.
+
+The existing 33 blocked SYNTHETIC calls must remain unchanged pending source
+review; the strict preflight should fail until the scenario itself is
+explicitly revised as a **new**, documented version. This PR does not do that.
+The full-source gate does not imply operational/port berthing approval.
