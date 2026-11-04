@@ -124,7 +124,14 @@ def apply_phase_policy(policy, row, *, available_at=None):
     if policy is None:
         return row
     validate_zero_phase_policy(policy)
-    phase = build_phase_timeline(row, available_at=available_at)
+    from .bootstrap_db import kst_time
+    # The existing weather engine deliberately emits naive KST timestamps.
+    # Normalize a temporary copy for strict phase validation; retain originals.
+    normalized = dict(row,
+        work_start_at=kst_time(row["work_start_at"]).isoformat(),
+        completion_at=kst_time(row["completion_at"]).isoformat())
+    phase = build_phase_timeline(normalized, available_at=(
+        kst_time(available_at).isoformat() if available_at is not None else None))
     return dict(row, **phase)
 
 
@@ -132,6 +139,10 @@ def occupancy_bounds(row):
     """Return physical berth occupation, falling back to legacy cargo boundaries."""
     start = row.get("berthing_start_at", row["work_start_at"])
     end = row.get("berth_release_at", row["completion_at"])
-    if _at(end, "berth_release_at") <= _at(start, "berthing_start_at"):
+    from .bootstrap_db import kst_time
+    # Legacy workload rows use naive-KST; explicit phase fields use aware-KST.
+    start_at = _at(kst_time(start).isoformat(), "berthing_start_at")
+    end_at = _at(kst_time(end).isoformat(), "berth_release_at")
+    if end_at <= start_at:
         raise ValueError("Invalid berth occupancy interval")
     return start, end
