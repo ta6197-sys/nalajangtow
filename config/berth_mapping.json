@@ -1,10 +1,10 @@
 {
-  "BERTH-01": null,
-  "BERTH-02": null,
-  "BERTH-03": null,
-  "BERTH-04": null,
-  "BERTH-05": null,
-  "BERTH-06": null,
-  "BERTH-07": null,
-  "BERTH-08": null
+  "BERTH-01": "SK#1-1",
+  "BERTH-02": "SK#2-7",
+  "BERTH-03": "SK#3",
+  "BERTH-04": "SK#4-1",
+  "BERTH-05": "SK#5-5",
+  "BERTH-06": "SK#6",
+  "BERTH-07": "SK#7",
+  "BERTH-08": "SK#8"
 }

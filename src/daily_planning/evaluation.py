@@ -11,6 +11,7 @@ from weather_optimizer import price_contract
 from .bootstrap_db import kst_time, remaining_kg
 from .context import engine_calls, local_time, plain, signature
 from .daylight import WORK_POLICY, daylight_window, simulator_for_policy
+from .sk_physical_v3 import is_compatible, require_compatible
 
 
 def interval_overlap(a, b):
@@ -65,6 +66,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
         cid = commit['call_id']
         if cid not in calls or cid in rows or commit['berth_id'] not in berths:
             raise ValueError('Invalid or duplicate committed call')
+        require_compatible(snapshot, cid, commit['berth_id'])
         row = replay_row(calls[cid], commit['berth_id'], commit['start_at'], weather, committed=True, policy=policy)
         if (local_time(row['completion_at']) != local_time(commit['completion_at'])
                 or local_time(commit['locked_from_at']) > local_time(row['work_start_at'])
@@ -79,6 +81,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
             raise ValueError(f'Unknown, duplicate or already committed call: {cid}')
         if bid not in active_berths or not begin <= start < end:
             raise ValueError('New decisions must use active berths and start inside the 72h horizon')
+        require_compatible(snapshot, cid, bid)
         row = replay_row(calls[cid], bid, start, weather, daylight=daylight, policy=policy)
         if item.get('completion_at') and local_time(item['completion_at']) != local_time(row['completion_at']):
             raise ValueError('Planned completion differs from weather/work replay')
@@ -103,7 +106,13 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
     free = {b: max([end] + [local_time(r['completion_at']) for r in rows.values()
                            if r['berth_id'] == b]) for b in active_berths}
     for cid in sorted(deferred, key=lambda c: (local_time(calls[c]['available_at']), c)):
-        bid = min(active_berths, key=lambda b: (free[b], b))
+        eligible_berths = [
+            bid for bid in active_berths
+            if is_compatible(snapshot, cid, bid)
+        ]
+        if not eligible_berths:
+            raise ValueError(f'NO_COMPATIBLE_BERTH: {cid}')
+        bid = min(eligible_berths, key=lambda b: (free[b], b))
         simulate = simulator_for_policy(policy)
         row = simulate(calls[cid], max(free[bid], end, local_time(calls[cid]['available_at'])), weather, RULE)
         rows[cid] = dict(row, berth_id=bid)

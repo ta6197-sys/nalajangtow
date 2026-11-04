@@ -1,6 +1,7 @@
 """Finite CP-SAT search using valid bounds and exact common-tail evaluation."""
 from __future__ import annotations
 
+from .sk_physical_v3 import is_compatible, require_compatible
 import math
 import time
 from datetime import timedelta
@@ -27,6 +28,9 @@ def build_domain(snapshot, weather):
     by_call = {c['call_id']: c for c in calls}
     fixed = []
     for c in snapshot['commits']:
+        require_compatible(
+        snapshot, c["call_id"], c["berth_id"]
+        )
         row = new_simulate(by_call[c['call_id']],local_time(c['start_at']),weather,RULE)
         fixed.append(dict(row,berth_id=c['berth_id']))
     # Existing baseline helpers assume one ongoing job per berth. Collapse only
@@ -70,6 +74,8 @@ def build_domain(snapshot, weather):
             if cost < 0:
                 raise ValueError('Negative future contract increment')
             for bid in berths:
+                if not is_compatible(snapshot, cid, bid):
+                    continue
                 assigned = dict(row,berth_id=bid)
                 if any(interval_overlap(assigned,r) for r in fixed):
                     continue

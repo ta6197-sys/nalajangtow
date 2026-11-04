@@ -160,7 +160,11 @@ def read_snapshot(connection, experiment_key, as_of, weather_path, *, berthing_p
                           source_state_ids=[s['state_id'] for s in stored_states], commits=commits,
                           previous_tentative_assignments=tentative,
                           weather=fingerprint(weather_path)))
-    snapshot['snapshot_hash'] = signature(snapshot)
+    if experiment_key == "sk-physical-v3":
+        from .sk_physical_v3 import build_physical_context
+        snapshot["sk_physical"] = build_physical_context(active)
+
+    snapshot["snapshot_hash"] = signature(snapshot)
     return snapshot
 
 
@@ -172,6 +176,9 @@ def verify_snapshot(snapshot):
         raise ValueError('Weather file differs from the frozen input')
     if snapshot.get('daylight_windows') and fingerprint(snapshot['daylight_windows']['path']) != snapshot['daylight_windows']:
         raise ValueError('Sunrise/sunset file differs from the frozen input')
+    if snapshot.get("sk_physical") is not None:
+        from .sk_physical_v3 import verify_physical_files
+        verify_physical_files(snapshot["sk_physical"])
 
 
 def engine_calls(snapshot):

@@ -11,4 +11,5 @@ input/
 reference/
 simulation/inputs/
 results/
-data/
+data/*
+!data/sk_facilities.json
