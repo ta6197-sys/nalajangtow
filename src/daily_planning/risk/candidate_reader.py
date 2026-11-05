@@ -68,5 +68,6 @@ def load_run_candidates(engine, run_id: str) -> dict:
         "experiment_key": run["experiment_key"],
         "planning_as_of": run["planning_as_of"].isoformat(),
         "input_snapshot_hash": snapshot["snapshot_hash"],
+        "input_snapshot": snapshot,
         "candidates": normalized,
     }

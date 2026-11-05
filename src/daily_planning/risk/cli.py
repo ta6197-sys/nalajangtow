@@ -1,10 +1,4 @@
-"""Read-only Stage 1 CLI: validate existing A/B/C, prepare shared scenarios.
-
-  python -m src.daily_planning.risk.cli --run-id UUID \
-    --config config/risk_synthetic_v1.json --out results/risk-stage1/UUID
-
-It generates *no* cost distribution until scenario replay is implemented.
-"""
+"""Risk CLI. --evaluate runs immutable A/B/C replay; --persist writes Risk tables only."""
 from __future__ import annotations
 
 import argparse
@@ -14,6 +8,8 @@ from pathlib import Path
 from .candidate_reader import load_run_candidates
 from .scenarios import load_scenario_config, generate_scenarios
 from .tradeoff import compare_candidates
+from .service import evaluate_monte_carlo
+from .persistence import persist_risk_analysis
 
 
 def _write_new(path: Path, payload):
@@ -27,13 +23,40 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id",required=True)
     parser.add_argument("--config",default="config/risk_synthetic_v1.json")
-    parser.add_argument("--out",required=True)
+    parser.add_argument("--out")
     parser.add_argument("--save-all-scenarios",action="store_true")
+    parser.add_argument("--evaluate",action="store_true")
+    parser.add_argument("--sample-count",type=int,choices=(100,1000))
+    parser.add_argument("--persist",action="store_true")
     args = parser.parse_args()
+    if args.persist and not args.evaluate:
+        parser.error('--persist requires --evaluate')
+    if args.evaluate and not args.sample_count:
+        parser.error('--evaluate requires --sample-count 100 or 1000')
+    if not args.evaluate and not args.out:
+        parser.error('Stage-1 manifest mode requires --out')
     from ..database import get_engine
     engine = get_engine()
     run = load_run_candidates(engine,args.run_id)
     config=load_scenario_config(args.config)
+    if args.evaluate:
+        config['sample_count'] = args.sample_count
+        report = evaluate_monte_carlo(run['input_snapshot'],run['candidates'],config)
+        report['run_id'] = run['run_id']
+        report['scenario_config'] = config
+        report['candidate_refs'] = [{key: candidate.get(key) for key in
+            ('label','candidate_id','schedule_signature','freeze_signature')}
+            for candidate in run['candidates']]
+        analysis_id = persist_risk_analysis(engine,report) if args.persist else None
+        print(json.dumps(dict(run_id=run['run_id'],analysis_id=analysis_id,
+            scenario_count=report['scenario_count'],risk_status=report['risk_status'],
+            coverage_by_candidate=report['coverage_by_candidate'],
+            full_distribution_available=report['full_distribution_available'],
+            risk_by_candidate=report['risk_by_candidate'],
+            conditional_risk_by_candidate=report['conditional_risk_by_candidate'],
+            failures=[{k:v for k,v in item.items() if k != 'physical_replay'}
+                      for item in report['failures']]), ensure_ascii=False))
+        return
     compared=compare_candidates(run["candidates"])
     call_ids=[v["call_id"] for v in run["candidates"][0]["vessel_results"]]
     scenarios=generate_scenarios(config,call_ids)

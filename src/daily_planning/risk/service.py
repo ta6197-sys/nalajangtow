@@ -39,8 +39,8 @@ def evaluate_with_adapter(
 ) -> dict:
     """Pure orchestration for a validated external scenario replay callback.
 
-    The evaluator may return actual integer cents or a replay result. Any
-    failed replay stops risk statistics and is retained with its reason.
+    The evaluator may return actual integer cents or a replay result. Failed
+    outcomes remain in coverage; full-distribution cost risk is unavailable.
     """
     if not scenarios:
         raise ValueError('At least one scenario required')
@@ -64,9 +64,19 @@ def evaluate_with_adapter(
             outcome = evaluator(candidate, scenario)
             if isinstance(outcome, Mapping):
                 outcomes[label][sid] = dict(outcome)
-                if outcome.get('status') == 'FAILED':
+                if outcome.get('status') in ('FAILED', 'MISSING'):
+                    if outcome.get('cost_cents') is not None:
+                        raise ValueError(f'Unpriced outcome has a cost: {label}/{sid}')
+                    failure_class = outcome.get('failure_class')
+                    if failure_class is None:
+                        failure_class = ('MISSING' if outcome['status'] == 'MISSING' else
+                                         'UNRESOLVED' if outcome.get('settlement_rule_status') else
+                                         'INFEASIBLE')
+                    if failure_class not in ('INFEASIBLE', 'UNRESOLVED', 'MISSING'):
+                        raise ValueError(f'Invalid failure class: {label}/{sid}')
                     failures.append(dict(candidate=label, scenario_id=sid,
                                          reason=outcome.get('failure_reason', 'Unspecified replay failure'),
+                                         failure_class=failure_class,
                                          physical_replay=outcome.get('physical_replay')))
                     continue
                 if outcome.get('status') != 'SUCCEEDED':
@@ -83,27 +93,71 @@ def evaluate_with_adapter(
                             or sum(vessel_costs[label][sid].values()) != cost):
                         raise ValueError(f'Vessel costs do not reconcile: {label}/{sid}')
             else:
+                if outcome is None:
+                    outcomes[label][sid] = {'status': 'MISSING', 'cost_cents': None}
+                    failures.append(dict(candidate=label, scenario_id=sid,
+                                         reason='MISSING_OUTCOME', failure_class='MISSING',
+                                         physical_replay=None))
+                    continue
                 cost = outcome
             if type(cost) is not int or cost < 0:
                 raise ValueError("Evaluator must return validated integer cents")
             values[sid] = cost
         costs[label] = values
     count = len(scenarios)
-    failure_rates = {}
+    weights = {s["scenario_id"]: s["scenario_weight"] for s in scenarios}
+    if len(weights) != count:
+        raise ValueError('Duplicate scenario IDs')
+    failure_rates, coverage = {}, {}
     for label in costs:
-        failed = sum(item['candidate'] == label for item in failures)
+        category = {kind: sum(item['candidate'] == label and item['failure_class'] == kind
+                              for item in failures)
+                    for kind in ('UNRESOLVED', 'INFEASIBLE', 'MISSING')}
+        settled = len(costs[label])
+        physical = settled + category['UNRESOLVED']
+        failed = count - settled
+        coverage[label] = dict(physical_success=physical,
+            settlement_success=settled, unresolved=category['UNRESOLVED'],
+            infeasible=category['INFEASIBLE'], missing=category['MISSING'],
+            scenario_count=count)
+        if settled + sum(category.values()) != count:
+            raise AssertionError(f'Outcome coverage does not reconcile: {label}')
         failure_rates[label] = dict(failed_count=failed, scenario_count=count,
             failure_probability=format((Decimal(failed) / Decimal(count)).quantize(
                 Decimal('0.000001')), 'f'))
     if failures:
+        conditional = {}
+        for label, values in costs.items():
+            ids = sorted(values)
+            conditional[label] = (dict(risk_statistics(
+                [values[sid] for sid in ids],
+                [Decimal(str(weights[sid])) / sum(Decimal(str(weights[x])) for x in ids)
+                 for sid in ids], alpha=alpha),
+                conditioning='SETTLEMENT_SUCCEEDED_ONLY') if ids else None)
+        common = sorted(set.intersection(*(set(values) for values in costs.values())))
+        paired = None
+        if common:
+            total = sum(Decimal(str(weights[sid])) for sid in common)
+            paired = compare_scenario_costs(
+                {label: {sid: values[sid] for sid in common}
+                 for label, values in costs.items()},
+                weights_by_scenario={sid: str(Decimal(str(weights[sid])) / total)
+                                     for sid in common}, baseline=baseline, alpha=alpha)
+            paired['conditioning'] = 'ALL_CANDIDATES_SETTLEMENT_SUCCEEDED_ONLY'
         return dict(risk_status='FAILED_SCENARIOS', failures=failures,
                     failed_count=len(failures), scenario_count=len(scenarios),
                     failure_rates_by_candidate=failure_rates, risk_by_candidate=None,
+                    full_distribution_available=False, coverage_by_candidate=coverage,
+                    conditional_risk_by_candidate=conditional,
+                    conditional_paired_risk=paired,
                     scenario_results=outcomes, vessel_loss_by_candidate=None)
-    weights = {s["scenario_id"]: s["scenario_weight"] for s in scenarios}
     report = compare_scenario_costs(costs,weights_by_scenario=weights,baseline=baseline,alpha=alpha)
     report['risk_status'] = 'SUCCEEDED'
     report['failure_rates_by_candidate'] = failure_rates
+    report['coverage_by_candidate'] = coverage
+    report['full_distribution_available'] = True
+    report['conditional_risk_by_candidate'] = None
+    report['conditional_paired_risk'] = None
     report['failures'] = []
     report['scenario_results'] = outcomes
     report['vessel_loss_by_candidate'] = None

@@ -1,0 +1,17 @@
+.risk-panel { margin-top: 18px; }
+.risk-panel select { max-width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
+.risk-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.risk-kpis article { display: grid; gap: 6px; padding: 13px; background: #faf8f7; border: 1px solid #eee; border-radius: 8px; font-size: 12px; }
+.risk-kpis article b { font-size: 14px; }
+.risk-kpis article small { color: #765f59; }
+.risk-chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.risk-chart-grid > div { min-width: 0; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
+.risk-chart-grid h3 { font-size: 13px; margin: 3px 0 8px; }
+.risk-chart { height: 270px; width: 100%; }
+.risk-wide { grid-column: 1 / -1; }
+.risk-drill { margin-top: 18px; }
+.risk-drill table { width: 100%; }
+@media (max-width: 900px) {
+  .risk-kpis, .risk-chart-grid { grid-template-columns: 1fr; }
+  .risk-wide { grid-column: auto; }
+}

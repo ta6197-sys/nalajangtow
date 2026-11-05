@@ -56,12 +56,34 @@ class ApiDocsTest(unittest.TestCase):
         self.assertEqual(routes,documented)
         operation_ids=[op['operationId'] for methods in spec['paths'].values() for op in methods.values()]
         self.assertEqual(len(operation_ids),len(set(operation_ids)))
-        self.assertEqual(len(spec['paths']),13)
+        self.assertEqual(len(spec['paths']),16)
+        self.assertTrue(all('get' in spec['paths'][path] and 'post' not in spec['paths'][path]
+            for path in ('/api/risk/analyses','/api/risk/analyses/{analysis_id}',
+                         '/api/risk/analyses/{analysis_id}/scenarios/{scenario_id}')))
 
     def test_unknown_assets_do_not_expose_other_files(self):
         for path in ('/docs/manifest.json','/docs/../.env','/docs/anything.js'):
             with self.subTest(path=path),self.assertRaises(HTTPError) as exc:urlopen(self.origin+path)
             self.assertEqual(exc.exception.code,404)
+
+    def test_risk_get_routes_are_read_only_and_assets_are_local(self):
+        for route in ('/assets/echarts.min.js','/assets/risk_charts.js','/assets/risk.css'):
+            with urlopen(self.origin+route) as response:
+                self.assertEqual(response.status,200)
+                self.assertTrue(response.read())
+        with (patch.object(web_app,'list_risk_analyses',return_value={'run_id':'x','analyses':[]}) as listed,
+              patch.object(web_app,'get_risk_distribution_payload',return_value={'analysis_id':'x'}) as analysis,
+              patch.object(web_app,'get_risk_scenario_payload',return_value={'scenario_id':'s'}) as scenario,
+              patch.object(web_app,'plan_next',side_effect=AssertionError('Risk GET must not plan'))):
+            paths=('/api/risk/analyses?run_id=00000000-0000-0000-0000-000000000001',
+                   '/api/risk/analyses/00000000-0000-0000-0000-000000000002',
+                   '/api/risk/analyses/00000000-0000-0000-0000-000000000002/scenarios/s')
+            for route in paths:
+                with urlopen(self.origin+route) as response:
+                    self.assertEqual(response.status,200)
+            listed.assert_called_once()
+            analysis.assert_called_once()
+            scenario.assert_called_once()
 
     def test_vendored_asset_integrity(self):
         root=ROOT/'web/vendor/swagger-ui'
@@ -69,6 +91,11 @@ class ApiDocsTest(unittest.TestCase):
         self.assertEqual(manifest['package'],'swagger-ui-dist')
         for name,digest in manifest['files'].items():
             self.assertEqual(hashlib.sha256((root/name).read_bytes()).hexdigest(),digest)
+        echarts=ROOT/'web/vendor/echarts'
+        manifest=json.loads((echarts/'manifest.json').read_text())
+        self.assertEqual(manifest['package'],'echarts')
+        self.assertEqual(hashlib.sha256((echarts/'echarts.min.js').read_bytes()).hexdigest(),
+                         manifest['sha256'])
 
 
 if __name__=='__main__':unittest.main()

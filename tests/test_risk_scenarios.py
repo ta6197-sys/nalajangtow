@@ -84,6 +84,32 @@ class ScenarioTest(unittest.TestCase):
                          '0.500000')
         self.assertEqual(report['failure_rates_by_candidate']['A']['failed_count'], 0)
         self.assertEqual(report['failures'][0]['scenario_id'], 's2')
+        self.assertFalse(report['full_distribution_available'])
+        self.assertIsNone(report['risk_by_candidate'])
+        self.assertEqual(report['coverage_by_candidate']['B'], dict(
+            physical_success=1, settlement_success=1, unresolved=0,
+            infeasible=1, missing=0, scenario_count=2))
+        self.assertEqual(report['conditional_risk_by_candidate']['B']['sample_count'], 1)
+
+    def test_unresolved_and_missing_outcomes_never_enter_full_cost_risk(self):
+        scenarios = [{'scenario_id': f's{x}', 'scenario_weight': '0.333333333333333'}
+                     for x in range(3)]
+        def callback(candidate, scenario):
+            sid = scenario['scenario_id']
+            if candidate['label'] == 'B' and sid == 's1':
+                return dict(status='FAILED', cost_cents=None,
+                            failure_class='UNRESOLVED', physical_success=True,
+                            settlement_success=False,
+                            settlement_rule_status='UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
+            if candidate['label'] == 'C' and sid == 's2':
+                return None
+            return dict(status='SUCCEEDED', cost_cents=100)
+        report = evaluate_with_adapter([{'label': x} for x in 'ABC'], scenarios, callback)
+        self.assertFalse(report['full_distribution_available'])
+        self.assertEqual(report['coverage_by_candidate']['B']['physical_success'], 3)
+        self.assertEqual(report['coverage_by_candidate']['B']['unresolved'], 1)
+        self.assertEqual(report['coverage_by_candidate']['C']['missing'], 1)
+        self.assertEqual(report['conditional_paired_risk']['scenario_count'], 1)
 
     def test_real_seeded_replay_reports_vessel_losses_and_paired_metrics(self):
         from .test_risk_arrival_replay import fixture

@@ -123,3 +123,57 @@ operation_event = sa.Table(
                        name='ck_operation_event_kind'),
     sa.CheckConstraint("length(trim(reason)) > 0", name='ck_operation_event_reason'),
 )
+
+
+risk_analysis = sa.Table(
+    'risk_analysis', metadata, ident('analysis_id'),
+    sa.Column('run_id', UUID(as_uuid=True), sa.ForeignKey('planning_run.run_id'), nullable=False),
+    sa.Column('input_snapshot_hash', sa.Text, nullable=False),
+    sa.Column('analysis_fingerprint', sa.Text, nullable=False, unique=True),
+    sa.Column('result_hash', sa.Text, nullable=False),
+    sa.Column('replay_version', sa.Text, nullable=False),
+    sa.Column('contract_rule_version', sa.Text, nullable=False),
+    sa.Column('model_id', sa.Text, nullable=False),
+    sa.Column('scenario_config', JSONB, nullable=False),
+    sa.Column('candidate_refs', JSONB, nullable=False),
+    sa.Column('summary', JSONB, nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False,
+              server_default=sa.func.now()),
+)
+
+risk_scenario = sa.Table(
+    'risk_scenario', metadata, ident('risk_scenario_id'),
+    sa.Column('analysis_id', UUID(as_uuid=True), sa.ForeignKey('risk_analysis.analysis_id'), nullable=False),
+    sa.Column('scenario_id', sa.Text, nullable=False),
+    sa.Column('payload', JSONB, nullable=False),
+    sa.Column('content_hash', sa.Text, nullable=False),
+    sa.UniqueConstraint('analysis_id', 'scenario_id', name='uq_risk_scenario'),
+)
+
+risk_candidate_outcome = sa.Table(
+    'risk_candidate_outcome', metadata, ident('outcome_id'),
+    sa.Column('analysis_id', UUID(as_uuid=True), sa.ForeignKey('risk_analysis.analysis_id'), nullable=False),
+    sa.Column('scenario_id', sa.Text, nullable=False),
+    sa.Column('candidate_id', UUID(as_uuid=True), sa.ForeignKey('schedule_candidate.candidate_id'), nullable=False),
+    sa.Column('label', sa.Text, nullable=False),
+    sa.Column('status', sa.Text, nullable=False),
+    sa.Column('cost_cents', sa.BigInteger),
+    sa.Column('failure_class', sa.Text),
+    sa.Column('payload', JSONB, nullable=False),
+    sa.Column('content_hash', sa.Text, nullable=False),
+    sa.ForeignKeyConstraint(['analysis_id', 'scenario_id'],
+                            ['risk_scenario.analysis_id', 'risk_scenario.scenario_id']),
+    sa.UniqueConstraint('analysis_id', 'scenario_id', 'candidate_id', name='uq_risk_outcome'),
+    sa.CheckConstraint("(status = 'SUCCEEDED' AND cost_cents IS NOT NULL AND cost_cents >= 0) OR "
+                       "(status IN ('FAILED','MISSING') AND cost_cents IS NULL AND failure_class IS NOT NULL)",
+                       name='ck_risk_outcome_status'),
+)
+
+risk_vessel_result = sa.Table(
+    'risk_vessel_result', metadata, ident('vessel_result_id'),
+    sa.Column('outcome_id', UUID(as_uuid=True), sa.ForeignKey('risk_candidate_outcome.outcome_id'), nullable=False),
+    sa.Column('call_id', sa.Text, nullable=False),
+    sa.Column('payload', JSONB, nullable=False),
+    sa.Column('content_hash', sa.Text, nullable=False),
+    sa.UniqueConstraint('outcome_id', 'call_id', name='uq_risk_vessel_result'),
+)
