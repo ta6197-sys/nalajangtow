@@ -133,6 +133,43 @@ class ArrivalReplayTest(unittest.TestCase):
         self.assertEqual([r['work_start_at'] for r in result['vessel_results']],
                          [r['work_start_at'] for r in candidate['vessel_results']])
 
+    def test_work_multiplier_delays_next_vessel_without_changing_cargo_kg(self):
+        snap, candidate = fixture()
+        scenario = dict(scenario_id='work-small', call_shocks={
+            'RISK-001': {'work_duration_multiplier': '2'}})
+        result = evaluate_scenario(snap, candidate, scenario)
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        before = {r['call_id']: r for r in candidate['vessel_results']}
+        after = {r['call_id']: r for r in result['vessel_results']}
+        self.assertEqual(after['RISK-001']['completion_at'], '2026-11-02T05:00:00+09:00')
+        self.assertGreater(local_time(after['RISK-002']['work_start_at']),
+                           local_time(before['RISK-002']['work_start_at']))
+        self.assertEqual(next(c for c in snap['calls'] if c['call_id'] == 'RISK-001')
+                         ['cargo_quantity_kg'], 120000)
+        self.assertGreater(result['cost_cents'], candidate['cost_cents'])
+
+    def test_subminute_completion_retains_physical_seconds_but_has_no_cost(self):
+        snap, candidate = fixture()
+        scenario = dict(scenario_id='work-seconds', call_shocks={
+            'RISK-001': {'work_duration_multiplier': '1.005'}})
+        result = evaluate_scenario(snap, candidate, scenario)
+        self.assertEqual(result['status'], 'FAILED')
+        self.assertIsNone(result['cost_cents'])
+        self.assertEqual(result['settlement_rule_status'], 'UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
+        row = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-001')
+        self.assertEqual(row['completion_at'], '2026-11-02T03:00:36+09:00')
+        following = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-002')
+        self.assertFalse(following['work_start_at'] < row['berth_release_at'])
+
+    def test_second_precision_arrival_is_preserved_without_fabricated_cost(self):
+        snap, candidate = fixture()
+        result = evaluate_scenario(snap, candidate, dict(scenario_id='arrival-seconds',
+            call_shocks={'RISK-001': {'available_at_shift_seconds': 17}}))
+        self.assertEqual(result['status'], 'FAILED')
+        self.assertIsNone(result['cost_cents'])
+        row = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-001')
+        self.assertEqual(row['work_start_at'], '2026-11-02T01:00:17+09:00')
+
     def test_frozen_arrival_conflict_is_explicit_failure_and_stops_statistics(self):
         snap = snapshot()
         baseline = evaluate_baseline(snap, [dict(call_id='RISK-001', berth_id='BERTH-01',

@@ -9,11 +9,14 @@ from typing import Any, Mapping
 from weather_optimizer import WeatherSeries
 
 from ..berth_phases import occupancy_bounds
+from ..bootstrap_db import kst_time
 from ..context import engine_calls, local_time, signature, verify_snapshot
 from ..daylight import WORK_POLICY, daylight_berthing_start
 from ..evaluation import evaluate_baseline, replay_row
+from ..sk_physical_v3 import assert_eligible
 from rolling_horizon import RULE
-from weather_optimizer import at_datetime
+
+from .physical import berth_overlap, first_workable_start, scaled_work_seconds, work_timeline
 
 
 NO_SHOCK_BASELINE = "NO_SHOCK_BASELINE"
@@ -87,6 +90,57 @@ def _failure(scenario, candidate, reason):
                 recovery_mode='NO_RECOVERY', constraint_violations=[str(reason)])
 
 
+def _physical_replay(snapshot, candidate, shocks, weather):
+    """Retain the complete second-precision fixed order when pricing is undefined."""
+    begin = local_time(snapshot['as_of_at'])
+    freeze = begin + timedelta(hours=24)
+    daylight = snapshot.get('berthing_policy') in ('DAYLIGHT_WEATHER_V1', WORK_POLICY)
+    committed = {c['call_id'] for c in snapshot['commits']}
+    calls = {c['call_id']: c for c in snapshot['calls']}
+    by_berth = {}
+    for row in candidate['vessel_results']:
+        by_berth.setdefault(row['berth_id'], []).append(row)
+    rows = []
+    for berth, ordered in by_berth.items():
+        released = None
+        for old in sorted(ordered, key=lambda r: (kst_time(r['work_start_at']), r['call_id'])):
+            cid = old['call_id']
+            assert_eligible(snapshot, cid, berth)
+            shock = shocks.get(cid, {})
+            shift = timedelta(minutes=shock.get('available_at_shift_minutes', 0),
+                              seconds=shock.get('available_at_shift_seconds', 0))
+            available = kst_time(calls[cid]['available_at']) + shift
+            original_start = kst_time(old['work_start_at'])
+            proposed = max(original_start, available, released or original_start)
+            frozen = cid in committed or original_start.replace(tzinfo=None) < freeze
+            if frozen and proposed > original_start:
+                raise ValueError(f'FROZEN_ASSIGNMENT_CONFLICT: {cid} arrival or berth occupancy')
+            start = first_workable_start(proposed.replace(tzinfo=None), weather,
+                                         daylight=daylight and cid not in committed)
+            seconds = scaled_work_seconds(calls[cid]['work_minutes'],
+                                          shock.get('work_duration_multiplier', 1))
+            timeline = work_timeline(start, seconds, weather,
+                                     daylight=snapshot.get('berthing_policy') == WORK_POLICY
+                                     and cid not in committed)
+            completion = kst_time(timeline['completion_at'])
+            release = completion + timedelta(minutes=old.get('unberthing_minutes', 0))
+            if frozen and (kst_time(old['completion_at']) != completion
+                           or kst_time(old['berth_release_at']) != release):
+                raise ValueError(f'FROZEN_ASSIGNMENT_CONFLICT: {cid} completion changed')
+            row = dict(call_id=cid, berth_id=berth,
+                       work_start_at=kst_time(timeline['work_start_at']).isoformat(),
+                       completion_at=completion.isoformat(), berth_release_at=release.isoformat(),
+                       cargo_quantity_kg=calls[cid]['cargo_quantity_kg'],
+                       work_intervals=timeline['work_intervals'],
+                       weather_pause_intervals=timeline['weather_pause_intervals'],
+                       night_pause_intervals=timeline['night_pause_intervals'])
+            if any(berth_overlap(row, previous) for previous in rows):
+                raise ValueError(f'BERTH_OVERLAP: {cid}')
+            rows.append(row)
+            released = release
+    return sorted(rows, key=lambda r: r['call_id'])
+
+
 def _replay_arrivals(snapshot, candidate, scenario, weather):
     shocks = scenario.get('call_shocks', {})
     if not isinstance(shocks, Mapping):
@@ -99,17 +153,26 @@ def _replay_arrivals(snapshot, candidate, scenario, weather):
     if scenario.get('weather_block_onset_offset_minutes') not in (None, 0):
         raise ValueError('Weather-block onset is unsupported')
     temporary = deepcopy(snapshot)
+    subminute_work = False
     for call in temporary['calls']:
         cid = call['call_id']
         shock = shocks.get(cid, {})
         if not isinstance(shock, Mapping):
             raise ValueError(f'Invalid call shock: {cid}')
         shift = shock.get('available_at_shift_minutes', 0)
-        if type(shift) is not int:
-            raise ValueError(f'Arrival shift must be integer minutes: {cid}')
-        if shock.get('work_duration_multiplier', 1) != 1:
-            raise ValueError(f'Work duration shock is unsupported: {cid}')
-        call['available_at'] = (at_datetime(call['available_at']) + timedelta(minutes=shift)).isoformat()
+        shift_seconds = shock.get('available_at_shift_seconds', 0)
+        if type(shift) is not int or type(shift_seconds) is not int:
+            raise ValueError(f'Arrival shift must be integer minutes/seconds: {cid}')
+        seconds = scaled_work_seconds(call['work_minutes'], shock.get('work_duration_multiplier', 1))
+        if seconds % 60:
+            subminute_work = True
+        else:
+            call['work_minutes'] = seconds // 60
+        call['available_at'] = (kst_time(call['available_at']) + timedelta(
+            minutes=shift, seconds=shift_seconds)).isoformat()
+    if subminute_work or any(kst_time(c['available_at']).second for c in temporary['calls']):
+        physical = _physical_replay(snapshot, candidate, shocks, weather)
+        raise UnresolvedSubminuteSettlement(physical)
     temporary['snapshot_hash'] = signature({k: v for k, v in temporary.items() if k != 'snapshot_hash'})
     calls = {c['call_id']: c for c in engine_calls(temporary)}
     begin = local_time(snapshot['as_of_at'])
@@ -155,6 +218,12 @@ def _replay_arrivals(snapshot, candidate, scenario, weather):
     return result['evaluation']
 
 
+class UnresolvedSubminuteSettlement(ValueError):
+    def __init__(self, physical_replay: list[dict]):
+        super().__init__('UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
+        self.physical_replay = physical_replay
+
+
 def evaluate_scenario(
     snapshot: Mapping[str, Any],
     candidate: Mapping[str, Any],
@@ -183,6 +252,10 @@ def evaluate_scenario(
     else:
         try:
             evaluation = _replay_arrivals(snapshot, candidate, scenario, weather)
+        except UnresolvedSubminuteSettlement as exc:
+            return dict(_failure(scenario, candidate, exc),
+                        physical_replay=exc.physical_replay,
+                        settlement_rule_status='UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
         except (ValueError, KeyError) as exc:
             return _failure(scenario, candidate, exc)
     summary = evaluation["summary"]
