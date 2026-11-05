@@ -1,0 +1,58 @@
+import json
+import unittest
+from pathlib import Path
+
+from src.daily_planning.risk.scenarios import generate_scenarios, load_scenario_config
+from src.daily_planning.risk.service import evaluate_with_adapter
+from src.daily_planning.risk.replay import evaluate_scenario, ScenarioReplayNotImplemented
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class ScenarioTest(unittest.TestCase):
+    def setUp(self):
+        self.config = load_scenario_config(ROOT / 'config/risk_synthetic_v1.json')
+        self.config['sample_count'] = 11
+
+    def test_seed_and_call_order_reproducible(self):
+        a = generate_scenarios(self.config, ['DEM-2', 'DEM-1'])
+        b = generate_scenarios(self.config, ['DEM-1', 'DEM-2'])
+        self.assertEqual(a,b)
+        self.assertEqual(len(a),11)
+        self.assertEqual(a[0]['provenance'],'SYNTHETIC_ASSUMPTION')
+        self.assertEqual(len({s['scenario_id'] for s in a}),11)
+
+    def test_seed_or_config_change_changes_scenarios(self):
+        a = generate_scenarios(self.config,['DEM-1'])
+        self.config['seed'] = 43
+        b = generate_scenarios(self.config,['DEM-1'])
+        self.assertNotEqual(a,b)
+
+    def test_bad_config_and_calls(self):
+        self.config['arrival_shift_minutes'] = {'0':0.8,'60':0.3}
+        with self.assertRaises(ValueError):
+            generate_scenarios(self.config,['DEM-1'])
+        self.config = load_scenario_config(ROOT / 'config/risk_synthetic_v1.json')
+        with self.assertRaises(ValueError):
+            generate_scenarios(self.config,['DEM-1','DEM-1'])
+
+    def test_evaluation_requires_actual_callback(self):
+        with self.assertRaises(ScenarioReplayNotImplemented):
+            evaluate_scenario({}, {}, {'scenario_id':'s1'})
+
+    def test_synthetic_replay_callback_only_for_unit_test(self):
+        # This validates orchestration and CVaR with a *dummy unit-test callback*.
+        # The demo callback is NOT a terminal demurrage calculator.
+        configs = [{'scenario_id':'s1','scenario_weight':'0.6'},
+                   {'scenario_id':'s2','scenario_weight':'0.4'}]
+        def stub(candidate, scenario):
+            return {'A':{'s1':100,'s2':200},'B':{'s1':90,'s2':220}}[candidate['label']][scenario['scenario_id']]
+        report = evaluate_with_adapter([{'label':'A'},{'label':'B'}],configs,stub)
+        self.assertEqual(report['risk_by_candidate']['A']['expected_cost_cents'],'140.000000')
+        self.assertEqual(report['risk_by_candidate']['B']['probability_cheaper_than_baseline'],'0.600000')
+        self.assertEqual(report['provenance'],'SYNTHETIC_ASSUMPTION')
+
+
+if __name__ == '__main__':
+    unittest.main()
