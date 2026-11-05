@@ -49,6 +49,7 @@ function render(){if(!state)return;
   $('operateButton').hidden=!current?.applied_candidate_id||current?.actual_day_cents!=null;
   renderScheduler();
   renderTradeoff(current);
+  loadRisk(current?.run_id);
   const done=state.history.filter(r=>r.actual_day_cents!=null);
   $('history').innerHTML=done.length?`<p>각 날짜는 당시 정책으로 보존됩니다. ‘주간 작업’은 야간 중단, ‘주간 시작’은 시작시각만 제한한 과거 정책입니다.</p><table><thead><tr><th>날짜</th><th>정책</th><th>A 평가</th><th>B 평가</th><th>C 평가</th><th>적용</th><th>당일 실제</th><th>누적 실제</th><th>완료</th></tr></thead><tbody>${done.map(r=>{const a=Object.fromEntries(r.candidates.map(c=>[c.label,c]));const applied=r.candidates.find(c=>c.candidate_id===r.applied_candidate_id);return `<tr><td>${r.date}</td><td>${r.berthing_policy==='DAYLIGHT_WORK_V2'?'주간 작업':r.berthing_policy==='DAYLIGHT_WEATHER_V1'?'주간 시작':'기존'}</td><td>${money(a.A?.cost_cents)}</td><td>${money(a.B?.cost_cents)}</td><td>${money(a.C?.cost_cents)}</td><td>${applied?.label||'—'}</td><td>${money(r.actual_day_cents)}</td><td>${money(r.accumulated_cents)}</td><td>${r.completed_count}</td></tr>`}).join('')}</tbody></table>`:'아직 운영한 날짜가 없습니다.';
 }
@@ -111,6 +112,7 @@ function navigate(page){
   document.querySelectorAll('.page').forEach(el=>el.classList.toggle('active',el.id===`page-${page}`));
   document.querySelectorAll('nav [data-page]').forEach(el=>{el.classList.toggle('current',el.dataset.page===page);el.setAttribute('aria-current',el.dataset.page===page?'page':'false')});
   window.scrollTo({top:0,behavior:'instant'});
+  if(page==='compare')setTimeout(()=>window.DockRiskCharts?.resize(),0);
 }
 function summaryRow(label,value){return `<div class="availability-row"><div><b>${esc(label)}</b></div><span>${esc(value)}</span></div>`}
 function renderScheduler(){

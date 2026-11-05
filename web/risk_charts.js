@@ -1,7 +1,4 @@
-/* Stage 2 standalone ECharts renderer; production wiring pending.
- * Requires vetted local ECharts bundle (window.echarts). No CDN included.
- * Does NOT compute financial statistics; uses Python-produced JSON.
- */
+/* Read-only ECharts views of persisted Risk outcomes. No CDN or client pricing. */
 (function (root) {
   'use strict';
   const instances = new Map();
@@ -68,5 +65,67 @@
     for (const chart of instances.values()) chart.dispose();
     instances.clear();
   }
-  root.DockRiskCharts = { riskBar, vesselWaterfall, scenarioHistogram, dispose };
+  function empty(id, message) {
+    mount(id).setOption({title:{text:message,left:'center',top:'middle',
+      textStyle:{fontSize:12,fontWeight:'normal',color:'#777'}},series:[]},true);
+  }
+  function draw(report, vesselLabel='B') {
+    const summary=report.summary;
+    const risk=summary.risk_by_candidate||summary.conditional_risk_by_candidate;
+    const labels=['A','B','C'];
+    if (risk && labels.some(label=>risk[label])) {
+      mount('risk-comparison-chart').setOption({
+        tooltip:{trigger:'axis'},legend:{top:0},grid:{left:75,right:20,top:42,bottom:38},
+        xAxis:{type:'category',data:labels},yAxis:{type:'value',name:'USD',scale:true},
+        series:[
+          {name:'기대 비용',type:'bar',data:labels.map(label=>dollars(risk[label]?.expected_cost_cents))},
+          {name:'CVaR 95%',type:'bar',data:labels.map(label=>dollars(risk[label]?.cvar_cents))}
+        ]},true);
+    } else empty('risk-comparison-chart','정산된 비용 없음');
+    const settled=report.outcomes.filter(row=>row.status==='SUCCEEDED'&&Number.isInteger(row.cost_cents));
+    if (settled.length) {
+      const values=settled.map(row=>row.cost_cents);
+      const low=Math.min(...values),high=Math.max(...values);
+      const width=Math.max(1,Math.ceil((high-low+1)/10));
+      const buckets=Array.from({length:Math.min(10,Math.ceil((high-low+1)/width))},(_,i)=>low+i*width);
+      mount('risk-distribution-chart').setOption({tooltip:{trigger:'axis'},legend:{top:0},
+        grid:{left:60,right:18,top:38,bottom:60},
+        xAxis:{type:'category',data:buckets.map(value=>moneyLabel(value)),axisLabel:{rotate:35}},
+        yAxis:{type:'value',name:'건'},
+        series:labels.map(label=>({name:label,type:'bar',data:buckets.map(start=>
+          settled.filter(row=>row.label===label&&row.cost_cents>=start&&row.cost_cents<start+width).length)}))},true);
+      const tails=labels.map(label=>settled.filter(row=>row.label===label)
+        .map(row=>row.cost_cents).sort((a,b)=>b-a));
+      const n=Math.max(...tails.map(list=>Math.max(1,Math.ceil(list.length*0.05))));
+      mount('risk-tail-chart').setOption({tooltip:{trigger:'axis'},legend:{top:0},
+        grid:{left:70,right:20,top:38,bottom:36},
+        xAxis:{type:'category',name:'상위 순위',data:Array.from({length:n},(_,i)=>i+1)},
+        yAxis:{type:'value',name:'USD',scale:true},
+        series:labels.map((label,i)=>({name:label,type:'line',data:tails[i].slice(0,n).map(dollars)}))},true);
+    } else {
+      empty('risk-distribution-chart','정산된 시나리오 없음');
+      empty('risk-tail-chart','정산된 시나리오 없음');
+    }
+    const coverage=summary.coverage_by_candidate||{};
+    mount('risk-failure-chart').setOption({tooltip:{trigger:'axis'},legend:{top:0},
+      grid:{left:50,right:20,top:38,bottom:35},
+      xAxis:{type:'category',data:labels},yAxis:{type:'value',name:'건'},
+      series:[['물리 불가능','infeasible'],['정산 미정','unresolved'],['결과 누락','missing']]
+        .map(([name,key])=>({name,type:'bar',stack:'failure',data:labels.map(label=>coverage[label]?.[key]??0)}))},true);
+    const vessel=summary.vessel_loss_by_candidate?.[vesselLabel];
+    if (vessel) {
+      const entries=Object.entries(vessel).sort((a,b)=>
+        Math.abs(Number(b[1].paired_loss_risk.expected_cost_cents))-
+        Math.abs(Number(a[1].paired_loss_risk.expected_cost_cents)));
+      mount('risk-vessel-chart').setOption({tooltip:{trigger:'axis'},
+        grid:{left:70,right:20,top:20,bottom:70},
+        xAxis:{type:'category',data:entries.map(([id])=>id),axisLabel:{rotate:35}},
+        yAxis:{type:'value',name:'A 대비 USD'},
+        series:[{type:'bar',data:entries.map(([,item])=>dollars(item.paired_loss_risk.expected_cost_cents))}]},true);
+    } else empty('risk-vessel-chart','전체 표본의 항차별 손실 통계 없음');
+    resize();
+  }
+  function moneyLabel(cents){return '$'+(cents/100).toLocaleString()}
+  function resize(){for(const chart of instances.values())chart.resize()}
+  root.DockRiskCharts = { riskBar, vesselWaterfall, scenarioHistogram, draw, resize, dispose };
 })(window);

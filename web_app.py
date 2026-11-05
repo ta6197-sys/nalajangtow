@@ -14,12 +14,13 @@ from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 from zipfile import BadZipFile, ZipFile
 from xml.etree import ElementTree as ET
 
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import NoResultFound
 from weather_optimizer import WeatherSeries
 from rolling_horizon import RULE, simulate_call
 
@@ -34,6 +35,8 @@ from src.daily_planning.operations import advance_run, confirm_candidate
 from src.daily_planning.optimization import optimize_run
 from src.daily_planning.evaluation import price_until
 from src.daily_planning.validator import normalize_contract, time_value
+from src.daily_planning.risk.api_adapter import (get_risk_distribution_payload,
+    get_risk_scenario_payload, list_risk_analyses)
 
 EXPERIMENT = os.environ.get('WEB_EXPERIMENT_KEY', 'source-daywork-v2')
 INDEX = (ROOT / 'web' / 'index.html').read_bytes()
@@ -721,10 +724,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
         static_files = {
             '/assets/app.css': ('app.css', 'text/css; charset=utf-8'),
             '/assets/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+            '/assets/risk_charts.js': ('risk_charts.js', 'text/javascript; charset=utf-8'),
+            '/assets/echarts.min.js': ('vendor/echarts/echarts.min.js', 'text/javascript; charset=utf-8'),
             '/docs': ('docs.html', 'text/html; charset=utf-8'),
             '/docs/': ('docs.html', 'text/html; charset=utf-8'),
             '/docs/init.js': ('swagger-init.js', 'text/javascript; charset=utf-8'),
@@ -768,6 +774,29 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/status':
             try:
                 self.respond(200, current_state())
+            except Exception as exc:
+                traceback.print_exc()
+                self.respond(500, {'error': str(exc)})
+        elif path == '/api/risk/analyses' or path.startswith('/api/risk/analyses/'):
+            try:
+                parts = path.strip('/').split('/')
+                if len(parts) == 3:
+                    run_id = parse_qs(parsed.query).get('run_id', [None])[0]
+                    if not run_id:
+                        raise ValueError('run_id query parameter required')
+                    payload = list_risk_analyses(ENGINE, run_id)
+                elif len(parts) == 4:
+                    payload = get_risk_distribution_payload(ENGINE, parts[3])
+                elif len(parts) == 6 and parts[4] == 'scenarios':
+                    payload = get_risk_scenario_payload(ENGINE, parts[3], unquote(parts[5]))
+                else:
+                    self.respond(404, {'error': 'Not found'})
+                    return
+                self.respond(200, payload)
+            except NoResultFound:
+                self.respond(404, {'error': 'Risk analysis or scenario not found'})
+            except (ValueError, KeyError) as exc:
+                self.respond(400, {'error': str(exc)})
             except Exception as exc:
                 traceback.print_exc()
                 self.respond(500, {'error': str(exc)})
