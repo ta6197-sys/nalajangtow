@@ -18,8 +18,9 @@ class UnresolvedSubminuteSettlement(ValueError):
 def require_minute_aligned(rows: list[dict]) -> None:
     """A physical second is retained, never rounded into a contract minute."""
     for row in rows:
-        values = [row['work_start_at'], row['completion_at']]
-        for key in ('weather_pause_intervals', 'night_pause_intervals'):
+        values = [row['work_start_at'], row['completion_at'],
+                  row.get('berth_release_at', row['completion_at'])]
+        for key in ('work_intervals', 'weather_pause_intervals', 'night_pause_intervals'):
             values.extend(time for interval in row.get(key, []) for time in interval)
         if any(kst_time(value).second or kst_time(value).microsecond for value in values):
             raise UnresolvedSubminuteSettlement(rows)

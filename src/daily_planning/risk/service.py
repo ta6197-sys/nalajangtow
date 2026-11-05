@@ -77,6 +77,8 @@ def evaluate_with_adapter(
                     failures.append(dict(candidate=label, scenario_id=sid,
                                          reason=outcome.get('failure_reason', 'Unspecified replay failure'),
                                          failure_class=failure_class,
+                                         reason_codes=outcome.get('reason_codes', []),
+                                         affected_call_ids=outcome.get('affected_call_ids', []),
                                          physical_replay=outcome.get('physical_replay')))
                     continue
                 if outcome.get('status') != 'SUCCEEDED':
@@ -108,6 +110,33 @@ def evaluate_with_adapter(
     weights = {s["scenario_id"]: s["scenario_weight"] for s in scenarios}
     if len(weights) != count:
         raise ValueError('Duplicate scenario IDs')
+    disruption = {}
+    for label, rows in outcomes.items():
+        total_weight = sum(Decimal(str(weights[sid])) for sid in rows)
+        if not total_weight:
+            disruption[label] = None
+            continue
+        disrupted = sum(Decimal(str(weights[sid])) for sid, outcome in rows.items()
+            if outcome.get('commitment_status') == 'DISRUPTED')
+        propagated = sum(Decimal(str(weights[sid])) for sid, outcome in rows.items()
+            if outcome.get('propagated_delay_call_ids'))
+        severity = sum(Decimal(str(weights[sid])) *
+            Decimal(str(outcome.get('total_start_delay_minutes', 0)))
+            for sid, outcome in rows.items())
+        disruption[label] = dict(
+            commitment_deviation_probability=format(disrupted/total_weight, '.6f'),
+            propagated_delay_probability=format(propagated/total_weight, '.6f'),
+            expected_total_start_delay_minutes=format(severity/total_weight, '.6f'),
+            max_completion_delay_minutes=max((outcome.get('max_completion_delay_minutes', 0)
+                for outcome in rows.values()), default=0))
+    failure_breakdown = {}
+    for label in costs:
+        items = [item for item in failures if item['candidate'] == label]
+        failure_breakdown[label] = {
+            'by_class': {kind: sum(item['failure_class'] == kind for item in items)
+                         for kind in ('INFEASIBLE', 'UNRESOLVED', 'MISSING')},
+            'by_reason_code': {code: sum(code in item.get('reason_codes', []) for item in items)
+                for code in sorted({code for item in items for code in item.get('reason_codes', [])})}}
     failure_rates, coverage = {}, {}
     for label in costs:
         category = {kind: sum(item['candidate'] == label and item['failure_class'] == kind
@@ -150,7 +179,9 @@ def evaluate_with_adapter(
                     full_distribution_available=False, coverage_by_candidate=coverage,
                     conditional_risk_by_candidate=conditional,
                     conditional_paired_risk=paired,
-                    scenario_results=outcomes, vessel_loss_by_candidate=None)
+                    scenario_results=outcomes, vessel_loss_by_candidate=None,
+                    disruption_by_candidate=disruption,
+                    failure_breakdown_by_candidate=failure_breakdown)
     report = compare_scenario_costs(costs,weights_by_scenario=weights,baseline=baseline,alpha=alpha)
     report['risk_status'] = 'SUCCEEDED'
     report['failure_rates_by_candidate'] = failure_rates
@@ -160,6 +191,8 @@ def evaluate_with_adapter(
     report['conditional_paired_risk'] = None
     report['failures'] = []
     report['scenario_results'] = outcomes
+    report['disruption_by_candidate'] = disruption
+    report['failure_breakdown_by_candidate'] = failure_breakdown
     report['vessel_loss_by_candidate'] = None
     if all(len(vessel_costs[label]) == count for label in costs):
         reference = vessel_costs[baseline]
