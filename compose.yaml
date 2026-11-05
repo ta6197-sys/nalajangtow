@@ -22,7 +22,7 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_HOST: web-postgres
-      POSTGRES_DB: ulsan_clx_source_daywork_v2
+      POSTGRES_DB: Docktimize
       POSTGRES_USER: ulsan_clx
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env before starting PostgreSQL}
       WEB_EXPERIMENT_KEY: source-daywork-v2
