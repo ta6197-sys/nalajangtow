@@ -73,13 +73,12 @@ def _assert_candidate_matches_baseline(candidate: Mapping[str, Any], evaluation:
     if None in actual or len(actual) != len(actual_rows) or set(actual) != set(expected):
         raise AssertionError("NO_SHOCK_BASELINE vessel set differs from stored candidate evaluation")
     for call_id, row in expected.items():
-        stored = actual[call_id]
-        for key in ("demurrage_increment_to_completion_cents", "total_wait_minutes", "completion_at",
-                    "berth_id", "work_start_at", "assignment_kind"):
-            if stored.get(key) != row[key]:
-                raise AssertionError(
-                    f"NO_SHOCK_BASELINE {key} differs for call {call_id}"
-                )
+        if actual[call_id] != row:
+            differing = sorted(key for key in set(actual[call_id]) | set(row)
+                               if actual[call_id].get(key) != row.get(key))
+            raise AssertionError(
+                f"NO_SHOCK_BASELINE vessel evaluation differs for {call_id}: {differing}"
+            )
 
 
 def _failure(scenario, candidate, reason):

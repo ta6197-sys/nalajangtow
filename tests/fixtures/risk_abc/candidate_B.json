@@ -1,0 +1,822 @@
+{
+  "cost_cents": 6736250,
+  "wait_minutes": 2170,
+  "vessel_results": [
+    {
+      "call_id": "DEM-0011",
+      "berth_id": "BERTH-04",
+      "completion_at": "2026-11-13T07:41:00+09:00",
+      "work_start_at": "2026-11-05T06:48:00+09:00",
+      "work_intervals": [
+        [
+          "2026-11-05T06:48:00+09:00",
+          "2026-11-05T17:24:00+09:00"
+        ],
+        [
+          "2026-11-06T06:49:00+09:00",
+          "2026-11-06T09:30:00+09:00"
+        ],
+        [
+          "2026-11-06T10:00:00+09:00",
+          "2026-11-06T17:23:00+09:00"
+        ],
+        [
+          "2026-11-07T06:50:00+09:00",
+          "2026-11-07T13:00:00+09:00"
+        ],
+        [
+          "2026-11-07T13:30:00+09:00",
+          "2026-11-07T17:22:00+09:00"
+        ],
+        [
+          "2026-11-08T06:51:00+09:00",
+          "2026-11-08T15:30:00+09:00"
+        ],
+        [
+          "2026-11-09T06:52:00+09:00",
+          "2026-11-09T12:00:00+09:00"
+        ],
+        [
+          "2026-11-09T12:30:00+09:00",
+          "2026-11-09T13:00:00+09:00"
+        ],
+        [
+          "2026-11-09T13:30:00+09:00",
+          "2026-11-09T17:21:00+09:00"
+        ],
+        [
+          "2026-11-10T06:53:00+09:00",
+          "2026-11-10T08:30:00+09:00"
+        ],
+        [
+          "2026-11-10T09:30:00+09:00",
+          "2026-11-10T10:00:00+09:00"
+        ],
+        [
+          "2026-11-10T11:30:00+09:00",
+          "2026-11-10T17:20:00+09:00"
+        ],
+        [
+          "2026-11-11T06:54:00+09:00",
+          "2026-11-11T10:30:00+09:00"
+        ],
+        [
+          "2026-11-11T11:00:00+09:00",
+          "2026-11-11T17:19:00+09:00"
+        ],
+        [
+          "2026-11-12T06:55:00+09:00",
+          "2026-11-12T17:18:00+09:00"
+        ],
+        [
+          "2026-11-13T06:56:00+09:00",
+          "2026-11-13T07:41:00+09:00"
+        ]
+      ],
+      "assignment_kind": "PLANNED",
+      "berth_release_at": "2026-11-13T07:41:00+09:00",
+      "completed_at_72h": false,
+      "total_wait_minutes": 668,
+      "night_pause_minutes": 6491,
+      "accrued_before_cents": 0,
+      "work_pause_intervals": [
+        [
+          "2026-11-05T17:24:00+09:00",
+          "2026-11-06T06:49:00+09:00"
+        ],
+        [
+          "2026-11-06T09:30:00+09:00",
+          "2026-11-06T10:00:00+09:00"
+        ],
+        [
+          "2026-11-06T17:23:00+09:00",
+          "2026-11-07T06:50:00+09:00"
+        ],
+        [
+          "2026-11-07T13:00:00+09:00",
+          "2026-11-07T13:30:00+09:00"
+        ],
+        [
+          "2026-11-07T17:22:00+09:00",
+          "2026-11-08T06:51:00+09:00"
+        ],
+        [
+          "2026-11-08T15:30:00+09:00",
+          "2026-11-09T06:52:00+09:00"
+        ],
+        [
+          "2026-11-09T12:00:00+09:00",
+          "2026-11-09T12:30:00+09:00"
+        ],
+        [
+          "2026-11-09T13:00:00+09:00",
+          "2026-11-09T13:30:00+09:00"
+        ],
+        [
+          "2026-11-09T17:21:00+09:00",
+          "2026-11-10T06:53:00+09:00"
+        ],
+        [
+          "2026-11-10T08:30:00+09:00",
+          "2026-11-10T09:30:00+09:00"
+        ],
+        [
+          "2026-11-10T10:00:00+09:00",
+          "2026-11-10T11:30:00+09:00"
+        ],
+        [
+          "2026-11-10T17:20:00+09:00",
+          "2026-11-11T06:54:00+09:00"
+        ],
+        [
+          "2026-11-11T10:30:00+09:00",
+          "2026-11-11T11:00:00+09:00"
+        ],
+        [
+          "2026-11-11T17:19:00+09:00",
+          "2026-11-12T06:55:00+09:00"
+        ],
+        [
+          "2026-11-12T17:18:00+09:00",
+          "2026-11-13T06:56:00+09:00"
+        ]
+      ],
+      "contract_clock_at_24h": {
+        "clock_start_at": "2026-11-05T13:40:00",
+        "despatch_cents": 0,
+        "allowed_minutes": 7200,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "0.0",
+        "pre_excluded_minutes": "0.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "7200.0",
+        "net_owner_receivable_cents": 0
+      },
+      "contract_clock_at_72h": {
+        "clock_start_at": "2026-11-05T13:40:00",
+        "despatch_cents": 0,
+        "allowed_minutes": 7200,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "2030.0",
+        "pre_excluded_minutes": "30.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "5170.0",
+        "net_owner_receivable_cents": 0
+      },
+      "night_pause_intervals": [
+        [
+          "2026-11-05T17:24:00+09:00",
+          "2026-11-06T06:49:00+09:00"
+        ],
+        [
+          "2026-11-06T17:23:00+09:00",
+          "2026-11-07T06:50:00+09:00"
+        ],
+        [
+          "2026-11-07T17:22:00+09:00",
+          "2026-11-08T06:51:00+09:00"
+        ],
+        [
+          "2026-11-08T17:22:00+09:00",
+          "2026-11-09T06:52:00+09:00"
+        ],
+        [
+          "2026-11-09T17:21:00+09:00",
+          "2026-11-10T06:53:00+09:00"
+        ],
+        [
+          "2026-11-10T17:20:00+09:00",
+          "2026-11-11T06:54:00+09:00"
+        ],
+        [
+          "2026-11-11T17:19:00+09:00",
+          "2026-11-12T06:55:00+09:00"
+        ],
+        [
+          "2026-11-12T17:18:00+09:00",
+          "2026-11-13T06:56:00+09:00"
+        ]
+      ],
+      "weather_pause_minutes": 412,
+      "remaining_wait_minutes": 668,
+      "weather_pause_intervals": [
+        [
+          "2026-11-06T09:30:00+09:00",
+          "2026-11-06T10:00:00+09:00"
+        ],
+        [
+          "2026-11-07T13:00:00+09:00",
+          "2026-11-07T13:30:00+09:00"
+        ],
+        [
+          "2026-11-08T15:30:00+09:00",
+          "2026-11-08T17:22:00+09:00"
+        ],
+        [
+          "2026-11-09T12:00:00+09:00",
+          "2026-11-09T12:30:00+09:00"
+        ],
+        [
+          "2026-11-09T13:00:00+09:00",
+          "2026-11-09T13:30:00+09:00"
+        ],
+        [
+          "2026-11-10T08:30:00+09:00",
+          "2026-11-10T09:30:00+09:00"
+        ],
+        [
+          "2026-11-10T10:00:00+09:00",
+          "2026-11-10T11:30:00+09:00"
+        ],
+        [
+          "2026-11-11T10:30:00+09:00",
+          "2026-11-11T11:00:00+09:00"
+        ]
+      ],
+      "remaining_work_kg_at_24h": 36000000,
+      "remaining_work_kg_at_72h": 26441114,
+      "weather_pause_minutes_72h": 30,
+      "contract_clock_at_completion": {
+        "clock_start_at": "2026-11-05T13:40:00",
+        "despatch_cents": 0,
+        "allowed_minutes": 7200,
+        "demurrage_cents": 2236875,
+        "demurrage_minutes": "3579.0",
+        "first_demurrage_at": "2026-11-10T20:02:00",
+        "laytime_used_minutes": "7200.0",
+        "pre_excluded_minutes": "382.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "0.0",
+        "net_owner_receivable_cents": 2236875
+      },
+      "despatch_to_completion_cents": 0,
+      "demurrage_increment_24h_cents": 0,
+      "demurrage_increment_72h_cents": 0,
+      "remaining_work_minutes_at_24h": 4670,
+      "remaining_work_minutes_at_72h": 3430,
+      "total_settlement_demurrage_cents": 2236875,
+      "demurrage_increment_to_completion_cents": 2236875
+    },
+    {
+      "call_id": "DEM-0047",
+      "berth_id": "BERTH-03",
+      "completion_at": "2026-11-10T12:43:00+09:00",
+      "work_start_at": "2026-11-05T06:48:00+09:00",
+      "work_intervals": [
+        [
+          "2026-11-05T06:48:00+09:00",
+          "2026-11-05T17:24:00+09:00"
+        ],
+        [
+          "2026-11-06T06:49:00+09:00",
+          "2026-11-06T09:30:00+09:00"
+        ],
+        [
+          "2026-11-06T10:00:00+09:00",
+          "2026-11-06T17:23:00+09:00"
+        ],
+        [
+          "2026-11-07T06:50:00+09:00",
+          "2026-11-07T13:00:00+09:00"
+        ],
+        [
+          "2026-11-07T13:30:00+09:00",
+          "2026-11-07T17:22:00+09:00"
+        ],
+        [
+          "2026-11-08T06:51:00+09:00",
+          "2026-11-08T15:30:00+09:00"
+        ],
+        [
+          "2026-11-09T06:52:00+09:00",
+          "2026-11-09T12:00:00+09:00"
+        ],
+        [
+          "2026-11-09T12:30:00+09:00",
+          "2026-11-09T13:00:00+09:00"
+        ],
+        [
+          "2026-11-09T13:30:00+09:00",
+          "2026-11-09T17:21:00+09:00"
+        ],
+        [
+          "2026-11-10T06:53:00+09:00",
+          "2026-11-10T08:30:00+09:00"
+        ],
+        [
+          "2026-11-10T09:30:00+09:00",
+          "2026-11-10T10:00:00+09:00"
+        ],
+        [
+          "2026-11-10T11:30:00+09:00",
+          "2026-11-10T12:43:00+09:00"
+        ]
+      ],
+      "assignment_kind": "PLANNED",
+      "berth_release_at": "2026-11-10T12:43:00+09:00",
+      "completed_at_72h": false,
+      "total_wait_minutes": 723,
+      "night_pause_minutes": 4043,
+      "accrued_before_cents": 0,
+      "work_pause_intervals": [
+        [
+          "2026-11-05T17:24:00+09:00",
+          "2026-11-06T06:49:00+09:00"
+        ],
+        [
+          "2026-11-06T09:30:00+09:00",
+          "2026-11-06T10:00:00+09:00"
+        ],
+        [
+          "2026-11-06T17:23:00+09:00",
+          "2026-11-07T06:50:00+09:00"
+        ],
+        [
+          "2026-11-07T13:00:00+09:00",
+          "2026-11-07T13:30:00+09:00"
+        ],
+        [
+          "2026-11-07T17:22:00+09:00",
+          "2026-11-08T06:51:00+09:00"
+        ],
+        [
+          "2026-11-08T15:30:00+09:00",
+          "2026-11-09T06:52:00+09:00"
+        ],
+        [
+          "2026-11-09T12:00:00+09:00",
+          "2026-11-09T12:30:00+09:00"
+        ],
+        [
+          "2026-11-09T13:00:00+09:00",
+          "2026-11-09T13:30:00+09:00"
+        ],
+        [
+          "2026-11-09T17:21:00+09:00",
+          "2026-11-10T06:53:00+09:00"
+        ],
+        [
+          "2026-11-10T08:30:00+09:00",
+          "2026-11-10T09:30:00+09:00"
+        ],
+        [
+          "2026-11-10T10:00:00+09:00",
+          "2026-11-10T11:30:00+09:00"
+        ]
+      ],
+      "contract_clock_at_24h": {
+        "clock_start_at": "2026-11-04T18:45:00",
+        "despatch_cents": 2617969,
+        "allowed_minutes": 10368,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "315.0",
+        "pre_excluded_minutes": "0.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "10053.0",
+        "net_owner_receivable_cents": -2617969
+      },
+      "contract_clock_at_72h": {
+        "clock_start_at": "2026-11-04T18:45:00",
+        "despatch_cents": 1875781,
+        "allowed_minutes": 10368,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "3165.0",
+        "pre_excluded_minutes": "30.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "7203.0",
+        "net_owner_receivable_cents": -1875781
+      },
+      "night_pause_intervals": [
+        [
+          "2026-11-05T17:24:00+09:00",
+          "2026-11-06T06:49:00+09:00"
+        ],
+        [
+          "2026-11-06T17:23:00+09:00",
+          "2026-11-07T06:50:00+09:00"
+        ],
+        [
+          "2026-11-07T17:22:00+09:00",
+          "2026-11-08T06:51:00+09:00"
+        ],
+        [
+          "2026-11-08T17:22:00+09:00",
+          "2026-11-09T06:52:00+09:00"
+        ],
+        [
+          "2026-11-09T17:21:00+09:00",
+          "2026-11-10T06:53:00+09:00"
+        ]
+      ],
+      "weather_pause_minutes": 382,
+      "remaining_wait_minutes": 723,
+      "weather_pause_intervals": [
+        [
+          "2026-11-06T09:30:00+09:00",
+          "2026-11-06T10:00:00+09:00"
+        ],
+        [
+          "2026-11-07T13:00:00+09:00",
+          "2026-11-07T13:30:00+09:00"
+        ],
+        [
+          "2026-11-08T15:30:00+09:00",
+          "2026-11-08T17:22:00+09:00"
+        ],
+        [
+          "2026-11-09T12:00:00+09:00",
+          "2026-11-09T12:30:00+09:00"
+        ],
+        [
+          "2026-11-09T13:00:00+09:00",
+          "2026-11-09T13:30:00+09:00"
+        ],
+        [
+          "2026-11-10T08:30:00+09:00",
+          "2026-11-10T09:30:00+09:00"
+        ],
+        [
+          "2026-11-10T10:00:00+09:00",
+          "2026-11-10T11:30:00+09:00"
+        ]
+      ],
+      "remaining_work_kg_at_24h": 36000000,
+      "remaining_work_kg_at_72h": 21738020,
+      "weather_pause_minutes_72h": 30,
+      "contract_clock_at_completion": {
+        "clock_start_at": "2026-11-04T18:45:00",
+        "despatch_cents": 1169271,
+        "allowed_minutes": 10368,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "5878.0",
+        "pre_excluded_minutes": "2400.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "4490.0",
+        "net_owner_receivable_cents": -1169271
+      },
+      "despatch_to_completion_cents": 1169271,
+      "demurrage_increment_24h_cents": 0,
+      "demurrage_increment_72h_cents": 0,
+      "remaining_work_minutes_at_24h": 3130,
+      "remaining_work_minutes_at_72h": 1890,
+      "total_settlement_demurrage_cents": 0,
+      "demurrage_increment_to_completion_cents": 0
+    },
+    {
+      "call_id": "DEM-0103",
+      "berth_id": "BERTH-02",
+      "completion_at": "2026-11-05T12:58:00+09:00",
+      "work_start_at": "2026-11-04T06:47:00+09:00",
+      "work_intervals": [
+        [
+          "2026-11-04T06:47:00+09:00",
+          "2026-11-04T07:30:00+09:00"
+        ],
+        [
+          "2026-11-04T09:00:00+09:00",
+          "2026-11-04T12:00:00+09:00"
+        ],
+        [
+          "2026-11-04T13:00:00+09:00",
+          "2026-11-04T17:25:00+09:00"
+        ],
+        [
+          "2026-11-05T06:48:00+09:00",
+          "2026-11-05T12:58:00+09:00"
+        ]
+      ],
+      "assignment_kind": "PLANNED",
+      "berth_release_at": "2026-11-05T12:58:00+09:00",
+      "completed_at_72h": true,
+      "total_wait_minutes": 667,
+      "night_pause_minutes": 803,
+      "accrued_before_cents": 0,
+      "work_pause_intervals": [
+        [
+          "2026-11-04T07:30:00+09:00",
+          "2026-11-04T09:00:00+09:00"
+        ],
+        [
+          "2026-11-04T12:00:00+09:00",
+          "2026-11-04T13:00:00+09:00"
+        ],
+        [
+          "2026-11-04T17:25:00+09:00",
+          "2026-11-05T06:48:00+09:00"
+        ]
+      ],
+      "contract_clock_at_24h": {
+        "clock_start_at": "2026-11-03T19:40:00",
+        "despatch_cents": 1364583,
+        "allowed_minutes": 2880,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "260.0",
+        "pre_excluded_minutes": "1440.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "2620.0",
+        "net_owner_receivable_cents": -1364583
+      },
+      "contract_clock_at_72h": {
+        "clock_start_at": "2026-11-03T19:40:00",
+        "despatch_cents": 959375,
+        "allowed_minutes": 2880,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "1038.0",
+        "pre_excluded_minutes": "1440.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "1842.0",
+        "net_owner_receivable_cents": -959375
+      },
+      "night_pause_intervals": [
+        [
+          "2026-11-04T17:25:00+09:00",
+          "2026-11-05T06:48:00+09:00"
+        ]
+      ],
+      "weather_pause_minutes": 150,
+      "remaining_wait_minutes": 407,
+      "weather_pause_intervals": [
+        [
+          "2026-11-04T07:30:00+09:00",
+          "2026-11-04T09:00:00+09:00"
+        ],
+        [
+          "2026-11-04T12:00:00+09:00",
+          "2026-11-04T13:00:00+09:00"
+        ]
+      ],
+      "remaining_work_kg_at_24h": 1293707,
+      "remaining_work_kg_at_72h": 0,
+      "weather_pause_minutes_72h": 150,
+      "contract_clock_at_completion": {
+        "clock_start_at": "2026-11-03T19:40:00",
+        "despatch_cents": 959375,
+        "allowed_minutes": 2880,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "1038.0",
+        "pre_excluded_minutes": "1440.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "1842.0",
+        "net_owner_receivable_cents": -959375
+      },
+      "despatch_to_completion_cents": 959375,
+      "demurrage_increment_24h_cents": 0,
+      "demurrage_increment_72h_cents": 0,
+      "remaining_work_minutes_at_24h": 370,
+      "remaining_work_minutes_at_72h": 0,
+      "total_settlement_demurrage_cents": 0,
+      "demurrage_increment_to_completion_cents": 0
+    },
+    {
+      "call_id": "DEM-0112",
+      "berth_id": "BERTH-01",
+      "completion_at": "2026-11-10T07:24:00+09:00",
+      "work_start_at": "2026-11-04T06:47:00+09:00",
+      "work_intervals": [
+        [
+          "2026-11-04T06:47:00+09:00",
+          "2026-11-04T07:30:00+09:00"
+        ],
+        [
+          "2026-11-04T09:00:00+09:00",
+          "2026-11-04T12:00:00+09:00"
+        ],
+        [
+          "2026-11-04T13:00:00+09:00",
+          "2026-11-04T17:25:00+09:00"
+        ],
+        [
+          "2026-11-05T06:48:00+09:00",
+          "2026-11-05T17:24:00+09:00"
+        ],
+        [
+          "2026-11-06T06:49:00+09:00",
+          "2026-11-06T09:30:00+09:00"
+        ],
+        [
+          "2026-11-06T10:00:00+09:00",
+          "2026-11-06T17:23:00+09:00"
+        ],
+        [
+          "2026-11-07T06:50:00+09:00",
+          "2026-11-07T13:00:00+09:00"
+        ],
+        [
+          "2026-11-07T13:30:00+09:00",
+          "2026-11-07T17:22:00+09:00"
+        ],
+        [
+          "2026-11-08T06:51:00+09:00",
+          "2026-11-08T15:30:00+09:00"
+        ],
+        [
+          "2026-11-09T06:52:00+09:00",
+          "2026-11-09T12:00:00+09:00"
+        ],
+        [
+          "2026-11-09T12:30:00+09:00",
+          "2026-11-09T13:00:00+09:00"
+        ],
+        [
+          "2026-11-09T13:30:00+09:00",
+          "2026-11-09T17:21:00+09:00"
+        ],
+        [
+          "2026-11-10T06:53:00+09:00",
+          "2026-11-10T07:24:00+09:00"
+        ]
+      ],
+      "assignment_kind": "PLANNED",
+      "berth_release_at": "2026-11-10T07:24:00+09:00",
+      "completed_at_72h": false,
+      "total_wait_minutes": 112,
+      "night_pause_minutes": 4846,
+      "accrued_before_cents": 0,
+      "work_pause_intervals": [
+        [
+          "2026-11-04T07:30:00+09:00",
+          "2026-11-04T09:00:00+09:00"
+        ],
+        [
+          "2026-11-04T12:00:00+09:00",
+          "2026-11-04T13:00:00+09:00"
+        ],
+        [
+          "2026-11-04T17:25:00+09:00",
+          "2026-11-05T06:48:00+09:00"
+        ],
+        [
+          "2026-11-05T17:24:00+09:00",
+          "2026-11-06T06:49:00+09:00"
+        ],
+        [
+          "2026-11-06T09:30:00+09:00",
+          "2026-11-06T10:00:00+09:00"
+        ],
+        [
+          "2026-11-06T17:23:00+09:00",
+          "2026-11-07T06:50:00+09:00"
+        ],
+        [
+          "2026-11-07T13:00:00+09:00",
+          "2026-11-07T13:30:00+09:00"
+        ],
+        [
+          "2026-11-07T17:22:00+09:00",
+          "2026-11-08T06:51:00+09:00"
+        ],
+        [
+          "2026-11-08T15:30:00+09:00",
+          "2026-11-09T06:52:00+09:00"
+        ],
+        [
+          "2026-11-09T12:00:00+09:00",
+          "2026-11-09T12:30:00+09:00"
+        ],
+        [
+          "2026-11-09T13:00:00+09:00",
+          "2026-11-09T13:30:00+09:00"
+        ],
+        [
+          "2026-11-09T17:21:00+09:00",
+          "2026-11-10T06:53:00+09:00"
+        ]
+      ],
+      "contract_clock_at_24h": {
+        "clock_start_at": "2026-11-04T04:55:00",
+        "despatch_cents": 0,
+        "allowed_minutes": 1440,
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "995.0",
+        "pre_excluded_minutes": "150.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "445.0",
+        "net_owner_receivable_cents": 0
+      },
+      "contract_clock_at_72h": {
+        "clock_start_at": "2026-11-04T04:55:00",
+        "despatch_cents": 0,
+        "allowed_minutes": 1440,
+        "demurrage_cents": 1521875,
+        "demurrage_minutes": "2435.0",
+        "first_demurrage_at": "2026-11-05T07:25:00",
+        "laytime_used_minutes": "1440.0",
+        "pre_excluded_minutes": "150.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "0.0",
+        "net_owner_receivable_cents": 1521875
+      },
+      "night_pause_intervals": [
+        [
+          "2026-11-04T17:25:00+09:00",
+          "2026-11-05T06:48:00+09:00"
+        ],
+        [
+          "2026-11-05T17:24:00+09:00",
+          "2026-11-06T06:49:00+09:00"
+        ],
+        [
+          "2026-11-06T17:23:00+09:00",
+          "2026-11-07T06:50:00+09:00"
+        ],
+        [
+          "2026-11-07T17:22:00+09:00",
+          "2026-11-08T06:51:00+09:00"
+        ],
+        [
+          "2026-11-08T17:22:00+09:00",
+          "2026-11-09T06:52:00+09:00"
+        ],
+        [
+          "2026-11-09T17:21:00+09:00",
+          "2026-11-10T06:53:00+09:00"
+        ]
+      ],
+      "weather_pause_minutes": 382,
+      "remaining_wait_minutes": 112,
+      "weather_pause_intervals": [
+        [
+          "2026-11-04T07:30:00+09:00",
+          "2026-11-04T09:00:00+09:00"
+        ],
+        [
+          "2026-11-04T12:00:00+09:00",
+          "2026-11-04T13:00:00+09:00"
+        ],
+        [
+          "2026-11-06T09:30:00+09:00",
+          "2026-11-06T10:00:00+09:00"
+        ],
+        [
+          "2026-11-07T13:00:00+09:00",
+          "2026-11-07T13:30:00+09:00"
+        ],
+        [
+          "2026-11-08T15:30:00+09:00",
+          "2026-11-08T17:22:00+09:00"
+        ],
+        [
+          "2026-11-09T12:00:00+09:00",
+          "2026-11-09T12:30:00+09:00"
+        ],
+        [
+          "2026-11-09T13:00:00+09:00",
+          "2026-11-09T13:30:00+09:00"
+        ]
+      ],
+      "remaining_work_kg_at_24h": 6181270,
+      "remaining_work_kg_at_72h": 3592694,
+      "weather_pause_minutes_72h": 180,
+      "contract_clock_at_completion": {
+        "clock_start_at": "2026-11-04T04:55:00",
+        "despatch_cents": 0,
+        "allowed_minutes": 1440,
+        "demurrage_cents": 4499375,
+        "demurrage_minutes": "7199.0",
+        "first_demurrage_at": "2026-11-05T07:25:00",
+        "laytime_used_minutes": "1440.0",
+        "pre_excluded_minutes": "150.0",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "post_excluded_minutes": "0.0",
+        "unused_laytime_minutes": "0.0",
+        "net_owner_receivable_cents": 4499375
+      },
+      "despatch_to_completion_cents": 0,
+      "demurrage_increment_24h_cents": 0,
+      "demurrage_increment_72h_cents": 1521875,
+      "remaining_work_minutes_at_24h": 2961,
+      "remaining_work_minutes_at_72h": 1721,
+      "total_settlement_demurrage_cents": 4499375,
+      "demurrage_increment_to_completion_cents": 4499375
+    }
+  ]
+}

@@ -16,7 +16,7 @@ from src.daily_planning.risk.replay import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WEATHER_PATH = ROOT / "input/weather_for_optimizer_30min.csv"
+WEATHER_PATH = ROOT / "tests/fixtures/risk_abc/weather.csv"
 
 
 def snapshot():
@@ -94,6 +94,11 @@ class RiskReplayTest(unittest.TestCase):
             })
         self.candidate["cost_cents"] += 1
         with self.assertRaises(AssertionError):
+            evaluate_scenario(self.snapshot, self.candidate, {"scenario_id": NO_SHOCK_BASELINE})
+
+    def test_schedule_detail_mismatch_fails_closed(self):
+        self.candidate['vessel_results'][0]['berth_release_at'] = '2026-11-02T00:00:00+09:00'
+        with self.assertRaisesRegex(AssertionError, 'berth_release_at'):
             evaluate_scenario(self.snapshot, self.candidate, {"scenario_id": NO_SHOCK_BASELINE})
 
 

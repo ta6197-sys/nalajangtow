@@ -1,0 +1,437 @@
+{
+  "as_of_at": "2026-11-04T00:00:00+09:00",
+  "berthing_policy": "DAYLIGHT_WORK_V2",
+  "berths": [
+    {
+      "berth_id": "BERTH-01",
+      "berth_name": "BERTH-01",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-02",
+      "berth_name": "BERTH-02",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-03",
+      "berth_name": "BERTH-03",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-04",
+      "berth_name": "BERTH-04",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-05",
+      "berth_name": "BERTH-05",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-06",
+      "berth_name": "BERTH-06",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-07",
+      "berth_name": "BERTH-07",
+      "is_active": true
+    },
+    {
+      "berth_id": "BERTH-08",
+      "berth_name": "BERTH-08",
+      "is_active": true
+    }
+  ],
+  "call_states": [
+    {
+      "accrued_demurrage_cents": 0,
+      "berth_id": null,
+      "call_id": "DEM-0011",
+      "contract_clock_state": {
+        "initialization": "NEWLY_DISCLOSED_UNSTARTED",
+        "remaining_work_minutes": 4670
+      },
+      "experiment_key": "source-daywork-v2",
+      "remaining_work_kg": 36000000,
+      "state_at": "2026-11-04T00:00:00+09:00",
+      "state_id": null,
+      "status": "PLANNED"
+    },
+    {
+      "accrued_demurrage_cents": 0,
+      "berth_id": null,
+      "call_id": "DEM-0047",
+      "contract_clock_state": {
+        "initialization": "NEWLY_DISCLOSED_UNSTARTED",
+        "remaining_work_minutes": 3130
+      },
+      "experiment_key": "source-daywork-v2",
+      "remaining_work_kg": 36000000,
+      "state_at": "2026-11-04T00:00:00+09:00",
+      "state_id": null,
+      "status": "PLANNED"
+    },
+    {
+      "accrued_demurrage_cents": 0,
+      "berth_id": null,
+      "call_id": "DEM-0103",
+      "contract_clock_state": {
+        "accrued_despatch_cents": 0,
+        "allowed_minutes": 2880,
+        "clock_start_at": "2026-11-03T19:40:00",
+        "contract_rule_version": "SYN-LAYTIME-v1-minute-boundary",
+        "demurrage_cents": 0,
+        "demurrage_minutes": "0.0",
+        "despatch_cents": 1364583,
+        "first_demurrage_at": null,
+        "laytime_used_minutes": "260.0",
+        "net_owner_receivable_cents": -1364583,
+        "operation_input_hash": "fcd1c7da7d0f3acbffaf7f2e751f74b0d302d3cc65514a2ceffce79216e74019",
+        "post_excluded_minutes": "0.0",
+        "pre_excluded_minutes": "0.0",
+        "remaining_work_minutes": 858,
+        "source_run_id": "580e271d-2196-519d-b838-d0e975ad5f19",
+        "unused_laytime_minutes": "2620.0"
+      },
+      "experiment_key": "source-daywork-v2",
+      "remaining_work_kg": 3000000,
+      "state_at": "2026-11-04T00:00:00+09:00",
+      "state_id": "cdfab30f-21dc-5df0-bc02-de876ac3c30e",
+      "status": "WAITING"
+    },
+    {
+      "accrued_demurrage_cents": 0,
+      "berth_id": null,
+      "call_id": "DEM-0112",
+      "contract_clock_state": {
+        "initialization": "NEWLY_DISCLOSED_UNSTARTED",
+        "remaining_work_minutes": 3449
+      },
+      "experiment_key": "source-daywork-v2",
+      "remaining_work_kg": 7200000,
+      "state_at": "2026-11-04T00:00:00+09:00",
+      "state_id": null,
+      "status": "PLANNED"
+    }
+  ],
+  "calls": [
+    {
+      "available_at": "2026-11-04T19:40:00+09:00",
+      "call_id": "DEM-0011",
+      "cargo_quantity_kg": 36000000,
+      "contract_id": "DEM-0011",
+      "known_at": "2026-11-04T00:00:00+09:00",
+      "nor_at": "2026-11-04T19:40:00+09:00",
+      "work_minutes": 4670
+    },
+    {
+      "available_at": "2026-11-04T18:45:00+09:00",
+      "call_id": "DEM-0047",
+      "cargo_quantity_kg": 36000000,
+      "contract_id": "DEM-0047",
+      "known_at": "2026-11-04T00:00:00+09:00",
+      "nor_at": "2026-11-04T18:45:00+09:00",
+      "work_minutes": 3130
+    },
+    {
+      "available_at": "2026-11-03T19:40:00+09:00",
+      "call_id": "DEM-0103",
+      "cargo_quantity_kg": 3000000,
+      "contract_id": "DEM-0103",
+      "known_at": "2026-11-03T00:00:00+09:00",
+      "nor_at": "2026-11-03T19:40:00+09:00",
+      "work_minutes": 858
+    },
+    {
+      "available_at": "2026-11-04T04:55:00+09:00",
+      "call_id": "DEM-0112",
+      "cargo_quantity_kg": 7200000,
+      "contract_id": "DEM-0112",
+      "known_at": "2026-11-04T00:00:00+09:00",
+      "nor_at": "2026-11-04T04:55:00+09:00",
+      "work_minutes": 3449
+    }
+  ],
+  "commits": [],
+  "contracts": [
+    {
+      "allowed_minutes": 7200,
+      "contract_id": "DEM-0011",
+      "contract_terms": {
+        "_source": {
+          "bytes": 345664,
+          "path": "/app/input/source_contracts.xlsx",
+          "row": 5,
+          "sha256": "50de0b153ea3d51b076389452e0a8bc774499032d8e322963df7bba21023509f",
+          "sheet": "03_계약조건"
+        },
+        "allowed_minutes": 7200,
+        "contract_id": "DEM-0011",
+        "daily_demurrage_cents": 900000,
+        "daily_demurrage_usd": "9E+3",
+        "day_mode": "SHINC",
+        "despatch_policy": "NONE",
+        "early_start_if_work": "N",
+        "holidays": [
+          "2026-11-08"
+        ],
+        "nor_valid": "Y",
+        "notice_hours": "18",
+        "original_fields": {
+          "allowance_value": "120.0",
+          "allowed_hours_excel": "120",
+          "cargo": "유류",
+          "case_id": "DEM-0011",
+          "completion_local": "46337.68819444445",
+          "contract_clause_ko": "NOR 유효; 통지 후 18시간 경과 시 개시; 휴무일을 포함하여 24시간 연속 산입; 기상=EXCLUDE; 체선 후 특별 제외=NONE; 허용 120시간; 체선료 USD 9,000/day; 조출료 NONE. 독립 합성 계약 조건",
+          "day_condition": "휴무일을 포함하여 24시간 연속 산입",
+          "day_mode": "SHINC",
+          "demurrage_condition": "체선료 USD 9,000/day",
+          "demurrage_usd_day": "9000.0",
+          "despatch_condition": "조출료 NONE. 독립 합성 계약 조건",
+          "despatch_policy": "NONE",
+          "early_start_if_work": "N",
+          "effective_start_local": "46330.87152777778",
+          "holiday_count": "1.0",
+          "laytime_basis": "FIXED_HOURS",
+          "laytime_condition": "허용 120시간",
+          "nor_condition": "NOR 유효",
+          "nor_tender_local": "46330.819444444445",
+          "nor_valid": "Y",
+          "notice_hours": "18.0",
+          "operation": "LOAD",
+          "operation_start_local": "46330.87152777778",
+          "port": "울산항",
+          "post_demurrage_condition": "체선 후 특별 제외=NONE",
+          "post_demurrage_exceptions": "NONE",
+          "quantity_mt": "36000.0",
+          "scenario": "NOR 통지 유예",
+          "source_type": "SYNTHETIC",
+          "split": "train",
+          "start_condition": "통지 후 18시간 경과 시 개시",
+          "vessel_id": "IMO-TEST-9000010",
+          "vessel_name": "SEA ORCHID",
+          "weather_condition": "기상=EXCLUDE",
+          "weather_policy": "EXCLUDE"
+        },
+        "post_demurrage_exceptions": "NONE",
+        "source_type": "SYNTHETIC",
+        "vessel_name": "SEA ORCHID",
+        "weather_policy": "EXCLUDE"
+      },
+      "demurrage_daily_cents": 900000
+    },
+    {
+      "allowed_minutes": 10368,
+      "contract_id": "DEM-0047",
+      "contract_terms": {
+        "_source": {
+          "bytes": 345664,
+          "path": "/app/input/source_contracts.xlsx",
+          "row": 4,
+          "sha256": "50de0b153ea3d51b076389452e0a8bc774499032d8e322963df7bba21023509f",
+          "sheet": "03_계약조건"
+        },
+        "allowed_minutes": 10368,
+        "contract_id": "DEM-0047",
+        "daily_demurrage_cents": 750000,
+        "daily_demurrage_usd": "7.5E+3",
+        "day_mode": "SHEX_SAT12",
+        "despatch_policy": "HALF_WORKING_TIME",
+        "early_start_if_work": "N",
+        "holidays": [],
+        "nor_valid": "Y",
+        "notice_hours": "0",
+        "original_fields": {
+          "allowance_value": "5000.0",
+          "allowed_hours_excel": "172.8",
+          "cargo": "유류",
+          "case_id": "DEM-0047",
+          "completion_local": "46333.69652777778",
+          "contract_clause_ko": "NOR 유효; 통지 후 0시간 경과 시 개시; 토요일 12:00부터 일요일 24:00까지와 계약지정 휴무일 미산입; 기상=EXCLUDE; 체선 후 특별 제외=NONE; 5000 MT/일, 수량 36000MT; 체선료 USD 7,500/day; 조출료 HALF_WORKING_TIME. 독립 합성 계약 조건",
+          "day_condition": "토요일 12:00부터 일요일 24:00까지와 계약지정 휴무일 미산입",
+          "day_mode": "SHEX_SAT12",
+          "demurrage_condition": "체선료 USD 7,500/day",
+          "demurrage_usd_day": "7500.0",
+          "despatch_condition": "조출료 HALF_WORKING_TIME. 독립 합성 계약 조건",
+          "despatch_policy": "HALF_WORKING_TIME",
+          "early_start_if_work": "N",
+          "effective_start_local": "46330.78125",
+          "holiday_count": "0.0",
+          "laytime_basis": "MT_PER_DAY",
+          "laytime_condition": "5000 MT/일, 수량 36000MT",
+          "nor_condition": "NOR 유효",
+          "nor_tender_local": "46330.78125",
+          "nor_valid": "Y",
+          "notice_hours": "0.0",
+          "operation": "LOAD",
+          "operation_start_local": "46331.322916666664",
+          "port": "울산항",
+          "post_demurrage_condition": "체선 후 특별 제외=NONE",
+          "post_demurrage_exceptions": "NONE",
+          "quantity_mt": "36000.0",
+          "scenario": "단시간 조출",
+          "source_type": "SYNTHETIC",
+          "split": "train",
+          "start_condition": "통지 후 0시간 경과 시 개시",
+          "vessel_id": "IMO-TEST-9000046",
+          "vessel_name": "SEA ORCHID",
+          "weather_condition": "기상=EXCLUDE",
+          "weather_policy": "EXCLUDE"
+        },
+        "post_demurrage_exceptions": "NONE",
+        "source_type": "SYNTHETIC",
+        "vessel_name": "SEA ORCHID",
+        "weather_policy": "EXCLUDE"
+      },
+      "demurrage_daily_cents": 750000
+    },
+    {
+      "allowed_minutes": 2880,
+      "contract_id": "DEM-0103",
+      "contract_terms": {
+        "_source": {
+          "bytes": 345664,
+          "path": "/app/input/source_contracts.xlsx",
+          "row": 2,
+          "sha256": "50de0b153ea3d51b076389452e0a8bc774499032d8e322963df7bba21023509f",
+          "sheet": "03_계약조건"
+        },
+        "allowed_minutes": 2880,
+        "contract_id": "DEM-0103",
+        "daily_demurrage_cents": 1500000,
+        "daily_demurrage_usd": "1.5E+4",
+        "day_mode": "SHEX_SUN",
+        "despatch_policy": "HALF_WORKING_TIME",
+        "early_start_if_work": "N",
+        "holidays": [
+          "2026-11-04"
+        ],
+        "nor_valid": "Y",
+        "notice_hours": "0",
+        "original_fields": {
+          "allowance_value": "48.0",
+          "allowed_hours_excel": "48",
+          "cargo": "유류",
+          "case_id": "DEM-0103",
+          "completion_local": "46330.91458333333",
+          "contract_clause_ko": "NOR 유효; 통지 후 0시간 경과 시 개시; 일요일 및 계약지정 휴무일 미산입; 기상=EXCLUDE; 체선 후 특별 제외=OWNER_AND_TERMINAL; 허용 48시간; 체선료 USD 15,000/day; 조출료 HALF_WORKING_TIME. 독립 합성 계약 조건",
+          "day_condition": "일요일 및 계약지정 휴무일 미산입",
+          "day_mode": "SHEX_SUN",
+          "demurrage_condition": "체선료 USD 15,000/day",
+          "demurrage_usd_day": "15000.0",
+          "despatch_condition": "조출료 HALF_WORKING_TIME. 독립 합성 계약 조건",
+          "despatch_policy": "HALF_WORKING_TIME",
+          "early_start_if_work": "N",
+          "effective_start_local": "46329.819444444445",
+          "holiday_count": "1.0",
+          "laytime_basis": "FIXED_HOURS",
+          "laytime_condition": "허용 48시간",
+          "nor_condition": "NOR 유효",
+          "nor_tender_local": "46329.819444444445",
+          "nor_valid": "Y",
+          "notice_hours": "0.0",
+          "operation": "LOAD",
+          "operation_start_local": "46330.194444444445",
+          "port": "울산항",
+          "post_demurrage_condition": "체선 후 특별 제외=OWNER_AND_TERMINAL",
+          "post_demurrage_exceptions": "OWNER_AND_TERMINAL",
+          "quantity_mt": "3000.0",
+          "scenario": "계약지정 휴무일",
+          "source_type": "SYNTHETIC",
+          "split": "validation",
+          "start_condition": "통지 후 0시간 경과 시 개시",
+          "vessel_id": "IMO-TEST-9000102",
+          "vessel_name": "KOREA BAY",
+          "weather_condition": "기상=EXCLUDE",
+          "weather_policy": "EXCLUDE"
+        },
+        "post_demurrage_exceptions": "OWNER_AND_TERMINAL",
+        "source_type": "SYNTHETIC",
+        "vessel_name": "KOREA BAY",
+        "weather_policy": "EXCLUDE"
+      },
+      "demurrage_daily_cents": 1500000
+    },
+    {
+      "allowed_minutes": 1440,
+      "contract_id": "DEM-0112",
+      "contract_terms": {
+        "_source": {
+          "bytes": 345664,
+          "path": "/app/input/source_contracts.xlsx",
+          "row": 3,
+          "sha256": "50de0b153ea3d51b076389452e0a8bc774499032d8e322963df7bba21023509f",
+          "sheet": "03_계약조건"
+        },
+        "allowed_minutes": 1440,
+        "contract_id": "DEM-0112",
+        "daily_demurrage_cents": 900000,
+        "daily_demurrage_usd": "9E+3",
+        "day_mode": "SHEX_SUN",
+        "despatch_policy": "NONE",
+        "early_start_if_work": "N",
+        "holidays": [],
+        "nor_valid": "Y",
+        "notice_hours": "0",
+        "original_fields": {
+          "allowance_value": "24.0",
+          "allowed_hours_excel": "24",
+          "cargo": "유류",
+          "case_id": "DEM-0112",
+          "completion_local": "46334.45486111111",
+          "contract_clause_ko": "NOR 유효; 통지 후 0시간 경과 시 개시; 일요일 및 계약지정 휴무일 미산입; 기상=EXCLUDE; 체선 후 특별 제외=OWNER_AND_TERMINAL; 허용 24시간; 체선료 USD 9,000/day; 조출료 NONE. 독립 합성 계약 조건",
+          "day_condition": "일요일 및 계약지정 휴무일 미산입",
+          "day_mode": "SHEX_SUN",
+          "demurrage_condition": "체선료 USD 9,000/day",
+          "demurrage_usd_day": "9000.0",
+          "despatch_condition": "조출료 NONE. 독립 합성 계약 조건",
+          "despatch_policy": "NONE",
+          "early_start_if_work": "N",
+          "effective_start_local": "46330.20486111111",
+          "holiday_count": "0.0",
+          "laytime_basis": "FIXED_HOURS",
+          "laytime_condition": "허용 24시간",
+          "nor_condition": "NOR 유효",
+          "nor_tender_local": "46330.20486111111",
+          "nor_valid": "Y",
+          "notice_hours": "0.0",
+          "operation": "DISCHARGE",
+          "operation_start_local": "46330.37152777778",
+          "port": "울산항",
+          "post_demurrage_condition": "체선 후 특별 제외=OWNER_AND_TERMINAL",
+          "post_demurrage_exceptions": "OWNER_AND_TERMINAL",
+          "quantity_mt": "7200.0",
+          "scenario": "체선 후 기상 영향",
+          "source_type": "SYNTHETIC",
+          "split": "validation",
+          "start_condition": "통지 후 0시간 경과 시 개시",
+          "vessel_id": "IMO-TEST-9000111",
+          "vessel_name": "SUNRISE BULKER",
+          "weather_condition": "기상=EXCLUDE",
+          "weather_policy": "EXCLUDE"
+        },
+        "post_demurrage_exceptions": "OWNER_AND_TERMINAL",
+        "source_type": "SYNTHETIC",
+        "vessel_name": "SUNRISE BULKER",
+        "weather_policy": "EXCLUDE"
+      },
+      "demurrage_daily_cents": 900000
+    }
+  ],
+  "experiment_key": "source-daywork-v2",
+  "previous_tentative_assignments": [
+    {
+      "assignment_id": "77e12302-5cc1-4bf7-9330-7a6e2f5fcf8d",
+      "berth_id": "BERTH-02",
+      "call_id": "DEM-0103",
+      "candidate_id": "569ce0f3-b056-5cee-b0ff-2077cea0dbd7",
+      "completion_at": "2026-11-05T12:58:00+09:00",
+      "start_at": "2026-11-04T06:47:00+09:00"
+    }
+  ],
+  "source_state_ids": [
+    "cdfab30f-21dc-5df0-bc02-de876ac3c30e"
+  ]
+}

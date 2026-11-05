@@ -17,6 +17,7 @@ from weather_optimizer import WeatherSeries
 from .test_risk_replay import WEATHER_PATH, snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = ROOT / 'tests/fixtures/risk_abc'
 
 
 def fixture():
@@ -49,15 +50,12 @@ def shock(**shifts):
 
 
 def saved_candidate(label):
-    folder = ROOT / 'results/source-daywork-v2/f080131a-33d7-5ca8-8ac6-091930421063'
-    snap = json.loads((folder / 'input_snapshot.json').read_text())
+    snap = json.loads((FIXTURE / 'snapshot.json').read_text())
     snap['weather'] = fingerprint(WEATHER_PATH)
-    snap['daylight_windows'] = fingerprint(ROOT / 'src/daily_planning/daylight_windows.csv')
     snap['snapshot_hash'] = signature({k: v for k, v in snap.items() if k != 'snapshot_hash'})
-    stored = json.loads((folder / f'candidate_{label}_evaluation.json').read_text())
+    stored = json.loads((FIXTURE / f'candidate_{label}.json').read_text())
     candidate = dict(candidate_id=label, input_snapshot_hash=snap['snapshot_hash'],
-                     cost_cents=stored['summary']['demurrage_increment_to_completion_cents'],
-                     wait_minutes=stored['summary']['total_wait_minutes'],
+                     cost_cents=stored['cost_cents'], wait_minutes=stored['wait_minutes'],
                      vessel_results=stored['vessel_results'])
     return snap, candidate
 
