@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "model_id": "SYNTHETIC_RISK_V1",
+  "provenance": "SYNTHETIC_ASSUMPTION",
+  "seed": 42,
+  "sample_count": 1000,
+  "arrival_shift_minutes": {
+    "-60": 0.05,
+    "0": 0.60,
+    "60": 0.20,
+    "180": 0.10,
+    "360": 0.05
+  },
+  "work_duration_multiplier": {
+    "0.90": 0.05,
+    "1.00": 0.70,
+    "1.10": 0.20,
+    "1.25": 0.05
+  },
+  "additional_weather_block_minutes": {
+    "0": 0.80,
+    "120": 0.12,
+    "240": 0.06,
+    "480": 0.02
+  },
+  "weather_block_onset_offset_minutes": {
+    "0": 0.30,
+    "1440": 0.40,
+    "2880": 0.30
+  }
+}

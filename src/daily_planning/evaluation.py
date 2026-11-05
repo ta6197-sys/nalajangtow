@@ -12,15 +12,18 @@ from .bootstrap_db import kst_time, remaining_kg
 from .context import engine_calls, local_time, plain, signature
 from .daylight import WORK_POLICY, daylight_window, simulator_for_policy
 from .sk_physical_v3 import assert_eligible, eligible_berths
+from .berth_phases import apply_phase_policy, occupancy_bounds
 
 
 def interval_overlap(a, b):
+    a_start, a_end = occupancy_bounds(a)
+    b_start, b_end = occupancy_bounds(b)
     return (a['berth_id'] == b['berth_id']
-            and max(local_time(a['work_start_at']), local_time(b['work_start_at']))
-            < min(local_time(a['completion_at']), local_time(b['completion_at'])))
+            and max(local_time(a_start), local_time(b_start))
+            < min(local_time(a_end), local_time(b_end)))
 
 
-def replay_row(call, berth_id, start_at, weather, *, committed=False, daylight=False, policy=None):
+def replay_row(call, berth_id, start_at, weather, *, committed=False, daylight=False, policy=None, phase_policy=None):
     start = local_time(start_at)
     if start < local_time(call['available_at']):
         raise ValueError(f'Start before availability: {call["call_id"]}')
@@ -31,7 +34,7 @@ def replay_row(call, berth_id, start_at, weather, *, committed=False, daylight=F
     row = simulator_for_policy(policy)(call, start, weather, RULE)
     if local_time(row['work_start_at']) != start:
         raise ValueError(f'Planned start is weather-blocked: {call["call_id"]}')
-    return dict(row, berth_id=berth_id)
+    return apply_phase_policy(phase_policy, dict(row, berth_id=berth_id), available_at=call['available_at'])
 
 
 def price_until(call, row, cut, weather):
@@ -54,6 +57,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
     end = begin + timedelta(hours=72)
     freeze = begin + timedelta(hours=24)
     policy = snapshot.get('berthing_policy')
+    phase_policy = snapshot.get('berth_phase')
     daylight = policy in ('DAYLIGHT_WEATHER_V1', WORK_POLICY)
     calls = {c['call_id']: c for c in engine_calls(snapshot)}
     states = {s['call_id']: s for s in snapshot['call_states']}
@@ -67,10 +71,12 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
         if cid not in calls or cid in rows or commit['berth_id'] not in berths:
             raise ValueError('Invalid or duplicate committed call')
         assert_eligible(snapshot, cid, commit['berth_id'])
-        row = replay_row(calls[cid], commit['berth_id'], commit['start_at'], weather, committed=True, policy=policy)
+        row = replay_row(calls[cid], commit['berth_id'], commit['start_at'], weather,
+                         committed=True, policy=policy, phase_policy=phase_policy)
+        occupied_start, occupied_end = occupancy_bounds(row)
         if (local_time(row['completion_at']) != local_time(commit['completion_at'])
-                or local_time(commit['locked_from_at']) > local_time(row['work_start_at'])
-                or local_time(commit['locked_until_at']) < local_time(row['completion_at'])):
+                or local_time(commit['locked_from_at']) > local_time(occupied_start)
+                or local_time(commit['locked_until_at']) < local_time(occupied_end)):
             raise ValueError('Committed occupancy does not protect the full work interval')
         rows[cid], kinds[cid] = row, 'COMMITTED'
     for item in planned_assignments:
@@ -82,7 +88,8 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
         if bid not in active_berths or not begin <= start < end:
             raise ValueError('New decisions must use active berths and start inside the 72h horizon')
         assert_eligible(snapshot, cid, bid)
-        row = replay_row(calls[cid], bid, start, weather, daylight=daylight, policy=policy)
+        row = replay_row(calls[cid], bid, start, weather, daylight=daylight,
+                         policy=policy, phase_policy=phase_policy)
         if item.get('completion_at') and local_time(item['completion_at']) != local_time(row['completion_at']):
             raise ValueError('Planned completion differs from weather/work replay')
         rows[cid], kinds[cid] = row, 'PLANNED'
@@ -103,7 +110,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
     deferred = sorted(set(calls) - set(rows))
     # All newly started tail work is >= horizon_end. Already chosen work can
     # extend past the boundary and continues occupying its berth.
-    free = {b: max([end] + [local_time(r['completion_at']) for r in rows.values()
+    free = {b: max([end] + [local_time(occupancy_bounds(r)[1]) for r in rows.values()
                            if r['berth_id'] == b]) for b in active_berths}
     for cid in sorted(deferred, key=lambda c: (local_time(calls[c]['available_at']), c)):
         compatible = eligible_berths(snapshot, cid, active_berths)
@@ -112,9 +119,10 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
         bid = min(compatible, key=lambda b: (free[b], b))
         simulate = simulator_for_policy(policy)
         row = simulate(calls[cid], max(free[bid], end, local_time(calls[cid]['available_at'])), weather, RULE)
-        rows[cid] = dict(row, berth_id=bid)
+        rows[cid] = apply_phase_policy(phase_policy, dict(row, berth_id=bid),
+                                      available_at=calls[cid]['available_at'])
         kinds[cid] = 'EVALUATION_TAIL'
-        free[bid] = local_time(row['completion_at'])
+        free[bid] = local_time(occupancy_bounds(rows[cid])[1])
     details = []
     occupancy = {b: 0 for b in berths}
     for cid, row in sorted(rows.items()):
@@ -135,11 +143,16 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
                       for a, b in row['weather_pause_intervals'])
         pauses_future = sum(max(0, int((local_time(b)-max(local_time(a), begin)).total_seconds()/60))
                             for a, b in row['weather_pause_intervals'])
-        occupancy[row['berth_id']] += max(0, int((min(finish, end)-max(start, begin)).total_seconds()/60))
+        berth_start, berth_release = (local_time(value) for value in occupancy_bounds(row))
+        occupancy[row['berth_id']] += max(0, int((min(berth_release, end)-max(berth_start, begin)).total_seconds()/60))
         details.append(dict(
             call_id=cid, assignment_kind=kinds[cid], berth_id=row['berth_id'],
             work_start_at=kst_time(start).isoformat(), completion_at=kst_time(finish).isoformat(),
-            berth_release_at=kst_time(finish).isoformat(),
+            berth_release_at=kst_time(berth_release).isoformat(),
+            **({key: row[key] for key in (
+                'berthing_start_at', 'cargo_work_start_at', 'cargo_work_end_at',
+                'berthing_minutes', 'unberthing_minutes', 'berth_occupied_minutes',
+                'duration_origin')} if phase_policy else {}),
             weather_pause_intervals=[[kst_time(a).isoformat(), kst_time(b).isoformat()]
                                      for a, b in row['weather_pause_intervals']],
             work_intervals=[[kst_time(a).isoformat(), kst_time(b).isoformat()] for a,b in row.get('work_intervals', [])],

@@ -24,10 +24,13 @@ def execute_committed_window(snapshot,end,weather):
         row=None
         if protected and local_time(protected['start_at'])<cut:
             assert_eligible(snapshot, cid, protected['berth_id'])
-            row=replay_row(call,protected['berth_id'],protected['start_at'],weather,policy=snapshot.get('berthing_policy'))
+            row=replay_row(call,protected['berth_id'],protected['start_at'],weather,
+                policy=snapshot.get('berthing_policy'),phase_policy=snapshot.get('berth_phase'))
+            from .berth_phases import occupancy_bounds
+            occupied_start, occupied_end = occupancy_bounds(row)
             if (local_time(row['completion_at'])!=local_time(protected['completion_at'])
-                    or local_time(protected['locked_from_at'])>local_time(row['work_start_at'])
-                    or local_time(protected['locked_until_at'])<local_time(row['completion_at'])):
+                    or local_time(protected['locked_from_at'])>local_time(occupied_start)
+                    or local_time(protected['locked_until_at'])<local_time(occupied_end)):
                 raise ValueError('Protected work differs from confirmed occupancy')
             executions.append(row)
         if states[cid]['status']=='IN_PROGRESS':
@@ -47,7 +50,7 @@ def execute_committed_window(snapshot,end,weather):
         if delta<0:
             raise ValueError('Cumulative demurrage cannot decrease')
         remaining=workload_remaining(row,call,cut) if row else call['processing_minutes']
-        completed=row is not None and local_time(row['completion_at'])<=cut
+        completed=row is not None and local_time(row.get('berth_release_at', row['completion_at']))<=cut
         details.append(dict(call_id=cid,berth_id=row['berth_id'] if row else None,
             work_start_at=kst_time(row['work_start_at']).isoformat() if row else None,
             completion_at=kst_time(row['completion_at']).isoformat() if row else None,
@@ -62,6 +65,9 @@ def execute_committed_window(snapshot,end,weather):
             remaining_work_kg_at_24h=remaining_kg(call['cargo_quantity_kg'],remaining,call['processing_minutes']),
             contract_clock_at_24h=plain({k:str(Decimal(str(v))) if isinstance(v,float) else v
                                        for k,v in after.items()})))
+        if snapshot.get('berth_phase') and row is not None:
+            details[-1]['berthing_start_at'] = row['berthing_start_at']
+            details[-1]['berth_release_at'] = row['berth_release_at']
     if any(interval_overlap(a,b) for i,a in enumerate(executions) for b in executions[i+1:]):
         raise ValueError('Confirmed work overlaps on a berth')
     return dict(vessel_results=details,

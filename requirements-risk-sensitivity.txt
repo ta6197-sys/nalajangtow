@@ -1,0 +1,3 @@
+-r requirements-risk.txt
+# Optional: only install when Stage 3 Morris/Sobol is enabled.
+SALib>=1.5,<2

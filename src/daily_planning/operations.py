@@ -73,15 +73,23 @@ def confirm_in_transaction(connection,candidate_id):
         raise ValueError('Stored candidate does not match its immutable BASELINE schedule')
     now=datetime.now(KST)
     added=[]
+    replay_rows = {r['call_id']: r for r in replay['evaluation']['vessel_results']}
     for row in rows:
         if row['call_id'] in existing_ids:
             continue
-        if run['planning_as_of']<=row['start_at']<run['freeze_end_at']:
+        occupied_start, occupied_end = row['start_at'], row['completion_at']
+        if snapshot.get('berth_phase'):
+            phase_row = replay_rows[row['call_id']]
+            occupied_start, occupied_end = phase_row['berthing_start_at'], phase_row['berth_release_at']
+            if (kst_time(occupied_start) != kst_time(row['start_at'])
+                    or kst_time(occupied_end) != kst_time(row['completion_at'])):
+                raise ValueError('Only zero-duration confirmed berth phases are supported')
+        if run['planning_as_of']<=kst_time(occupied_start)<run['freeze_end_at']:
             commit_id=uuid.uuid5(candidate_id,'commit:'+row['call_id'])
             connection.execute(schedule_commit.insert().values(
                 commit_id=commit_id,assignment_id=row['assignment_id'],experiment_key=run['experiment_key'],
-                berth_id=row['berth_id'],confirmed_at=now,locked_from_at=row['start_at'],
-                locked_until_at=row['completion_at'],status='LOCKED'))
+                berth_id=row['berth_id'],confirmed_at=now,locked_from_at=occupied_start,
+                locked_until_at=occupied_end,status='LOCKED'))
             added.append(str(commit_id))
     confirmation=plain(dict(confirmation_id=uuid.uuid5(candidate_id,'confirmation'),candidate_id=candidate_id,
         confirmed_at=now,status='CONFIRMED',selection_policy='USER_CANDIDATE_CHOICE',
@@ -121,7 +129,8 @@ def advance_in_transaction(connection,run_id):
     next_states=[]
     for row in result['vessel_results']:
         started=row['work_start_at'] is not None and local_time(row['work_start_at'])<local_time(end)
-        completed=row['completion_at'] is not None and local_time(row['completion_at'])<=local_time(end)
+        release_at = row.get('berth_release_at', row['completion_at'])
+        completed=release_at is not None and local_time(release_at)<=local_time(end)
         source=next(c for c in operation_input['calls'] if c['call_id']==row['call_id'])
         status=('COMPLETED' if completed else 'IN_PROGRESS' if started else
                 'WAITING' if kst_time(source['available_at'])<=end else 'PLANNED')
@@ -130,6 +139,9 @@ def advance_in_transaction(connection,run_id):
                    source_run_id=str(run_id),operation_input_hash=operation_input['snapshot_hash'])
         if started:
             clock['schedule']={k:row[k] for k in ('work_start_at','completion_at','berth_id','weather_pause_intervals','work_intervals','work_pause_intervals','night_pause_intervals')}
+            if operation_input.get('berth_phase'):
+                clock['schedule']['berthing_start_at'] = row['berthing_start_at']
+                clock['schedule']['berth_release_at'] = row['berth_release_at']
         next_states.append(dict(state_id=uuid.uuid5(run_id,'state:'+row['call_id']),call_id=row['call_id'],
             berth_id=row['berth_id'] if status=='IN_PROGRESS' else None,experiment_key=run['experiment_key'],state_at=end,
             status=status,remaining_work_kg=row['remaining_work_kg_at_24h'],
