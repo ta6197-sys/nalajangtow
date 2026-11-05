@@ -96,6 +96,7 @@ def _assert_candidate_matches_baseline(candidate: Mapping[str, Any], evaluation:
 def _failure(scenario, candidate, reason):
     return dict(scenario_id=scenario.get('scenario_id'), candidate_id=candidate.get('candidate_id'),
                 status='FAILED', failure_reason=str(reason), cost_cents=None,
+                failure_class='INFEASIBLE', physical_success=False, settlement_success=False,
                 recovery_mode='NO_RECOVERY', constraint_violations=[str(reason)])
 
 
@@ -267,6 +268,7 @@ def evaluate_scenario(
         except UnresolvedSubminuteSettlement as exc:
             return dict(_failure(scenario, candidate, exc),
                         physical_replay=exc.physical_replay,
+                        failure_class='UNRESOLVED', physical_success=True,
                         settlement_rule_status='UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
         except (ValueError, KeyError) as exc:
             return _failure(scenario, candidate, exc)
@@ -275,6 +277,8 @@ def evaluate_scenario(
         "scenario_id": scenario['scenario_id'],
         "candidate_id": candidate.get("candidate_id"),
         "status": "SUCCEEDED",
+        "physical_success": True,
+        "settlement_success": True,
         "cost_cents": summary["demurrage_increment_to_completion_cents"],
         "wait_minutes": summary["total_wait_minutes"],
         "completion_at": summary["last_completion_at"],

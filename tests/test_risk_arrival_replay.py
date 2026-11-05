@@ -156,6 +156,9 @@ class ArrivalReplayTest(unittest.TestCase):
         self.assertEqual(result['status'], 'FAILED')
         self.assertIsNone(result['cost_cents'])
         self.assertEqual(result['settlement_rule_status'], 'UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
+        self.assertTrue(result['physical_success'])
+        self.assertFalse(result['settlement_success'])
+        self.assertEqual(result['failure_class'], 'UNRESOLVED')
         row = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-001')
         self.assertEqual(row['completion_at'], '2026-11-02T03:00:36+09:00')
         self.assertEqual(row['cargo_quantity_kg'], 120000)
@@ -234,6 +237,7 @@ class ArrivalReplayTest(unittest.TestCase):
                              'duration_minutes': 60}]))
         self.assertEqual(result['status'], 'FAILED')
         self.assertIn('FROZEN_ASSIGNMENT_CONFLICT', result['failure_reason'])
+        self.assertEqual(result['failure_class'], 'INFEASIBLE')
 
     def test_frozen_arrival_conflict_is_explicit_failure_and_stops_statistics(self):
         snap = snapshot()
