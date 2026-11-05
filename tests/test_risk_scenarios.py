@@ -29,6 +29,23 @@ class ScenarioTest(unittest.TestCase):
         b = generate_scenarios(self.config,['DEM-1'])
         self.assertNotEqual(a,b)
 
+    def test_multiple_weather_blocks_are_seeded_and_backward_compatible(self):
+        legacy = generate_scenarios(self.config, ['DEM-1'])
+        self.assertNotIn('weather_blocks', legacy[0])
+        self.config['weather_blocks'] = [
+            {'duration_minutes': {'60': 1}, 'onset_offset_minutes': {'120': 1}},
+            {'duration_minutes': {'30': 1}, 'onset_offset_minutes': {'150': 1}},
+        ]
+        first = generate_scenarios(self.config, ['DEM-1', 'DEM-2'])
+        second = generate_scenarios(self.config, ['DEM-2', 'DEM-1'])
+        self.assertEqual(first, second)
+        self.assertEqual(first[0]['weather_blocks'], [
+            {'duration_minutes': 60, 'onset_offset_minutes': 120},
+            {'duration_minutes': 30, 'onset_offset_minutes': 150}])
+        self.config['weather_blocks'][0]['duration_minutes'] = {'-1': 1}
+        with self.assertRaises(ValueError):
+            generate_scenarios(self.config, ['DEM-1'])
+
     def test_bad_config_and_calls(self):
         self.config['arrival_shift_minutes'] = {'0':0.8,'60':0.3}
         with self.assertRaises(ValueError):

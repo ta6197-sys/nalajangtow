@@ -16,8 +16,10 @@ from ..evaluation import evaluate_baseline, replay_row
 from ..sk_physical_v3 import assert_eligible
 from rolling_horizon import RULE
 
-from .physical import berth_overlap, first_workable_start, scaled_work_seconds, work_timeline
-from .weather import scenario_weather
+from .time_precision import (berth_overlap, first_workable_start, remaining_work_kg,
+                             scaled_work_seconds, work_timeline, worked_seconds_until)
+from .weather_overlay import scenario_weather
+from .settlement import UnresolvedSubminuteSettlement, require_minute_aligned
 
 
 NO_SHOCK_BASELINE = "NO_SHOCK_BASELINE"
@@ -33,13 +35,19 @@ def _require_no_shock_baseline(scenario: Mapping[str, Any]) -> None:
         )
     if scenario.get("additional_weather_block_minutes", 0) != 0:
         raise ValueError("NO_SHOCK_BASELINE cannot add a weather block")
+    if scenario.get('weather_blocks'):
+        raise ValueError('NO_SHOCK_BASELINE cannot add weather blocks')
     if scenario.get("weather_block_onset_offset_minutes") not in (None, 0):
         raise ValueError("NO_SHOCK_BASELINE cannot set a weather-block onset")
+    if scenario.get('weather_block_onset_offset_seconds', 0):
+        raise ValueError('NO_SHOCK_BASELINE cannot set a weather-block onset second')
     for call_id, shock in scenario.get("call_shocks", {}).items():
         if not isinstance(shock, Mapping):
             raise ValueError(f"Invalid no-shock call entry: {call_id}")
         if shock.get("available_at_shift_minutes", 0) != 0:
             raise ValueError(f"NO_SHOCK_BASELINE cannot shift arrival: {call_id}")
+        if shock.get('available_at_shift_seconds', 0) != 0:
+            raise ValueError(f'NO_SHOCK_BASELINE cannot shift arrival seconds: {call_id}')
         if shock.get("work_duration_multiplier", 1) != 1:
             raise ValueError(f"NO_SHOCK_BASELINE cannot change work duration: {call_id}")
 
@@ -135,6 +143,16 @@ def _physical_replay(snapshot, candidate, shocks, weather):
                        work_intervals=timeline['work_intervals'],
                        weather_pause_intervals=timeline['weather_pause_intervals'],
                        night_pause_intervals=timeline['night_pause_intervals'])
+            row['remaining_work_kg_at_24h'] = remaining_work_kg(
+                calls[cid]['cargo_quantity_kg'], seconds,
+                worked_seconds_until(timeline['work_intervals'], freeze))
+            row['remaining_work_kg_at_72h'] = remaining_work_kg(
+                calls[cid]['cargo_quantity_kg'], seconds,
+                worked_seconds_until(timeline['work_intervals'], begin + timedelta(hours=72)))
+            row['completed_work_kg_at_24h'] = (row['cargo_quantity_kg']
+                                               - row['remaining_work_kg_at_24h'])
+            row['completed_work_kg_at_72h'] = (row['cargo_quantity_kg']
+                                               - row['remaining_work_kg_at_72h'])
             if any(berth_overlap(row, previous) for previous in rows):
                 raise ValueError(f'BERTH_OVERLAP: {cid}')
             rows.append(row)
@@ -169,8 +187,9 @@ def _replay_arrivals(snapshot, candidate, scenario, weather):
         call['available_at'] = (kst_time(call['available_at']) + timedelta(
             minutes=shift, seconds=shift_seconds)).isoformat()
     if (subminute_work or any(kst_time(c['available_at']).second for c in temporary['calls'])
-            or scenario.get('weather_block_onset_offset_seconds', 0) % 60):
+            or any(a.second or b.second for a, b in weather.blocks)):
         physical = _physical_replay(snapshot, candidate, shocks, weather)
+        require_minute_aligned(physical)
         raise UnresolvedSubminuteSettlement(physical)
     temporary['snapshot_hash'] = signature({k: v for k, v in temporary.items() if k != 'snapshot_hash'})
     calls = {c['call_id']: c for c in engine_calls(temporary)}
@@ -215,12 +234,6 @@ def _replay_arrivals(snapshot, candidate, scenario, weather):
                 raise ValueError(f'Unknown assignment kind: {cid}')
     result = evaluate_baseline(temporary, assignments, weather, fixed_tail_assignments=tail)
     return result['evaluation']
-
-
-class UnresolvedSubminuteSettlement(ValueError):
-    def __init__(self, physical_replay: list[dict]):
-        super().__init__('UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
-        self.physical_replay = physical_replay
 
 
 def evaluate_scenario(

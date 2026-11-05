@@ -55,6 +55,14 @@ def validate_scenario_config(config: Mapping[str, object]) -> None:
     for field in ("arrival_shift_minutes", "work_duration_multiplier",
                   "additional_weather_block_minutes", "weather_block_onset_offset_minutes"):
         _distribution(config, field, nonnegative=field != "arrival_shift_minutes")
+    blocks = config.get('weather_blocks', [])
+    if not isinstance(blocks, list) or len(blocks) > 16:
+        raise ValueError('weather_blocks must be a list of at most 16 distributions')
+    for index, block in enumerate(blocks):
+        if not isinstance(block, dict) or set(block) != {'duration_minutes', 'onset_offset_minutes'}:
+            raise ValueError(f'Invalid weather block distribution {index}')
+        _distribution(block, 'duration_minutes', nonnegative=True)
+        _distribution(block, 'onset_offset_minutes', nonnegative=True)
 
 
 def generate_scenarios(config: Mapping[str, object], call_ids: Sequence[str]) -> list[dict]:
@@ -78,6 +86,10 @@ def generate_scenarios(config: Mapping[str, object], call_ids: Sequence[str]) ->
         for key in ("arrival_shift_minutes", "work_duration_multiplier",
                     "additional_weather_block_minutes", "weather_block_onset_offset_minutes")
     }
+    block_distributions = [(
+        _distribution(block, 'duration_minutes', nonnegative=True),
+        _distribution(block, 'onset_offset_minutes', nonnegative=True))
+        for block in config.get('weather_blocks', [])]
     rng = np.random.default_rng(config["seed"])
     scenarios = []
     for idx in range(config["sample_count"]):
@@ -93,7 +105,13 @@ def generate_scenarios(config: Mapping[str, object], call_ids: Sequence[str]) ->
                 "available_at_shift_minutes": int(rng.choice(arrival_values, p=arrival_probs)),
                 "work_duration_multiplier": float(rng.choice(work_values, p=work_probs)),
             }
-        scenarios.append({
+        added_blocks = []
+        for (durations, duration_probs), (onsets, onset_probs) in block_distributions:
+            duration = int(rng.choice(durations, p=duration_probs))
+            if duration:
+                added_blocks.append(dict(duration_minutes=duration,
+                    onset_offset_minutes=int(rng.choice(onsets, p=onset_probs))))
+        entry = {
             "scenario_id": f"{config['model_id']}-{fingerprint}-{idx:06d}",
             "scenario_index": idx,
             "scenario_weight": f"{Decimal(1) / Decimal(config['sample_count']):.15f}",
@@ -101,5 +119,8 @@ def generate_scenarios(config: Mapping[str, object], call_ids: Sequence[str]) ->
             "additional_weather_block_minutes": weather_minutes,
             "weather_block_onset_offset_minutes": onset_minutes,
             "call_shocks": call_shocks,
-        })
+        }
+        if 'weather_blocks' in config:
+            entry['weather_blocks'] = added_blocks
+        scenarios.append(entry)
     return scenarios

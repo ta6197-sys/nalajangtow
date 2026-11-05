@@ -5,9 +5,11 @@ from datetime import datetime, timedelta
 
 
 def merge_blocks(blocks):
-    ordered = sorted((start, end) for start, end in blocks if end > start)
+    ordered = sorted(blocks)
     merged = []
     for start, end in ordered:
+        if end <= start:
+            raise ValueError('Weather block must have positive duration')
         if merged and start <= merged[-1][1]:
             merged[-1] = merged[-1][0], max(end, merged[-1][1])
         else:
@@ -51,11 +53,29 @@ def scenario_weather(source, scenario, as_of):
     onset_seconds = scenario.get('weather_block_onset_offset_seconds', 0)
     if type(duration) is not int or duration < 0 or type(onset_seconds) is not int:
         raise ValueError('Weather block duration and onset must use integer minutes/seconds')
-    if not duration:
-        if onset not in (None, 0) or onset_seconds:
-            raise ValueError('Weather onset requires a positive block duration')
-        return ScenarioWeather(source, [])
-    if type(onset) is not int:
-        raise ValueError('Weather block onset is required in integer minutes')
-    start = as_of + timedelta(minutes=onset, seconds=onset_seconds)
-    return ScenarioWeather(source, [(start, start + timedelta(minutes=duration))])
+    blocks = []
+    if duration:
+        if type(onset) is not int:
+            raise ValueError('Weather block onset is required in integer minutes')
+        start = as_of + timedelta(minutes=onset, seconds=onset_seconds)
+        blocks.append((start, start + timedelta(minutes=duration)))
+    elif onset not in (None, 0) or onset_seconds:
+        raise ValueError('Weather onset requires a positive block duration')
+    additional = scenario.get('weather_blocks', [])
+    if not isinstance(additional, list):
+        raise ValueError('weather_blocks must be a list')
+    for index, item in enumerate(additional):
+        if not isinstance(item, dict):
+            raise ValueError(f'Invalid weather block {index}')
+        minute = item.get('onset_offset_minutes')
+        second = item.get('onset_offset_seconds', 0)
+        length_min = item.get('duration_minutes', 0)
+        length_sec = item.get('duration_seconds', 0)
+        if any(type(value) is not int for value in (minute, second, length_min, length_sec)):
+            raise ValueError(f'Weather block {index} requires integer minutes/seconds')
+        length = timedelta(minutes=length_min, seconds=length_sec)
+        if length <= timedelta(0):
+            raise ValueError(f'Weather block {index} requires positive duration')
+        start = as_of + timedelta(minutes=minute, seconds=second)
+        blocks.append((start, start + length))
+    return ScenarioWeather(source, blocks)

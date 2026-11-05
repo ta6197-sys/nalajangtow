@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 
 from rolling_horizon import RULE
 
@@ -10,8 +10,14 @@ from ..bootstrap_db import kst_time
 from ..daylight import daylight_window
 
 
+def _risk_daylight_window(at: datetime):
+    # The legacy lookup requires minute timestamps; only its date is relevant.
+    # Physical Risk timestamps retain their seconds outside this lookup.
+    return daylight_window(at.replace(second=0, microsecond=0))
+
+
 def scaled_work_seconds(work_minutes: int, multiplier: object) -> int:
-    """Convert a duration multiplier without silently rounding physical work."""
+    """Round physical work to seconds, independent of allowed-laytime rounding."""
     if type(work_minutes) is not int or work_minutes <= 0 or isinstance(multiplier, bool):
         raise ValueError('Invalid work duration input')
     try:
@@ -20,10 +26,29 @@ def scaled_work_seconds(work_minutes: int, multiplier: object) -> int:
         raise ValueError('Invalid work duration multiplier') from exc
     if not factor.is_finite() or factor <= 0:
         raise ValueError('Work duration multiplier must be positive and finite')
-    seconds = Decimal(work_minutes) * factor * 60
-    if seconds != seconds.to_integral_value():
-        raise ValueError('Work duration must resolve to exact whole seconds')
-    return int(seconds)
+    with localcontext() as ctx:
+        ctx.prec = max(50, len(factor.as_tuple().digits) + len(str(work_minutes)) + 8)
+        seconds = Decimal(work_minutes) * factor * 60
+        rounded = int(seconds.to_integral_value(rounding=ROUND_HALF_UP))
+    if rounded <= 0:
+        raise ValueError('Work duration rounds below one physical second')
+    return rounded
+
+
+def remaining_work_kg(total_kg: int, total_seconds: int, worked_seconds: int) -> int:
+    """Integer kg balance; completed kg plus remaining kg equals source kg."""
+    if (any(type(value) is not int for value in (total_kg, total_seconds, worked_seconds))
+            or total_kg < 0 or total_seconds <= 0
+            or not 0 <= worked_seconds <= total_seconds):
+        raise ValueError('Invalid cargo/work balance')
+    left = total_seconds - worked_seconds
+    return (total_kg * left + total_seconds - 1) // total_seconds
+
+
+def worked_seconds_until(work_intervals: list, cut: datetime) -> int:
+    target = kst_time(cut)
+    return sum(max(0, int((min(kst_time(end), target) - kst_time(start)).total_seconds()))
+               for start, end in work_intervals)
 
 
 def _append(intervals: list, start: datetime, end: datetime) -> None:
@@ -44,11 +69,11 @@ def work_timeline(start: datetime, seconds: int, weather, *, daylight: bool) -> 
     work, weather_stops, night_stops = [], [], []
     while remaining:
         if daylight:
-            sunrise, sunset = daylight_window(at)
+            sunrise, sunset = _risk_daylight_window(at)
             if at < sunrise or at >= sunset:
                 next_start = (sunrise if at < sunrise else
-                              daylight_window(datetime.combine(at.date() + timedelta(days=1),
-                                                                datetime.min.time()))[0])
+                              _risk_daylight_window(datetime.combine(
+                                  at.date() + timedelta(days=1), datetime.min.time()))[0])
                 _append(night_stops, at, next_start)
                 at = next_start
                 continue
@@ -75,7 +100,7 @@ def first_workable_start(proposed: datetime, weather, *, daylight: bool) -> date
     at = proposed
     while True:
         if daylight:
-            sunrise, sunset = daylight_window(at)
+            sunrise, sunset = _risk_daylight_window(at)
             if at < sunrise:
                 at = sunrise
             if at >= sunset:

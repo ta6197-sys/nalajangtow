@@ -3,6 +3,9 @@ import unittest
 from datetime import datetime, timedelta
 
 from contracts import settle_intervals
+from src.daily_planning.risk.settlement import (UnresolvedSubminuteSettlement,
+    settle_minute_aligned)
+from .test_risk_physical import weather_rows
 
 
 def contract(**changes):
@@ -34,6 +37,18 @@ class RiskSettlementPrecisionTest(unittest.TestCase):
         end = start + timedelta(seconds=61)
         with self.assertRaisesRegex(ValueError, 'whole minutes'):
             settle_intervals(contract(), start, end, [(start, end, 'WAIT')])
+
+    def test_risk_adapter_matches_original_minute_settlement_and_flags_seconds(self):
+        start = datetime(2026, 11, 2, 10)
+        weather = weather_rows(start, 3)
+        expected = settle_intervals(contract(), start, start + timedelta(minutes=1),
+                                    [(start, start + timedelta(minutes=1), 'WAIT')])
+        actual = settle_minute_aligned(contract(), start, start + timedelta(minutes=1),
+                                       [], weather)
+        self.assertEqual(actual, expected)
+        with self.assertRaises(UnresolvedSubminuteSettlement):
+            settle_minute_aligned(contract(), start, start + timedelta(seconds=61),
+                                  [], weather)
 
 
 if __name__ == '__main__':

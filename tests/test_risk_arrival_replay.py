@@ -158,6 +158,13 @@ class ArrivalReplayTest(unittest.TestCase):
         self.assertEqual(result['settlement_rule_status'], 'UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
         row = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-001')
         self.assertEqual(row['completion_at'], '2026-11-02T03:00:36+09:00')
+        self.assertEqual(row['cargo_quantity_kg'], 120000)
+        self.assertEqual(row['remaining_work_kg_at_24h'], 120000)
+        self.assertEqual(row['remaining_work_kg_at_72h'], 0)
+        self.assertEqual(row['completed_work_kg_at_24h'] + row['remaining_work_kg_at_24h'],
+                         row['cargo_quantity_kg'])
+        self.assertEqual(row['completed_work_kg_at_72h'] + row['remaining_work_kg_at_72h'],
+                         row['cargo_quantity_kg'])
         following = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-002')
         self.assertFalse(following['work_start_at'] < row['berth_release_at'])
 
@@ -203,6 +210,30 @@ class ArrivalReplayTest(unittest.TestCase):
         self.assertIsNone(result['cost_cents'])
         self.assertEqual(result['settlement_rule_status'], 'UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
         self.assertTrue(any(r['weather_pause_intervals'] for r in result['physical_replay']))
+
+    def test_multiple_overlapping_weather_blocks_delay_fixed_order_once(self):
+        snap, candidate = fixture()
+        scenario = dict(scenario_id='multi-weather',
+            additional_weather_block_minutes=30,
+            weather_block_onset_offset_minutes=25 * 60,
+            weather_blocks=[
+                {'onset_offset_minutes': 25 * 60 + 15, 'duration_minutes': 60},
+                {'onset_offset_minutes': 25 * 60 + 45, 'duration_minutes': 30}],
+            call_shocks={'RISK-001': {'work_duration_multiplier': '2'}})
+        result = evaluate_scenario(snap, candidate, scenario)
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        rows = {r['call_id']: r for r in result['vessel_results']}
+        self.assertEqual(rows['RISK-001']['work_start_at'], '2026-11-02T02:15:00+09:00')
+        self.assertEqual(rows['RISK-001']['completion_at'], '2026-11-02T06:15:00+09:00')
+        self.assertEqual(rows['RISK-002']['work_start_at'], '2026-11-02T06:15:00+09:00')
+
+    def test_weather_shock_cannot_rewrite_frozen_completion(self):
+        snap, candidate = saved_candidate('A')
+        result = evaluate_scenario(snap, candidate, dict(scenario_id='frozen-weather',
+            weather_blocks=[{'onset_offset_minutes': 7 * 60,
+                             'duration_minutes': 60}]))
+        self.assertEqual(result['status'], 'FAILED')
+        self.assertIn('FROZEN_ASSIGNMENT_CONFLICT', result['failure_reason'])
 
     def test_frozen_arrival_conflict_is_explicit_failure_and_stops_statistics(self):
         snap = snapshot()

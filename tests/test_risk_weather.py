@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from rolling_horizon import RULE
 from weather_optimizer import price_contract
 
-from src.daily_planning.risk.physical import work_timeline
-from src.daily_planning.risk.weather import ScenarioWeather, merge_blocks, scenario_weather
+from src.daily_planning.risk.time_precision import work_timeline
+from src.daily_planning.risk.weather_overlay import ScenarioWeather, merge_blocks, scenario_weather
 from .test_risk_physical import weather_rows
 from .test_risk_settlement_precision import contract
 
@@ -17,6 +17,18 @@ class RiskWeatherTest(unittest.TestCase):
         blocks = merge_blocks([(start, start + timedelta(minutes=30)),
                                (start + timedelta(minutes=15), start + timedelta(minutes=45))])
         self.assertEqual(blocks, [(start, start + timedelta(minutes=45))])
+
+    def test_adjacent_cross_midnight_blocks_merge_without_mutating_source(self):
+        start = datetime(2026, 11, 2, 23, 30)
+        source = weather_rows(start, 5)
+        original = list(source.rows)
+        weather = scenario_weather(source, dict(weather_blocks=[
+            {'onset_offset_minutes': 15, 'duration_minutes': 30},
+            {'onset_offset_minutes': 45, 'duration_minutes': 45},
+        ]), start)
+        self.assertEqual(weather.blocks, [(datetime(2026, 11, 2, 23, 45),
+                                           datetime(2026, 11, 3, 1))])
+        self.assertEqual(source.rows, original)
 
     def test_overlay_and_source_weather_form_one_pause(self):
         start = datetime(2026, 11, 2, 10)
