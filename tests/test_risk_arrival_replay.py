@@ -230,16 +230,20 @@ class ArrivalReplayTest(unittest.TestCase):
         self.assertEqual(rows['RISK-001']['completion_at'], '2026-11-02T06:15:00+09:00')
         self.assertEqual(rows['RISK-002']['work_start_at'], '2026-11-02T06:15:00+09:00')
 
-    def test_weather_shock_cannot_rewrite_frozen_completion(self):
+    def test_weather_shock_changes_frozen_realization_without_changing_plan(self):
         snap, candidate = saved_candidate('A')
         result = evaluate_scenario(snap, candidate, dict(scenario_id='frozen-weather',
             weather_blocks=[{'onset_offset_minutes': 7 * 60,
                              'duration_minutes': 60}]))
-        self.assertEqual(result['status'], 'FAILED')
-        self.assertIn('FROZEN_ASSIGNMENT_CONFLICT', result['failure_reason'])
-        self.assertEqual(result['failure_class'], 'INFEASIBLE')
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        self.assertEqual(result['physical_status'], 'FEASIBLE')
+        self.assertEqual(result['commitment_status'], 'DISRUPTED')
+        row = next(r for r in result['actual_schedules'] if r['call_id'] == 'DEM-0103')
+        original = next(r for r in candidate['vessel_results'] if r['call_id'] == 'DEM-0103')
+        self.assertEqual(row['planned_completion_at'], original['completion_at'])
+        self.assertNotEqual(row['realized_completion_at'], row['planned_completion_at'])
 
-    def test_frozen_arrival_conflict_is_explicit_failure_and_stops_statistics(self):
+    def test_frozen_arrival_delay_is_commitment_disruption_with_valid_cost(self):
         snap = snapshot()
         baseline = evaluate_baseline(snap, [dict(call_id='RISK-001', berth_id='BERTH-01',
                                                  start_at=snap['calls'][0]['available_at'])],
@@ -250,13 +254,14 @@ class ArrivalReplayTest(unittest.TestCase):
                          vessel_results=baseline['vessel_results'], label='A')
         scenario = shock(**{'RISK-001': 1})
         result = evaluate_scenario(snap, candidate, scenario)
-        self.assertEqual(result['status'], 'FAILED')
-        self.assertIn('FROZEN_ASSIGNMENT_CONFLICT', result['failure_reason'])
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        self.assertEqual(result['physical_status'], 'FEASIBLE')
+        self.assertEqual(result['commitment_status'], 'DISRUPTED')
         report = evaluate_with_adapter([candidate], [dict(scenario, scenario_weight='1')],
                                        lambda c, s: evaluate_scenario(snap, c, s))
-        self.assertEqual(report['risk_status'], 'FAILED_SCENARIOS')
-        self.assertIsNone(report['risk_by_candidate'])
-        self.assertEqual(report['failures'][0]['scenario_id'], scenario['scenario_id'])
+        self.assertEqual(report['risk_status'], 'SUCCEEDED')
+        self.assertTrue(report['full_distribution_available'])
+        self.assertEqual(report['failures'], [])
 
 
 if __name__ == '__main__':

@@ -58,6 +58,8 @@ def scenario_weather(source, scenario, as_of):
         if type(onset) is not int:
             raise ValueError('Weather block onset is required in integer minutes')
         start = as_of + timedelta(minutes=onset, seconds=onset_seconds)
+        if start < as_of:
+            raise ValueError('WEATHER_ONSET_BEFORE_AS_OF')
         blocks.append((start, start + timedelta(minutes=duration)))
     elif onset not in (None, 0) or onset_seconds:
         raise ValueError('Weather onset requires a positive block duration')
@@ -77,5 +79,7 @@ def scenario_weather(source, scenario, as_of):
         if length <= timedelta(0):
             raise ValueError(f'Weather block {index} requires positive duration')
         start = as_of + timedelta(minutes=minute, seconds=second)
+        if start < as_of:
+            raise ValueError('WEATHER_ONSET_BEFORE_AS_OF')
         blocks.append((start, start + length))
     return ScenarioWeather(source, blocks)

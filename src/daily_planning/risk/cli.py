@@ -51,6 +51,8 @@ def main():
         print(json.dumps(dict(run_id=run['run_id'],analysis_id=analysis_id,
             scenario_count=report['scenario_count'],risk_status=report['risk_status'],
             coverage_by_candidate=report['coverage_by_candidate'],
+            failure_breakdown_by_candidate=report['failure_breakdown_by_candidate'],
+            disruption_by_candidate=report['disruption_by_candidate'],
             full_distribution_available=report['full_distribution_available'],
             risk_by_candidate=report['risk_by_candidate'],
             conditional_risk_by_candidate=report['conditional_risk_by_candidate'],
