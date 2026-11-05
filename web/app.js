@@ -236,6 +236,51 @@ $('candidates').onclick=event=>{
 $('compare-baseline').onchange=renderTimeline;
 $('go-confirm').onclick=()=>navigate('confirm');
 document.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>navigate(button.dataset.page));
+let riskRunId=null,riskAnalyses=[],riskReport=null,riskRequest=0;
+async function loadRisk(runId,force=false){
+  if(!runId){riskRunId=null;riskReport=null;riskAnalyses=[];$('risk-analysis-status').textContent='먼저 A/B/C 후보를 계산하세요.';$('risk-analysis-select').innerHTML='';$('risk-kpis').innerHTML='';return}
+  if(!force&&riskRunId===runId)return;
+  riskRunId=runId;const ticket=++riskRequest;
+  $('risk-analysis-status').textContent='저장된 Risk 분석을 조회하는 중입니다.';
+  try{
+    const listed=await api(`/api/risk/analyses?run_id=${encodeURIComponent(runId)}`);
+    if(ticket!==riskRequest)return;
+    riskAnalyses=listed.analyses;
+    $('risk-analysis-select').innerHTML=riskAnalyses.map(row=>`<option value="${esc(row.analysis_id)}">${row.scenario_count}개 · ${esc(row.model_id)} · ${esc(row.created_at)}</option>`).join('');
+    if(!riskAnalyses.length){riskReport=null;$('risk-analysis-status').textContent='이 계획의 저장된 Risk 분석이 없습니다. CLI 평가 후 새로고침하세요.';$('risk-kpis').innerHTML='';return}
+    const preferred=riskAnalyses.find(row=>row.scenario_count===1000)||riskAnalyses[0];
+    $('risk-analysis-select').value=preferred.analysis_id;
+    await selectRiskAnalysis(preferred.analysis_id,ticket);
+  }catch(error){if(ticket===riskRequest)$('risk-analysis-status').textContent=`Risk 조회 실패: ${error.message}`}
+}
+async function selectRiskAnalysis(analysisId,ticket=riskRequest){
+  try{
+    const report=await api(`/api/risk/analyses/${encodeURIComponent(analysisId)}`);
+    if(ticket!==riskRequest)return;
+    riskReport=report;
+    const summary=report.summary,full=summary.full_distribution_available;
+    $('risk-analysis-status').textContent=`${summary.scenario_count}개 합성 가정 시나리오 · ${full?'전체 표본 비용 통계':'전체 표본 비용 통계 산출 불가 · 성공 사례 조건부 수치만 표시'} · 스냅샷 ${report.input_snapshot_hash.slice(0,12)}`;
+    const risk=summary.risk_by_candidate||summary.conditional_risk_by_candidate||{};
+    $('risk-kpis').innerHTML='ABC'.split('').map(label=>{const row=risk[label],coverage=summary.coverage_by_candidate?.[label];return `<article><b>후보 ${label}</b><span>기대 비용 ${row?money(Number(row.expected_cost_cents)):'—'}</span><span>VaR95 ${row?money(row.var_cents):'—'} · CVaR95 ${row?money(Number(row.cvar_cents)):'—'}</span><small>물리 성공 ${coverage?.physical_success??'—'} / 정산 성공 ${coverage?.settlement_success??'—'} / 미정 ${coverage?.unresolved??'—'} / 불가능 ${coverage?.infeasible??'—'} / 누락 ${coverage?.missing??'—'}</small></article>`}).join('');
+    window.DockRiskCharts.draw(report);
+    const ids=[...new Set(report.outcomes.map(row=>row.scenario_id))];
+    $('risk-scenario-select').innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join('');
+    if(ids.length)await selectRiskScenario(ids[0],analysisId,ticket);
+  }catch(error){if(ticket===riskRequest)$('risk-analysis-status').textContent=`Risk 분석 조회 실패: ${error.message}`}
+}
+async function selectRiskScenario(scenarioId,analysisId=riskReport?.analysis_id,ticket=riskRequest){
+  if(!analysisId)return;
+  $('risk-scenario-detail').textContent='시나리오 상세를 읽는 중입니다.';
+  try{
+    const detail=await api(`/api/risk/analyses/${encodeURIComponent(analysisId)}/scenarios/${encodeURIComponent(scenarioId)}`);
+    if(ticket!==riskRequest||riskReport?.analysis_id!==analysisId)return;
+    const blocks=detail.scenario.weather_blocks||[];
+    $('risk-scenario-detail').innerHTML=`<p>출처: ${esc(detail.scenario.provenance)} · 추가 날씨 차단 ${blocks.length}개</p><table><thead><tr><th>후보</th><th>결과</th><th>비용</th><th>실패 구분</th><th>항차 상세</th></tr></thead><tbody>${detail.outcomes.map(item=>`<tr><td>${esc(item.label)}</td><td>${esc(item.status)}</td><td>${money(item.cost_cents)}</td><td>${esc(item.failure_class||'—')}</td><td>${item.vessel_results.map(v=>`${esc(v.call_id)} ${esc(v.berth_id)} ${esc(v.work_start_at)} → ${esc(v.completion_at)} · ${money(v.demurrage_increment_to_completion_cents)}`).join('<br>')||'—'}</td></tr>`).join('')}</tbody></table>`;
+  }catch(error){if(ticket===riskRequest)$('risk-scenario-detail').textContent=`상세 조회 실패: ${error.message}`}
+}
+$('risk-refresh').onclick=()=>loadRisk(state?.current?.run_id,true);
+$('risk-analysis-select').onchange=e=>selectRiskAnalysis(e.target.value);
+$('risk-scenario-select').onchange=e=>selectRiskScenario(e.target.value);
 async function refreshStatus(){
   if(busy)return;busy=true;setBusy(true);
   try{const next=await api('/api/status');

@@ -26,6 +26,10 @@
     },
     {
       "name": "5. XLSX 업로드"
+    },
+    {
+      "name": "6. Risk 분석",
+      "description": "저장된 합성 Risk 결과 조회 전용. 분석 생성은 CLI에서 수행합니다."
     }
   ],
   "paths": {
@@ -876,6 +880,131 @@
                 "$ref": "#/components/schemas/WorkbookApplyRequest"
               }
             }
+          }
+        }
+      }
+    },
+    "/api/risk/analyses": {
+      "get": {
+        "operationId": "list_risk_analyses",
+        "tags": [
+          "6. Risk 분석"
+        ],
+        "summary": "계획 실행의 저장 Risk 분석 목록",
+        "description": "읽기 전용. SYNTHETIC_ASSUMPTION 결과이며 미정산 비용은 null입니다.",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "저장된 Risk 결과",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskAnalysisList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 UUID 또는 필수 매개변수 누락"
+          },
+          "404": {
+            "description": "저장된 분석 또는 시나리오 없음"
+          }
+        }
+      }
+    },
+    "/api/risk/analyses/{analysis_id}": {
+      "get": {
+        "operationId": "get_risk_analysis",
+        "tags": [
+          "6. Risk 분석"
+        ],
+        "summary": "저장 Risk 분석 요약과 A/B/C 시나리오 비용",
+        "description": "읽기 전용. SYNTHETIC_ASSUMPTION 결과이며 미정산 비용은 null입니다.",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "저장된 Risk 결과",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskAnalysis"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 UUID 또는 필수 매개변수 누락"
+          },
+          "404": {
+            "description": "저장된 분석 또는 시나리오 없음"
+          }
+        }
+      }
+    },
+    "/api/risk/analyses/{analysis_id}/scenarios/{scenario_id}": {
+      "get": {
+        "operationId": "get_risk_scenario",
+        "tags": [
+          "6. Risk 분석"
+        ],
+        "summary": "시나리오별 후보·항차 상세",
+        "description": "읽기 전용. SYNTHETIC_ASSUMPTION 결과이며 미정산 비용은 null입니다.",
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "저장된 Risk 결과",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskScenarioDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 UUID 또는 필수 매개변수 누락"
+          },
+          "404": {
+            "description": "저장된 분석 또는 시나리오 없음"
           }
         }
       }
@@ -1781,6 +1910,153 @@
           "current",
           "history"
         ]
+      },
+      "RiskAnalysisList": {
+        "type": "object",
+        "required": [
+          "run_id",
+          "analyses"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "analyses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "analysis_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "scenario_count": {
+                  "type": "integer"
+                },
+                "risk_status": {
+                  "type": "string"
+                },
+                "full_distribution_available": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RiskAnalysis": {
+        "type": "object",
+        "required": [
+          "analysis_id",
+          "run_id",
+          "summary",
+          "outcomes"
+        ],
+        "properties": {
+          "analysis_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "input_snapshot_hash": {
+            "type": "string"
+          },
+          "scenario_config": {
+            "type": "object"
+          },
+          "summary": {
+            "type": "object",
+            "description": "전체 표본 통계 또는 명시적으로 표기된 조건부 통계와 실패율"
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "scenario_id",
+                "label",
+                "status"
+              ],
+              "properties": {
+                "scenario_id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "B",
+                    "C"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "cost_cents": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "failure_class": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "RiskScenarioDetail": {
+        "type": "object",
+        "required": [
+          "analysis_id",
+          "scenario_id",
+          "scenario",
+          "outcomes"
+        ],
+        "properties": {
+          "analysis_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scenario_id": {
+            "type": "string"
+          },
+          "scenario": {
+            "type": "object"
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "cost_cents": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "failure_class": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "vessel_results": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
