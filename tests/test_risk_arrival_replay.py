@@ -170,6 +170,40 @@ class ArrivalReplayTest(unittest.TestCase):
         row = next(r for r in result['physical_replay'] if r['call_id'] == 'RISK-001')
         self.assertEqual(row['work_start_at'], '2026-11-02T01:00:17+09:00')
 
+    def test_combined_arrival_work_and_weather_shocks(self):
+        snap, candidate = fixture()
+        scenario = dict(scenario_id='combined', additional_weather_block_minutes=60,
+            weather_block_onset_offset_minutes=25 * 60,
+            call_shocks={'RISK-001': {'available_at_shift_minutes': 30,
+                                       'work_duration_multiplier': '2'}})
+        result = evaluate_scenario(snap, candidate, scenario)
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        self.assertGreater(result['cost_cents'], candidate['cost_cents'])
+        rows = {row['call_id']: row for row in result['vessel_results']}
+        self.assertEqual(rows['RISK-001']['work_start_at'], '2026-11-02T02:00:00+09:00')
+        self.assertEqual(rows['RISK-001']['completion_at'], '2026-11-02T06:00:00+09:00')
+        self.assertEqual(rows['RISK-002']['work_start_at'], '2026-11-02T06:00:00+09:00')
+
+    def test_daylight_night_remains_distinct_from_added_weather(self):
+        snap, candidate = saved_candidate('A')
+        result = evaluate_scenario(snap, candidate, dict(scenario_id='night-weather',
+            additional_weather_block_minutes=60,
+            weather_block_onset_offset_minutes=20 * 60))
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        self.assertEqual(result['cost_cents'], candidate['cost_cents'])
+        self.assertEqual(result['vessel_results'], candidate['vessel_results'])
+
+    def test_second_precision_weather_onset_is_explicit_unpriced_failure(self):
+        snap, candidate = fixture()
+        result = evaluate_scenario(snap, candidate, dict(scenario_id='weather-seconds',
+            additional_weather_block_minutes=30,
+            weather_block_onset_offset_minutes=25 * 60,
+            weather_block_onset_offset_seconds=17))
+        self.assertEqual(result['status'], 'FAILED')
+        self.assertIsNone(result['cost_cents'])
+        self.assertEqual(result['settlement_rule_status'], 'UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE')
+        self.assertTrue(any(r['weather_pause_intervals'] for r in result['physical_replay']))
+
     def test_frozen_arrival_conflict_is_explicit_failure_and_stops_statistics(self):
         snap = snapshot()
         baseline = evaluate_baseline(snap, [dict(call_id='RISK-001', berth_id='BERTH-01',

@@ -17,6 +17,7 @@ from ..sk_physical_v3 import assert_eligible
 from rolling_horizon import RULE
 
 from .physical import berth_overlap, first_workable_start, scaled_work_seconds, work_timeline
+from .weather import scenario_weather
 
 
 NO_SHOCK_BASELINE = "NO_SHOCK_BASELINE"
@@ -148,10 +149,7 @@ def _replay_arrivals(snapshot, candidate, scenario, weather):
     original = {c['call_id']: c for c in snapshot['calls']}
     if set(shocks) - set(original):
         raise ValueError(f'Unknown shock calls: {sorted(set(shocks) - set(original))}')
-    if scenario.get('additional_weather_block_minutes', 0) != 0:
-        raise ValueError('Additional weather shock is unsupported')
-    if scenario.get('weather_block_onset_offset_minutes') not in (None, 0):
-        raise ValueError('Weather-block onset is unsupported')
+    weather = scenario_weather(weather, scenario, local_time(snapshot['as_of_at']))
     temporary = deepcopy(snapshot)
     subminute_work = False
     for call in temporary['calls']:
@@ -170,7 +168,8 @@ def _replay_arrivals(snapshot, candidate, scenario, weather):
             call['work_minutes'] = seconds // 60
         call['available_at'] = (kst_time(call['available_at']) + timedelta(
             minutes=shift, seconds=shift_seconds)).isoformat()
-    if subminute_work or any(kst_time(c['available_at']).second for c in temporary['calls']):
+    if (subminute_work or any(kst_time(c['available_at']).second for c in temporary['calls'])
+            or scenario.get('weather_block_onset_offset_seconds', 0) % 60):
         physical = _physical_replay(snapshot, candidate, shocks, weather)
         raise UnresolvedSubminuteSettlement(physical)
     temporary['snapshot_hash'] = signature({k: v for k, v in temporary.items() if k != 'snapshot_hash'})
