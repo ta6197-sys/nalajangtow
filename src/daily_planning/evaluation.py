@@ -49,7 +49,7 @@ def price_until(call, row, cut, weather):
     return partial_price(call, started, cut, weather, RULE)
 
 
-def evaluate_baseline(snapshot, planned_assignments, weather):
+def evaluate_baseline(snapshot, planned_assignments, weather, *, fixed_tail_assignments=None):
     """No DB writes, no reoptimization, no mutation of caller-owned objects."""
     if signature({k: v for k, v in snapshot.items() if k != 'snapshot_hash'}) != snapshot.get('snapshot_hash'):
         raise ValueError('Frozen input snapshot hash mismatch')
@@ -85,7 +85,7 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
         start = local_time(item.get('start_at', item.get('work_start_at')))
         if cid not in calls or cid in rows:
             raise ValueError(f'Unknown, duplicate or already committed call: {cid}')
-        if bid not in active_berths or not begin <= start < end:
+        if bid not in active_berths or not begin <= start or (fixed_tail_assignments is None and start >= end):
             raise ValueError('New decisions must use active berths and start inside the 72h horizon')
         assert_eligible(snapshot, cid, bid)
         row = replay_row(calls[cid], bid, start, weather, daylight=daylight,
@@ -112,7 +112,22 @@ def evaluate_baseline(snapshot, planned_assignments, weather):
     # extend past the boundary and continues occupying its berth.
     free = {b: max([end] + [local_time(occupancy_bounds(r)[1]) for r in rows.values()
                            if r['berth_id'] == b]) for b in active_berths}
-    for cid in sorted(deferred, key=lambda c: (local_time(calls[c]['available_at']), c)):
+    if fixed_tail_assignments is not None:
+        for item in fixed_tail_assignments:
+            cid, bid = item['call_id'], item['berth_id']
+            start = local_time(item['start_at'])
+            if cid not in deferred or bid not in active_berths or start < end:
+                raise ValueError(f'Invalid fixed evaluation tail: {cid}')
+            assert_eligible(snapshot, cid, bid)
+            rows[cid] = replay_row(calls[cid], bid, start, weather, daylight=daylight,
+                                   policy=policy, phase_policy=phase_policy)
+            kinds[cid] = 'EVALUATION_TAIL'
+        if set(rows) != set(calls):
+            raise ValueError('Fixed evaluation tail must cover every call')
+        if any(interval_overlap(a, b) for i, a in enumerate(rows.values()) for b in list(rows.values())[i+1:]):
+            raise ValueError('Fixed evaluation tail has overlapping berth occupancy')
+        deferred = sorted(cid for cid, kind in kinds.items() if kind == 'EVALUATION_TAIL')
+    for cid in ([] if fixed_tail_assignments is not None else sorted(deferred, key=lambda c: (local_time(calls[c]['available_at']), c))):
         compatible = eligible_berths(snapshot, cid, active_berths)
         if not compatible:
             raise ValueError(f'NO_COMPATIBLE_BERTH_IN_MODEL: {cid}')

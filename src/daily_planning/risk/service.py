@@ -30,18 +30,18 @@ def build_stage1_plan(engine, run_id: str, config: Mapping) -> dict:
 def evaluate_with_adapter(
     candidates: list[dict],
     scenarios: list[dict],
-    evaluator: Callable[[dict, dict], int],
+    evaluator: Callable[[dict, dict], int | dict],
     *,
     baseline: str = "A",
     alpha: str = "0.95",
 ) -> dict:
     """Pure orchestration for a validated external scenario replay callback.
 
-    `evaluator(candidate,scenario)` must return actual integer cents only.
-    For production, supply an implementation from replay.evaluate_scenario
-    AFTER physics + contract + freeze integration is verified.
+    The evaluator may return actual integer cents or a replay result. Any
+    failed replay stops risk statistics and is retained with its reason.
     """
     costs = {}
+    failures = []
     for candidate in candidates:
         label = candidate["label"]
         if label in costs:
@@ -51,10 +51,24 @@ def evaluate_with_adapter(
             sid = scenario["scenario_id"]
             if sid in values:
                 raise ValueError("Duplicate scenario")
-            cost = evaluator(candidate, scenario)
+            outcome = evaluator(candidate, scenario)
+            if isinstance(outcome, Mapping):
+                if outcome.get('status') == 'FAILED':
+                    failures.append(dict(candidate=label, scenario_id=sid,
+                                         reason=outcome.get('failure_reason', 'Unspecified replay failure')))
+                    continue
+                if outcome.get('status') != 'SUCCEEDED':
+                    raise ValueError(f'Invalid replay status: {label}/{sid}')
+                cost = outcome.get('cost_cents')
+            else:
+                cost = outcome
             if type(cost) is not int or cost < 0:
                 raise ValueError("Evaluator must return validated integer cents")
             values[sid] = cost
         costs[label] = values
+    if failures:
+        return dict(risk_status='FAILED_SCENARIOS', failures=failures,
+                    failed_count=len(failures), scenario_count=len(scenarios),
+                    risk_by_candidate=None)
     weights = {s["scenario_id"]: s["scenario_weight"] for s in scenarios}
     return compare_scenario_costs(costs,weights_by_scenario=weights,baseline=baseline,alpha=alpha)

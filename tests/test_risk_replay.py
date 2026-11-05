@@ -11,7 +11,6 @@ from src.daily_planning.evaluation import evaluate_baseline
 from src.daily_planning.input_loader import fingerprint
 from src.daily_planning.risk.replay import (
     NO_SHOCK_BASELINE,
-    ScenarioReplayNotImplemented,
     evaluate_scenario,
 )
 
@@ -85,8 +84,9 @@ class RiskReplayTest(unittest.TestCase):
         self.assertEqual(result["vessel_results"], self.candidate["vessel_results"])
 
     def test_shocks_and_stored_baseline_mismatches_fail_closed(self):
-        with self.assertRaises(ScenarioReplayNotImplemented):
-            evaluate_scenario(self.snapshot, self.candidate, {"scenario_id": "SYNTHETIC_RISK_V1-1"})
+        zero = evaluate_scenario(self.snapshot, self.candidate, {"scenario_id": "SYNTHETIC_RISK_V1-1"})
+        self.assertEqual(zero['status'], 'SUCCEEDED')
+        self.assertEqual(zero['cost_cents'], self.candidate['cost_cents'])
         with self.assertRaises(ValueError):
             evaluate_scenario(self.snapshot, self.candidate, {
                 "scenario_id": NO_SHOCK_BASELINE,
