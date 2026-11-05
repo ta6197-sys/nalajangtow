@@ -150,6 +150,7 @@ def compare_scenario_costs(
         rows[label] = {
             **summary,
             "expected_delta_vs_baseline_cents": _rounded_string(expected_delta),
+            "expected_savings_vs_baseline_cents": _rounded_string(-expected_delta),
             "probability_cheaper_than_baseline": _rounded_string(win),
             "probability_equal_to_baseline": _rounded_string(tie),
             "paired_delta_cvar_cents": risk_statistics(deltas, weights, alpha=alpha)["cvar_cents"],

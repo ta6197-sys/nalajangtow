@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from src.daily_planning.risk.scenarios import generate_scenarios, load_scenario_config
-from src.daily_planning.risk.service import evaluate_with_adapter
+from src.daily_planning.risk.service import evaluate_monte_carlo, evaluate_with_adapter
 from src.daily_planning.risk.replay import evaluate_scenario
 
 
@@ -52,6 +52,36 @@ class ScenarioTest(unittest.TestCase):
         self.assertEqual(report['risk_by_candidate']['A']['expected_cost_cents'],'140.000000')
         self.assertEqual(report['risk_by_candidate']['B']['probability_cheaper_than_baseline'],'0.600000')
         self.assertEqual(report['provenance'],'SYNTHETIC_ASSUMPTION')
+
+    def test_failure_rates_are_separate_from_unpriced_cost_risk(self):
+        scenarios = [{'scenario_id':'s1','scenario_weight':'0.5'},
+                     {'scenario_id':'s2','scenario_weight':'0.5'}]
+        def callback(candidate, scenario):
+            if candidate['label'] == 'B' and scenario['scenario_id'] == 's2':
+                return dict(status='FAILED', failure_reason='FROZEN_ASSIGNMENT_CONFLICT',
+                            cost_cents=None)
+            return dict(status='SUCCEEDED', cost_cents=100)
+        report = evaluate_with_adapter([{'label':'A'}, {'label':'B'}], scenarios, callback)
+        self.assertIsNone(report['risk_by_candidate'])
+        self.assertEqual(report['failure_rates_by_candidate']['B']['failure_probability'],
+                         '0.500000')
+        self.assertEqual(report['failure_rates_by_candidate']['A']['failed_count'], 0)
+        self.assertEqual(report['failures'][0]['scenario_id'], 's2')
+
+    def test_real_seeded_replay_reports_vessel_losses_and_paired_metrics(self):
+        from .test_risk_arrival_replay import fixture
+        snap, first = fixture()
+        candidates = [dict(first, label=label, candidate_id=label) for label in 'ABC']
+        config = dict(self.config, sample_count=5)
+        report = evaluate_monte_carlo(snap, candidates, config)
+        self.assertEqual(report['scenario_count'], 5)
+        self.assertEqual(report['risk_status'], 'SUCCEEDED')
+        self.assertEqual(report['risk_by_candidate']['A']['expected_savings_vs_baseline_cents'],
+                         '0.000000')
+        self.assertEqual(set(report['vessel_loss_by_candidate']['B']),
+                         {row['call_id'] for row in first['vessel_results']})
+        self.assertEqual(report['scenario_results']['A'].keys(),
+                         report['scenario_results']['C'].keys())
 
 
 if __name__ == '__main__':
