@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.daily_planning.risk.scenarios import generate_scenarios, load_scenario_config
 from src.daily_planning.risk.service import evaluate_with_adapter
-from src.daily_planning.risk.replay import evaluate_scenario, ScenarioReplayNotImplemented
+from src.daily_planning.risk.replay import evaluate_scenario
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,7 +38,7 @@ class ScenarioTest(unittest.TestCase):
             generate_scenarios(self.config,['DEM-1','DEM-1'])
 
     def test_evaluation_requires_actual_callback(self):
-        with self.assertRaises(ScenarioReplayNotImplemented):
+        with self.assertRaises(ValueError):
             evaluate_scenario({}, {}, {'scenario_id':'s1'})
 
     def test_synthetic_replay_callback_only_for_unit_test(self):
