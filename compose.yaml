@@ -27,7 +27,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env before starting PostgreSQL}
       WEB_EXPERIMENT_KEY: source-daywork-v2
     ports:
-      - "127.0.0.1:8765:8765"
+      - "0.0.0.0:8765:8765"
     volumes:
       - ./input:/app/input:ro
       - ./results/source-daywork-v2:/app/results/daily
