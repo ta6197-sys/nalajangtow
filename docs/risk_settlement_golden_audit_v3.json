@@ -1,0 +1,1230 @@
+{
+  "contract_count": 144,
+  "sof_event_count": 1639,
+  "golden_label_count": 144,
+  "exact_settlement_parity_count": 144,
+  "missing_label_ids": [],
+  "extra_label_ids": [],
+  "settlement_mismatches": [],
+  "clock_start_divergence_count": 40,
+  "clock_start_divergences": [
+    {
+      "contract_id": "DEM-0011",
+      "source_effective_start_at": "2026-11-04T20:55:00",
+      "derived_effective_start_at": "2026-11-05T13:40:00",
+      "delta_seconds": 60300,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0083",
+      "source_effective_start_at": "2026-11-07T05:55:00",
+      "derived_effective_start_at": "2026-11-07T14:40:00",
+      "delta_seconds": 31500,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0106",
+      "source_effective_start_at": "2026-11-07T20:55:00",
+      "derived_effective_start_at": "2026-11-07T22:40:00",
+      "delta_seconds": 6300,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0034",
+      "source_effective_start_at": "2026-11-07T20:25:00",
+      "derived_effective_start_at": "2026-11-08T01:25:00",
+      "delta_seconds": 18000,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0030",
+      "source_effective_start_at": "2026-11-08T01:10:00",
+      "derived_effective_start_at": "2026-11-08T04:55:00",
+      "delta_seconds": 13500,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0007",
+      "source_effective_start_at": "2026-11-10T12:55:00",
+      "derived_effective_start_at": "2026-11-11T06:40:00",
+      "delta_seconds": 63900,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0037",
+      "source_effective_start_at": "2026-11-13T19:45:00",
+      "derived_effective_start_at": "2026-11-14T07:45:00",
+      "delta_seconds": 43200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0064",
+      "source_effective_start_at": "2026-11-14T15:40:00",
+      "derived_effective_start_at": "2026-11-14T20:25:00",
+      "delta_seconds": 17100,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0045",
+      "source_effective_start_at": "2026-11-15T07:25:00",
+      "derived_effective_start_at": "2026-11-15T09:25:00",
+      "delta_seconds": 7200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "source_effective_start_at": "2026-11-17T23:05:00",
+      "derived_effective_start_at": "2026-11-18T11:05:00",
+      "delta_seconds": 43200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0025",
+      "source_effective_start_at": "2026-11-18T01:15:00",
+      "derived_effective_start_at": "2026-11-18T05:45:00",
+      "delta_seconds": 16200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0140",
+      "source_effective_start_at": "2026-11-18T04:30:00",
+      "derived_effective_start_at": "2026-11-18T16:00:00",
+      "delta_seconds": 41400,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0116",
+      "source_effective_start_at": "2026-11-19T08:45:00",
+      "derived_effective_start_at": "2026-11-20T01:45:00",
+      "delta_seconds": 61200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0046",
+      "source_effective_start_at": "2026-11-20T04:45:00",
+      "derived_effective_start_at": "2026-11-20T16:30:00",
+      "delta_seconds": 42300,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0141",
+      "source_effective_start_at": "2026-11-20T18:55:00",
+      "derived_effective_start_at": "2026-11-20T22:55:00",
+      "delta_seconds": 14400,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0100",
+      "source_effective_start_at": "2026-11-21T01:10:00",
+      "derived_effective_start_at": "2026-11-21T04:40:00",
+      "delta_seconds": 12600,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0109",
+      "source_effective_start_at": "2026-11-21T10:35:00",
+      "derived_effective_start_at": "2026-11-21T19:05:00",
+      "delta_seconds": 30600,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0056",
+      "source_effective_start_at": "2026-11-21T18:30:00",
+      "derived_effective_start_at": "2026-11-22T10:15:00",
+      "delta_seconds": 56700,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0120",
+      "source_effective_start_at": "2026-11-22T02:00:00",
+      "derived_effective_start_at": "2026-11-22T07:30:00",
+      "delta_seconds": 19800,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0009",
+      "source_effective_start_at": "2026-11-22T10:25:00",
+      "derived_effective_start_at": "2026-11-22T22:25:00",
+      "delta_seconds": 43200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0119",
+      "source_effective_start_at": "2026-11-22T15:10:00",
+      "derived_effective_start_at": "2026-11-22T18:55:00",
+      "delta_seconds": 13500,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0032",
+      "source_effective_start_at": "2026-11-22T17:45:00",
+      "derived_effective_start_at": "2026-11-23T04:15:00",
+      "delta_seconds": 37800,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0033",
+      "source_effective_start_at": "2026-11-23T17:15:00",
+      "derived_effective_start_at": "2026-11-24T01:15:00",
+      "delta_seconds": 28800,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0035",
+      "source_effective_start_at": "2026-11-24T20:25:00",
+      "derived_effective_start_at": "2026-11-25T08:25:00",
+      "delta_seconds": 43200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0063",
+      "source_effective_start_at": "2026-11-27T20:30:00",
+      "derived_effective_start_at": "2026-11-28T07:15:00",
+      "delta_seconds": 38700,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0015",
+      "source_effective_start_at": "2026-11-27T23:00:00",
+      "derived_effective_start_at": "2026-11-28T15:30:00",
+      "delta_seconds": 59400,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0080",
+      "source_effective_start_at": "2026-11-29T08:30:00",
+      "derived_effective_start_at": "2026-11-29T11:15:00",
+      "delta_seconds": 9900,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0062",
+      "source_effective_start_at": "2026-11-29T20:30:00",
+      "derived_effective_start_at": "2026-11-30T01:15:00",
+      "delta_seconds": 17100,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0094",
+      "source_effective_start_at": "2026-11-30T06:25:00",
+      "derived_effective_start_at": "2026-11-30T18:25:00",
+      "delta_seconds": 43200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0110",
+      "source_effective_start_at": "2026-12-01T12:45:00",
+      "derived_effective_start_at": "2026-12-01T17:45:00",
+      "delta_seconds": 18000,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0079",
+      "source_effective_start_at": "2026-12-01T18:45:00",
+      "derived_effective_start_at": "2026-12-02T08:30:00",
+      "delta_seconds": 49500,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "source_effective_start_at": "2026-12-03T20:20:00",
+      "derived_effective_start_at": "2026-12-04T14:05:00",
+      "delta_seconds": 63900,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0043",
+      "source_effective_start_at": "2026-12-03T21:15:00",
+      "derived_effective_start_at": "2026-12-04T02:45:00",
+      "delta_seconds": 19800,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0065",
+      "source_effective_start_at": "2026-12-05T07:15:00",
+      "derived_effective_start_at": "2026-12-05T11:00:00",
+      "delta_seconds": 13500,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "source_effective_start_at": "2026-12-06T02:10:00",
+      "derived_effective_start_at": "2026-12-06T19:55:00",
+      "delta_seconds": 63900,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0125",
+      "source_effective_start_at": "2026-12-07T08:55:00",
+      "derived_effective_start_at": "2026-12-07T20:40:00",
+      "delta_seconds": 42300,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0122",
+      "source_effective_start_at": "2026-12-08T00:45:00",
+      "derived_effective_start_at": "2026-12-08T09:15:00",
+      "delta_seconds": 30600,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0117",
+      "source_effective_start_at": "2026-12-09T17:00:00",
+      "derived_effective_start_at": "2026-12-10T05:00:00",
+      "delta_seconds": 43200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0010",
+      "source_effective_start_at": "2026-12-10T11:55:00",
+      "derived_effective_start_at": "2026-12-10T16:25:00",
+      "delta_seconds": 16200,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    },
+    {
+      "contract_id": "DEM-0048",
+      "source_effective_start_at": "2026-12-12T12:15:00",
+      "derived_effective_start_at": "2026-12-12T23:15:00",
+      "delta_seconds": 39600,
+      "suspected_cause": "SOURCE_EFFECTIVE_START_DIFFERS_FROM_NOR_NOTICE_RULE"
+    }
+  ],
+  "derived_clock_golden_mismatch_count": 133,
+  "derived_clock_golden_mismatches": [
+    {
+      "contract_id": "DEM-0011",
+      "field": "laytime_used_minutes",
+      "expected": 6837.0,
+      "actual": 5832.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0011",
+      "field": "unused_laytime_minutes",
+      "expected": 363.0,
+      "actual": 1368.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0083",
+      "field": "laytime_used_minutes",
+      "expected": 2416.0,
+      "actual": 1891.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0083",
+      "field": "unused_laytime_minutes",
+      "expected": 1184.0,
+      "actual": 1709.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0106",
+      "field": "pre_excluded_minutes",
+      "expected": 1310.0,
+      "actual": 1205.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0034",
+      "field": "laytime_used_minutes",
+      "expected": 1580.0,
+      "actual": 1365.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0034",
+      "field": "unused_laytime_minutes",
+      "expected": 4180.0,
+      "actual": 4395.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0034",
+      "field": "pre_excluded_minutes",
+      "expected": 1440.0,
+      "actual": 1355.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0030",
+      "field": "pre_excluded_minutes",
+      "expected": 1490.0,
+      "actual": 1265.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0007",
+      "field": "laytime_used_minutes",
+      "expected": 2136.0,
+      "actual": 2021.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0007",
+      "field": "unused_laytime_minutes",
+      "expected": 1464.0,
+      "actual": 1579.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0007",
+      "field": "pre_excluded_minutes",
+      "expected": 1186.0,
+      "actual": 236.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0007",
+      "field": "despatch_cents",
+      "expected": 635417,
+      "actual": 685330,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0007",
+      "field": "net_owner_receivable_cents",
+      "expected": -635417,
+      "actual": -685330,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0037",
+      "field": "laytime_used_minutes",
+      "expected": 2057.0,
+      "actual": 1486.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0037",
+      "field": "unused_laytime_minutes",
+      "expected": 823.0,
+      "actual": 1394.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0037",
+      "field": "pre_excluded_minutes",
+      "expected": 1663.0,
+      "actual": 1514.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0037",
+      "field": "despatch_cents",
+      "expected": 214323,
+      "actual": 363021,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0037",
+      "field": "net_owner_receivable_cents",
+      "expected": -214323,
+      "actual": -363021,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0064",
+      "field": "pre_excluded_minutes",
+      "expected": 1940.0,
+      "actual": 1655.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0045",
+      "field": "demurrage_minutes",
+      "expected": 1100.0,
+      "actual": 980.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0045",
+      "field": "first_demurrage_at",
+      "expected": "2026-11-16T19:25:00",
+      "actual": "2026-11-16T21:25:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0045",
+      "field": "demurrage_cents",
+      "expected": 458333,
+      "actual": 408333,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0045",
+      "field": "net_owner_receivable_cents",
+      "expected": 458333,
+      "actual": 408333,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "laytime_used_minutes",
+      "expected": 1512.0,
+      "actual": 1220.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "demurrage_minutes",
+      "expected": 196.0,
+      "actual": 0.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "unused_laytime_minutes",
+      "expected": 0.0,
+      "actual": 292.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "pre_excluded_minutes",
+      "expected": 554.0,
+      "actual": 322.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "first_demurrage_at",
+      "expected": "2026-11-19T09:31:00",
+      "actual": null,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "demurrage_cents",
+      "expected": 149722,
+      "actual": 0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0067",
+      "field": "net_owner_receivable_cents",
+      "expected": 149722,
+      "actual": 0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0025",
+      "field": "demurrage_minutes",
+      "expected": 4800.0,
+      "actual": 4530.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0025",
+      "field": "first_demurrage_at",
+      "expected": "2026-11-19T02:35:00",
+      "actual": "2026-11-19T07:05:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0025",
+      "field": "demurrage_cents",
+      "expected": 6000000,
+      "actual": 5662500,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0025",
+      "field": "net_owner_receivable_cents",
+      "expected": 6000000,
+      "actual": 5662500,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0140",
+      "field": "demurrage_minutes",
+      "expected": 2421.0,
+      "actual": 1731.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0140",
+      "field": "first_demurrage_at",
+      "expected": "2026-11-20T16:30:00",
+      "actual": "2026-11-21T04:00:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0140",
+      "field": "demurrage_cents",
+      "expected": 8406250,
+      "actual": 6010417,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0140",
+      "field": "net_owner_receivable_cents",
+      "expected": 8406250,
+      "actual": 6010417,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0116",
+      "field": "laytime_used_minutes",
+      "expected": 4126.5,
+      "actual": 3106.5,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0116",
+      "field": "unused_laytime_minutes",
+      "expected": 1345.5,
+      "actual": 2365.5,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0046",
+      "field": "demurrage_minutes",
+      "expected": 1165.0,
+      "actual": 1005.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0046",
+      "field": "pre_excluded_minutes",
+      "expected": 3035.0,
+      "actual": 2490.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0046",
+      "field": "first_demurrage_at",
+      "expected": "2026-11-24T07:20:00",
+      "actual": "2026-11-24T10:00:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0046",
+      "field": "demurrage_cents",
+      "expected": 728125,
+      "actual": 628125,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0046",
+      "field": "net_owner_receivable_cents",
+      "expected": 728125,
+      "actual": 628125,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0141",
+      "field": "laytime_used_minutes",
+      "expected": 2798.0,
+      "actual": 2558.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0141",
+      "field": "unused_laytime_minutes",
+      "expected": 4402.0,
+      "actual": 4642.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0141",
+      "field": "despatch_cents",
+      "expected": 917083,
+      "actual": 967083,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0141",
+      "field": "net_owner_receivable_cents",
+      "expected": -917083,
+      "actual": -967083,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0100",
+      "field": "laytime_used_minutes",
+      "expected": 2590.0,
+      "actual": 2498.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0100",
+      "field": "unused_laytime_minutes",
+      "expected": 290.0,
+      "actual": 382.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0100",
+      "field": "pre_excluded_minutes",
+      "expected": 1878.0,
+      "actual": 1760.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0109",
+      "field": "laytime_used_minutes",
+      "expected": 2343.0,
+      "actual": 1833.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0109",
+      "field": "unused_laytime_minutes",
+      "expected": 2594.0,
+      "actual": 3104.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0109",
+      "field": "despatch_cents",
+      "expected": 540417,
+      "actual": 646667,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0109",
+      "field": "net_owner_receivable_cents",
+      "expected": -540417,
+      "actual": -646667,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0056",
+      "field": "laytime_used_minutes",
+      "expected": 974.0,
+      "actual": 769.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0056",
+      "field": "unused_laytime_minutes",
+      "expected": 6226.0,
+      "actual": 6431.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0056",
+      "field": "pre_excluded_minutes",
+      "expected": 3005.0,
+      "actual": 2265.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0056",
+      "field": "despatch_cents",
+      "expected": 1297083,
+      "actual": 1339792,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0056",
+      "field": "net_owner_receivable_cents",
+      "expected": -1297083,
+      "actual": -1339792,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0120",
+      "field": "pre_excluded_minutes",
+      "expected": 1398.0,
+      "actual": 1068.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0009",
+      "field": "pre_excluded_minutes",
+      "expected": 1627.0,
+      "actual": 907.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0119",
+      "field": "pre_excluded_minutes",
+      "expected": 1970.0,
+      "actual": 1745.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0032",
+      "field": "laytime_used_minutes",
+      "expected": 1362.0,
+      "actual": 1201.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0032",
+      "field": "unused_laytime_minutes",
+      "expected": 798.0,
+      "actual": 959.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0032",
+      "field": "pre_excluded_minutes",
+      "expected": 1079.0,
+      "actual": 610.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0032",
+      "field": "despatch_cents",
+      "expected": 609583,
+      "actual": 732569,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0032",
+      "field": "net_owner_receivable_cents",
+      "expected": -609583,
+      "actual": -732569,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0033",
+      "field": "laytime_used_minutes",
+      "expected": 3068.0,
+      "actual": 2613.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0033",
+      "field": "unused_laytime_minutes",
+      "expected": 1252.0,
+      "actual": 1707.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0033",
+      "field": "pre_excluded_minutes",
+      "expected": 233.0,
+      "actual": 208.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0033",
+      "field": "despatch_cents",
+      "expected": 652083,
+      "actual": 889063,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0033",
+      "field": "net_owner_receivable_cents",
+      "expected": -652083,
+      "actual": -889063,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0035",
+      "field": "demurrage_minutes",
+      "expected": 1342.0,
+      "actual": 622.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0035",
+      "field": "first_demurrage_at",
+      "expected": "2026-11-26T10:49:00",
+      "actual": "2026-11-26T22:49:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0035",
+      "field": "demurrage_cents",
+      "expected": 698958,
+      "actual": 323958,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0035",
+      "field": "net_owner_receivable_cents",
+      "expected": 698958,
+      "actual": 323958,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0063",
+      "field": "laytime_used_minutes",
+      "expected": 210.0,
+      "actual": 0.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0063",
+      "field": "unused_laytime_minutes",
+      "expected": 1230.0,
+      "actual": 1440.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0063",
+      "field": "pre_excluded_minutes",
+      "expected": 1504.0,
+      "actual": 1069.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0063",
+      "field": "despatch_cents",
+      "expected": 1110417,
+      "actual": 1300000,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0063",
+      "field": "net_owner_receivable_cents",
+      "expected": -1110417,
+      "actual": -1300000,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0015",
+      "field": "laytime_used_minutes",
+      "expected": 1255.0,
+      "actual": 510.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0015",
+      "field": "unused_laytime_minutes",
+      "expected": 185.0,
+      "actual": 930.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0015",
+      "field": "pre_excluded_minutes",
+      "expected": 842.0,
+      "actual": 597.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0080",
+      "field": "pre_excluded_minutes",
+      "expected": 1727.0,
+      "actual": 1562.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0062",
+      "field": "pre_excluded_minutes",
+      "expected": 1650.0,
+      "actual": 1365.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0094",
+      "field": "demurrage_minutes",
+      "expected": 1296.0,
+      "actual": 106.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0094",
+      "field": "pre_excluded_minutes",
+      "expected": 2124.0,
+      "actual": 2594.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0094",
+      "field": "first_demurrage_at",
+      "expected": "2026-12-03T05:49:00",
+      "actual": "2026-12-04T01:39:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0094",
+      "field": "demurrage_cents",
+      "expected": 675000,
+      "actual": 55208,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0094",
+      "field": "net_owner_receivable_cents",
+      "expected": 675000,
+      "actual": 55208,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0110",
+      "field": "laytime_used_minutes",
+      "expected": 3620.0,
+      "actual": 3320.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0110",
+      "field": "unused_laytime_minutes",
+      "expected": 2140.0,
+      "actual": 2440.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0110",
+      "field": "despatch_cents",
+      "expected": 1337500,
+      "actual": 1525000,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0110",
+      "field": "net_owner_receivable_cents",
+      "expected": -1337500,
+      "actual": -1525000,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0079",
+      "field": "pre_excluded_minutes",
+      "expected": 1241.0,
+      "actual": 416.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "laytime_used_minutes",
+      "expected": 3600.0,
+      "actual": 2783.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "demurrage_minutes",
+      "expected": 484.0,
+      "actual": 0.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "unused_laytime_minutes",
+      "expected": 0.0,
+      "actual": 817.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "pre_excluded_minutes",
+      "expected": 1295.0,
+      "actual": 1531.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "first_demurrage_at",
+      "expected": "2026-12-07T05:55:00",
+      "actual": null,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "demurrage_cents",
+      "expected": 252083,
+      "actual": 0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "despatch_cents",
+      "expected": 0,
+      "actual": 212760,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0131",
+      "field": "net_owner_receivable_cents",
+      "expected": 252083,
+      "actual": -212760,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0043",
+      "field": "pre_excluded_minutes",
+      "expected": 1192.0,
+      "actual": 862.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0065",
+      "field": "pre_excluded_minutes",
+      "expected": 3084.0,
+      "actual": 2859.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "laytime_used_minutes",
+      "expected": 7200.0,
+      "actual": 6334.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "demurrage_minutes",
+      "expected": 199.0,
+      "actual": 0.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "unused_laytime_minutes",
+      "expected": 0.0,
+      "actual": 866.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "first_demurrage_at",
+      "expected": "2026-12-12T08:52:00",
+      "actual": null,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "demurrage_cents",
+      "expected": 152014,
+      "actual": 0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "despatch_cents",
+      "expected": 0,
+      "actual": 330764,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0107",
+      "field": "net_owner_receivable_cents",
+      "expected": 152014,
+      "actual": -330764,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0125",
+      "field": "laytime_used_minutes",
+      "expected": 5333.0,
+      "actual": 5226.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0125",
+      "field": "unused_laytime_minutes",
+      "expected": 1867.0,
+      "actual": 1974.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0125",
+      "field": "pre_excluded_minutes",
+      "expected": 1832.0,
+      "actual": 1234.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0125",
+      "field": "despatch_cents",
+      "expected": 583438,
+      "actual": 616875,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0125",
+      "field": "net_owner_receivable_cents",
+      "expected": -583438,
+      "actual": -616875,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0122",
+      "field": "laytime_used_minutes",
+      "expected": 1677.5,
+      "actual": 1297.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0122",
+      "field": "unused_laytime_minutes",
+      "expected": 5522.5,
+      "actual": 5903.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0122",
+      "field": "pre_excluded_minutes",
+      "expected": 335.5,
+      "actual": 206.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0122",
+      "field": "despatch_cents",
+      "expected": 3451563,
+      "actual": 3689375,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0122",
+      "field": "net_owner_receivable_cents",
+      "expected": -3451563,
+      "actual": -3689375,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0117",
+      "field": "demurrage_minutes",
+      "expected": 530.0,
+      "actual": 68.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0117",
+      "field": "pre_excluded_minutes",
+      "expected": 1050.0,
+      "actual": 792.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0117",
+      "field": "first_demurrage_at",
+      "expected": "2026-12-13T03:39:00",
+      "actual": "2026-12-13T11:21:00",
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0117",
+      "field": "demurrage_cents",
+      "expected": 331250,
+      "actual": 42500,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0117",
+      "field": "net_owner_receivable_cents",
+      "expected": 331250,
+      "actual": 42500,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0010",
+      "field": "pre_excluded_minutes",
+      "expected": 1393.0,
+      "actual": 1123.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    },
+    {
+      "contract_id": "DEM-0048",
+      "field": "pre_excluded_minutes",
+      "expected": 2937.0,
+      "actual": 2277.0,
+      "suspected_cause": "DERIVED_NOR_NOTICE_START_DIFFERS_FROM_SOURCE_EFFECTIVE_START"
+    }
+  ],
+  "settlement_parity_complete": true,
+  "source_workbook_sha256": "50de0b153ea3d51b076389452e0a8bc774499032d8e322963df7bba21023509f",
+  "source_workbook_bytes": 345664,
+  "status": "SETTLEMENT_PARITY_COMPLETE_CLOCK_SOURCE_DIVERGENCE_BLOCKS_ACTIVATION"
+}

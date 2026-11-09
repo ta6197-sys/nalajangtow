@@ -10,6 +10,8 @@ from .scenarios import load_scenario_config, generate_scenarios
 from .tradeoff import compare_candidates
 from .service import evaluate_monte_carlo
 from .persistence import persist_risk_analysis
+from .golden_validation import load_settlement_config
+from .replay import LEGACY_CONTRACT_PARITY, SECOND_PRECISION_SIMULATION_V1
 
 
 def _write_new(path: Path, payload):
@@ -28,6 +30,9 @@ def main():
     parser.add_argument("--evaluate",action="store_true")
     parser.add_argument("--sample-count",type=int,choices=(100,1000))
     parser.add_argument("--persist",action="store_true")
+    parser.add_argument('--settlement-policy',choices=(LEGACY_CONTRACT_PARITY,
+        SECOND_PRECISION_SIMULATION_V1),default=LEGACY_CONTRACT_PARITY)
+    parser.add_argument('--settlement-config')
     args = parser.parse_args()
     if args.persist and not args.evaluate:
         parser.error('--persist requires --evaluate')
@@ -35,13 +40,21 @@ def main():
         parser.error('--evaluate requires --sample-count 100 or 1000')
     if not args.evaluate and not args.out:
         parser.error('Stage-1 manifest mode requires --out')
+    if args.settlement_policy == SECOND_PRECISION_SIMULATION_V1 and not args.settlement_config:
+        parser.error('SECOND_PRECISION_SIMULATION_V1 requires --settlement-config')
+    if args.settlement_policy == LEGACY_CONTRACT_PARITY and args.settlement_config:
+        parser.error('--settlement-config requires SECOND_PRECISION_SIMULATION_V1')
     from ..database import get_engine
     engine = get_engine()
     run = load_run_candidates(engine,args.run_id)
     config=load_scenario_config(args.config)
     if args.evaluate:
         config['sample_count'] = args.sample_count
-        report = evaluate_monte_carlo(run['input_snapshot'],run['candidates'],config)
+        settlement_config = (load_settlement_config(args.settlement_config)
+            if args.settlement_config else None)
+        report = evaluate_monte_carlo(run['input_snapshot'],run['candidates'],config,
+            settlement_policy=args.settlement_policy,
+            settlement_config=settlement_config)
         report['run_id'] = run['run_id']
         report['scenario_config'] = config
         report['candidate_refs'] = [{key: candidate.get(key) for key in
@@ -53,6 +66,11 @@ def main():
             coverage_by_candidate=report['coverage_by_candidate'],
             failure_breakdown_by_candidate=report['failure_breakdown_by_candidate'],
             disruption_by_candidate=report['disruption_by_candidate'],
+            settlement_policy_version=report['settlement_policy_version'],
+            settlement_precision=report['settlement_precision'],
+            settlement_simulation_only=report['settlement_simulation_only'],
+            settlement_assumptions=report['settlement_assumptions'],
+            golden_validation=report['golden_validation'],
             full_distribution_available=report['full_distribution_available'],
             risk_by_candidate=report['risk_by_candidate'],
             conditional_risk_by_candidate=report['conditional_risk_by_candidate'],
