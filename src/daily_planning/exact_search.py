@@ -17,12 +17,12 @@ from .context import engine_calls, local_time, signature
 from .daylight import simulator_for_policy
 from .berth_phases import apply_phase_policy, occupancy_bounds
 from .evaluation import evaluate_baseline, interval_overlap, price_until
-from .event_candidates import LEGACY, EVENTS, event_anchors
+from .event_candidates import LEGACY, EVENTS, EVENTS_WEATHER, event_anchors, weather_release_events
 
 
 def build_domain(snapshot, weather, *, candidate_generator=LEGACY):
     """Reuse existing heuristic anchors/shifts without changing bundled caches."""
-    if candidate_generator not in (LEGACY, EVENTS):
+    if candidate_generator not in (LEGACY, EVENTS, EVENTS_WEATHER):
         raise ValueError(f'Unknown candidate generator: {candidate_generator}')
     begin = local_time(snapshot['as_of_at'])
     end = begin+timedelta(hours=72)
@@ -30,6 +30,7 @@ def build_domain(snapshot, weather, *, candidate_generator=LEGACY):
     calls = engine_calls(snapshot)
     fixed_ids = {c['call_id'] for c in snapshot['commits']}
     pending = [c for c in calls if c['call_id'] not in fixed_ids]
+    releases = weather_release_events(weather, RULE, begin, end) if pending and candidate_generator == EVENTS_WEATHER else ()
     berths = sorted(b['berth_id'] for b in snapshot['berths'] if b['is_active'])
     by_call = {c['call_id']: c for c in calls}
     fixed = []
@@ -60,8 +61,9 @@ def build_domain(snapshot, weather, *, candidate_generator=LEGACY):
         cid = call['call_id']
         earliest = max(begin,local_time(call['available_at']))
         proposals = {earliest,*anchors[cid]}
-        if candidate_generator == EVENTS:
+        if candidate_generator in (EVENTS, EVENTS_WEATHER):
             proposals.update(event_anchors(call, fixed, previous))
+            proposals.update(releases)
         if cid in previous:
             proposals.add(local_time(previous[cid]['start_at']))
         for anchor in anchors[cid][:2]:

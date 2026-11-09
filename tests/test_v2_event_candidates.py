@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
 from benchmarks.v2_phase0 import fixture
-from src.daily_planning.event_candidates import EVENTS, event_anchors
+from src.daily_planning.event_candidates import EVENTS, EVENTS_WEATHER, event_anchors, weather_release_events
 from src.daily_planning.exact_search import build_domain, exact_search
+from rolling_horizon import RULE
+from datetime import timedelta
 
 
 class EventCandidatesTest(unittest.TestCase):
@@ -44,6 +46,38 @@ class EventCandidatesTest(unittest.TestCase):
         self.assertLessEqual(record['valid_lower_bound'], record['exact_objective'])
         self.assertIn('warm_start_hint_used', record)
         self.assertEqual(record['solver_status'], legacy_record['solver_status'])
+
+    def test_hint_respects_excluded_schedule_and_cost_cap(self):
+        snapshot, weather = fixture(2)
+        domain = build_domain(snapshot, weather, candidate_generator=EVENTS)
+        first, _ = exact_search(snapshot, weather, domain, time_limit=2, warm_start=True)
+        cap = first['evaluation']['summary']['demurrage_increment_to_completion_cents']
+        alternate, record = exact_search(snapshot, weather, domain, objective='wait', time_limit=2,
+                                         cost_cap=cap, excluded_signatures=[first['schedule_signature']], warm_start=True)
+        self.assertIsNotNone(alternate)
+        self.assertNotEqual(alternate['schedule_signature'], first['schedule_signature'])
+        self.assertLessEqual(alternate['evaluation']['summary']['demurrage_increment_to_completion_cents'], cap)
+        self.assertLessEqual(record['valid_lower_bound'], record['exact_objective'])
+
+    def test_rejected_cost_cap_cannot_produce_hint_or_candidate(self):
+        snapshot, weather = fixture(2)
+        domain = build_domain(snapshot, weather, candidate_generator=EVENTS)
+        result, record = exact_search(snapshot, weather, domain, time_limit=2, cost_cap=0, warm_start=True)
+        self.assertIsNone(result)
+        self.assertFalse(record['warm_start_hint_used'])
+
+    def test_weather_release_expands_domain_without_losing_legacy_options(self):
+        snapshot, weather = fixture(2)
+        at, source, _, waves = weather.rows[15]
+        weather.rows[15] = (at, source, 9.0, waves)
+        release = at + timedelta(minutes=30)
+        self.assertIn(release, weather_release_events(weather, RULE, weather.first, weather.first + timedelta(hours=72)))
+        legacy = build_domain(snapshot, weather)
+        events = build_domain(snapshot, weather, candidate_generator=EVENTS_WEATHER)
+        def keys(domain):
+            return {(o['call_id'], o['row']['berth_id'], o['row']['work_start_at']) for o in domain['options'] if o['row']}
+        self.assertLess(keys(legacy), keys(events))
+        self.assertTrue(any(release.isoformat() == k[2][:19] for k in keys(events) - keys(legacy)))
 
     def test_unknown_version_rejected(self):
         snapshot,weather=fixture(2)
