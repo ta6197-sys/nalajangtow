@@ -1,0 +1,293 @@
+{
+  "schema_version": "TANK_NETWORK_V1",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "source_reference": "ISOLATED_UNIT_TEST_ONLY",
+  "operational_approval": false,
+  "required_tank_count": 30,
+  "required_total_capacity_bbl": "10000000",
+  "notes": "Illustrative distribution and 2 fictional berth connections. Not SK infrastructure.",
+  "tanks": [
+    {
+      "tank_id": "TANK-01",
+      "cargo_type": "CRUDE",
+      "capacity_bbl": "1000000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "1000000",
+      "initial_stock_bbl": "500000",
+      "fixed_process_net_flow_bbl_per_hour": "-1000"
+    },
+    {
+      "tank_id": "TANK-02",
+      "cargo_type": "CRUDE",
+      "capacity_bbl": "1000000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "1000000",
+      "initial_stock_bbl": "500000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-03",
+      "cargo_type": "CRUDE",
+      "capacity_bbl": "1000000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "1000000",
+      "initial_stock_bbl": "500000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-04",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "-500"
+    },
+    {
+      "tank_id": "TANK-05",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-06",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-07",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-08",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-09",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-10",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-11",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-12",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-13",
+      "cargo_type": "GASOLINE",
+      "capacity_bbl": "400000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "400000",
+      "initial_stock_bbl": "200000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-14",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-15",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-16",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-17",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-18",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-19",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-20",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-21",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-22",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-23",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-24",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-25",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-26",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-27",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-28",
+      "cargo_type": "LPG",
+      "capacity_bbl": "180000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "180000",
+      "initial_stock_bbl": "90000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-29",
+      "cargo_type": "LPG",
+      "capacity_bbl": "150000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "150000",
+      "initial_stock_bbl": "75000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    },
+    {
+      "tank_id": "TANK-30",
+      "cargo_type": "LPG",
+      "capacity_bbl": "150000",
+      "min_operating_bbl": "0",
+      "max_operating_bbl": "150000",
+      "initial_stock_bbl": "75000",
+      "fixed_process_net_flow_bbl_per_hour": "0"
+    }
+  ],
+  "connections": [
+    {
+      "berth_id": "TEST-CRUDE-1",
+      "tank_id": "TANK-01",
+      "max_transfer_rate_bbl_per_hour": "50000"
+    },
+    {
+      "berth_id": "TEST-GASOLINE-1",
+      "tank_id": "TANK-04",
+      "max_transfer_rate_bbl_per_hour": "10000"
+    }
+  ]
+}

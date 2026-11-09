@@ -1,0 +1,73 @@
+{
+  "repository": "ta6197-sys/nalajangtow",
+  "base_commit": "1be95988c77bcb5205a0cda374c1cf765b14bf7b",
+  "scope": "new-files-only isolated tank feasibility foundation",
+  "not_integrated": true,
+  "files": [
+    {
+      "path": "README_UNZIP_FIRST.md",
+      "sha256": "8b60add01c12508ffd70f5628a3830d199c084f9ecdd77083d8a3cdfbad886da",
+      "bytes": 2139
+    },
+    {
+      "path": "docs/V2_PHASE4_CODEX_HANDOFF.md",
+      "sha256": "8e8f9c439c4ce0a6f5109a12fd164c2d996fb0af4da965264a911553a6ce6578",
+      "bytes": 3526
+    },
+    {
+      "path": "docs/V2_PHASE4_TANK_KIT.md",
+      "sha256": "dd845736fcb444a33b3ad06694c94789bf2a7484d097ac6b434434a18394a188",
+      "bytes": 6066
+    },
+    {
+      "path": "schemas/tank_network_v1.schema.json",
+      "sha256": "d86b95ccd2027c82e93009603e715e7b055e5387a10b00148e5893fd62bcc10f",
+      "bytes": 2817
+    },
+    {
+      "path": "schemas/tank_schedule_v1.schema.json",
+      "sha256": "27dc5f029f13a6fcbed9cf5e502fe393a19e251466853126b0cc915c6bbf7c67",
+      "bytes": 2591
+    },
+    {
+      "path": "scripts/check_tank_fixture_v1.py",
+      "sha256": "0d9da19a2a803c78ab79e3ad841f773394532a80aca153262a01378a82d548d4",
+      "bytes": 1631
+    },
+    {
+      "path": "src/daily_planning/tank/__init__.py",
+      "sha256": "bcf3590dd9d73845210cd6f20d90c1fbd0259ad843d3e7465388152c8817bd55",
+      "bytes": 469
+    },
+    {
+      "path": "src/daily_planning/tank/inventory.py",
+      "sha256": "3acf6b7ef6000641835c5ab73e5806e8fd66d5d96eae8a7c9cef0155457fe0f8",
+      "bytes": 4188
+    },
+    {
+      "path": "src/daily_planning/tank/network.py",
+      "sha256": "e5971a88b287c3590ca1119d0bae3cbeb365da4eb610ccbe7bcc7031f720c363",
+      "bytes": 4276
+    },
+    {
+      "path": "src/daily_planning/tank/validator.py",
+      "sha256": "cb9178bf9118de909bbc77ac4dd52887d19bce6e141e38e0bb817a02de2f7866",
+      "bytes": 6724
+    },
+    {
+      "path": "tests/fixtures/tank_v1/synthetic_network_30tanks.json",
+      "sha256": "12ffb50953ac615bc1dac866f9bcbd6eaaab9dcce6035775752618707bab3686",
+      "bytes": 8325
+    },
+    {
+      "path": "tests/fixtures/tank_v1/synthetic_schedule.json",
+      "sha256": "ae0b41a14fe156fdc2b96e91e7021f45d485444b511dd03b2068fc24cb900f47",
+      "bytes": 1173
+    },
+    {
+      "path": "tests/test_v2_tank_inventory.py",
+      "sha256": "3f0157f0042591df911f3fd8f36f1ccf01e56c131314af5e55b33d7610978937",
+      "bytes": 8736
+    }
+  ]
+}

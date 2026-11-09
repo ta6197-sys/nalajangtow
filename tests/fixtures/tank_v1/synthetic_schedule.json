@@ -1,0 +1,42 @@
+{
+  "schema_version": "TANK_SCHEDULE_V1",
+  "horizon_start_at": "2026-11-09T08:00:00+09:00",
+  "horizon_end_at": "2026-11-10T08:00:00+09:00",
+  "notes": "Two independent synthetic transfers; cargo volumes are exactly rates times transfer durations.",
+  "calls": [
+    {
+      "call_id": "TEST-CALL-A",
+      "cargo_type": "CRUDE",
+      "direction": "DISCHARGE",
+      "berth_id": "TEST-CRUDE-1",
+      "tank_id": "TANK-01",
+      "cargo_volume_bbl": "30000",
+      "cargo_mass_kg": "3600000",
+      "density_kg_per_bbl": "120"
+    },
+    {
+      "call_id": "TEST-CALL-B",
+      "cargo_type": "GASOLINE",
+      "direction": "LOAD",
+      "berth_id": "TEST-GASOLINE-1",
+      "tank_id": "TANK-04",
+      "cargo_volume_bbl": "8000",
+      "cargo_mass_kg": "840000",
+      "density_kg_per_bbl": "105"
+    }
+  ],
+  "segments": [
+    {
+      "call_id": "TEST-CALL-A",
+      "start_at": "2026-11-09T08:00:00+09:00",
+      "end_at": "2026-11-09T09:00:00+09:00",
+      "rate_bbl_per_hour": "30000"
+    },
+    {
+      "call_id": "TEST-CALL-B",
+      "start_at": "2026-11-09T08:30:00+09:00",
+      "end_at": "2026-11-09T09:30:00+09:00",
+      "rate_bbl_per_hour": "8000"
+    }
+  ]
+}
