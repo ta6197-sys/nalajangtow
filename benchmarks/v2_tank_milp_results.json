@@ -1,0 +1,334 @@
+{
+  "schema": "TANK_MILP_BENCHMARK_V1",
+  "fixture": "SYNTHETIC_FIXTURE",
+  "python": "3.11.15",
+  "pyomo": "6.10.1",
+  "highs": "1.15.1",
+  "note": "Same two selected tanks and windows; deterministic rates fixed, LP/MILP rates variable. MILP forced with single eligible tank per vessel; MILP_SELECTION separately adds a synthetic alternative and a full first tank.",
+  "results": [
+    {
+      "variant": "DETERMINISTIC",
+      "repeat": 1,
+      "elapsed": 0.0025676670047687367,
+      "status": "FEASIBLE",
+      "mode": "DETERMINISTIC",
+      "objective": null,
+      "bound": null,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0,
+        "solver_seconds": 0.0,
+        "variable_count": 0,
+        "constraint_count": 0,
+        "binary_variable_count": 0,
+        "validation_seconds": 0.0019789579964708537,
+        "total_seconds": 0.002562833993579261
+      },
+      "input_fingerprint": "9cec9955e9169bd03eeba32e683ef340133d7c4048844c429d459ffaa801978c",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "DETERMINISTIC",
+      "repeat": 2,
+      "elapsed": 0.002327041991520673,
+      "status": "FEASIBLE",
+      "mode": "DETERMINISTIC",
+      "objective": null,
+      "bound": null,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0,
+        "solver_seconds": 0.0,
+        "variable_count": 0,
+        "constraint_count": 0,
+        "binary_variable_count": 0,
+        "validation_seconds": 0.0018772920011542737,
+        "total_seconds": 0.002315958001418039
+      },
+      "input_fingerprint": "9cec9955e9169bd03eeba32e683ef340133d7c4048844c429d459ffaa801978c",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "DETERMINISTIC",
+      "repeat": 3,
+      "elapsed": 0.0022762090084142983,
+      "status": "FEASIBLE",
+      "mode": "DETERMINISTIC",
+      "objective": null,
+      "bound": null,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0,
+        "solver_seconds": 0.0,
+        "variable_count": 0,
+        "constraint_count": 0,
+        "binary_variable_count": 0,
+        "validation_seconds": 0.0018362080008955672,
+        "total_seconds": 0.0022655829961877316
+      },
+      "input_fingerprint": "9cec9955e9169bd03eeba32e683ef340133d7c4048844c429d459ffaa801978c",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "LP",
+      "repeat": 1,
+      "elapsed": 0.13097958399157505,
+      "status": "OPTIMAL",
+      "mode": "LP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0012731660099234432,
+        "variable_count": 274,
+        "binary_variable_count": 0,
+        "constraint_count": 246,
+        "solver_seconds": 0.008835417000227608,
+        "validation_seconds": 0.0018319579976378009,
+        "total_seconds": 0.1309523329982767
+      },
+      "input_fingerprint": "d769600ebd36233d3e082d05bdb59758b4a7063b7f7098505a770eae96889d27",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "LP",
+      "repeat": 2,
+      "elapsed": 0.011122792013338767,
+      "status": "OPTIMAL",
+      "mode": "LP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0011769580014515668,
+        "variable_count": 274,
+        "binary_variable_count": 0,
+        "constraint_count": 246,
+        "solver_seconds": 0.007420042005833238,
+        "validation_seconds": 0.001666083000600338,
+        "total_seconds": 0.011105249999673106
+      },
+      "input_fingerprint": "d769600ebd36233d3e082d05bdb59758b4a7063b7f7098505a770eae96889d27",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "LP",
+      "repeat": 3,
+      "elapsed": 0.01085762499133125,
+      "status": "OPTIMAL",
+      "mode": "LP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0010255419911118224,
+        "variable_count": 274,
+        "binary_variable_count": 0,
+        "constraint_count": 246,
+        "solver_seconds": 0.0072896669880719855,
+        "validation_seconds": 0.0017321670020464808,
+        "total_seconds": 0.010831749998033047
+      },
+      "input_fingerprint": "d769600ebd36233d3e082d05bdb59758b4a7063b7f7098505a770eae96889d27",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "MILP",
+      "repeat": 1,
+      "elapsed": 0.011185082999872975,
+      "status": "OPTIMAL",
+      "mode": "MILP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0013951659930171445,
+        "variable_count": 280,
+        "binary_variable_count": 6,
+        "constraint_count": 260,
+        "solver_seconds": 0.007228249989566393,
+        "validation_seconds": 0.0016673750069458038,
+        "total_seconds": 0.011162708004121669
+      },
+      "input_fingerprint": "cc19ed17fcbc2e0e58e00051fa1b2a2fffdd282632adf4813bb85c16b42de90c",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "MILP",
+      "repeat": 2,
+      "elapsed": 0.010745916995801963,
+      "status": "OPTIMAL",
+      "mode": "MILP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0010975000041071326,
+        "variable_count": 280,
+        "binary_variable_count": 6,
+        "constraint_count": 260,
+        "solver_seconds": 0.007192624994786456,
+        "validation_seconds": 0.0016562910022912547,
+        "total_seconds": 0.010729542002081871
+      },
+      "input_fingerprint": "cc19ed17fcbc2e0e58e00051fa1b2a2fffdd282632adf4813bb85c16b42de90c",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "MILP",
+      "repeat": 3,
+      "elapsed": 0.01023216699832119,
+      "status": "OPTIMAL",
+      "mode": "MILP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0010459159966558218,
+        "variable_count": 280,
+        "binary_variable_count": 6,
+        "constraint_count": 260,
+        "solver_seconds": 0.00666912499582395,
+        "validation_seconds": 0.0017226669879164547,
+        "total_seconds": 0.01021254199440591
+      },
+      "input_fingerprint": "cc19ed17fcbc2e0e58e00051fa1b2a2fffdd282632adf4813bb85c16b42de90c",
+      "final_tank_01_exact": "526000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "500000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-01",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "MILP_SELECTION",
+      "repeat": 1,
+      "elapsed": 0.010423375002574176,
+      "status": "OPTIMAL",
+      "mode": "MILP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.001129416996263899,
+        "variable_count": 285,
+        "binary_variable_count": 9,
+        "constraint_count": 266,
+        "solver_seconds": 0.00680329100578092,
+        "validation_seconds": 0.0016746250039432198,
+        "total_seconds": 0.01040541598922573
+      },
+      "input_fingerprint": "1474e6aebb6779c37fb9b5a1ba825372c8c04a6dd7af4e12f1902e9be72cb2ed",
+      "final_tank_01_exact": "1000000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "530000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-02",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "MILP_SELECTION",
+      "repeat": 2,
+      "elapsed": 0.01056562500889413,
+      "status": "OPTIMAL",
+      "mode": "MILP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0015293329925043508,
+        "variable_count": 285,
+        "binary_variable_count": 9,
+        "constraint_count": 266,
+        "solver_seconds": 0.0065641250112093985,
+        "validation_seconds": 0.0016536250041099265,
+        "total_seconds": 0.01055050001014024
+      },
+      "input_fingerprint": "1474e6aebb6779c37fb9b5a1ba825372c8c04a6dd7af4e12f1902e9be72cb2ed",
+      "final_tank_01_exact": "1000000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "530000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-02",
+        "TEST-CALL-B": "TANK-04"
+      }
+    },
+    {
+      "variant": "MILP_SELECTION",
+      "repeat": 3,
+      "elapsed": 0.009964084005332552,
+      "status": "OPTIMAL",
+      "mode": "MILP",
+      "objective": 0.0,
+      "bound": 0.0,
+      "numerical_validation": "EXACT_PASS",
+      "timing": {
+        "construction_seconds": 0.0010679580009309575,
+        "variable_count": 285,
+        "binary_variable_count": 9,
+        "constraint_count": 266,
+        "solver_seconds": 0.006417749988031574,
+        "validation_seconds": 0.0016931249992921948,
+        "total_seconds": 0.009946291000233032
+      },
+      "input_fingerprint": "1474e6aebb6779c37fb9b5a1ba825372c8c04a6dd7af4e12f1902e9be72cb2ed",
+      "final_tank_01_exact": "1000000",
+      "final_tank_04_exact": "190000",
+      "final_tank_02_exact": "530000",
+      "selected_assignments": {
+        "TEST-CALL-A": "TANK-02",
+        "TEST-CALL-B": "TANK-04"
+      }
+    }
+  ]
+}

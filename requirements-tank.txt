@@ -1,0 +1,3 @@
+# Optional standalone Phase 4B tank optimizer; not imported by legacy scheduler.
+pyomo>=6.9,<7
+highspy>=1.10,<2
