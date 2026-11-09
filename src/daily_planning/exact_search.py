@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from .sk_physical_v3 import assert_eligible, eligible_berths
 import math
+import copy
+from collections import OrderedDict
 import time
 from datetime import timedelta
 from decimal import Decimal
@@ -11,14 +13,17 @@ from ortools.sat.python import cp_model
 
 from rolling_horizon import RULE, SHIFTS, baseline, simulate_call
 
-from .context import engine_calls, local_time
+from .context import engine_calls, local_time, signature
 from .daylight import simulator_for_policy
 from .berth_phases import apply_phase_policy, occupancy_bounds
 from .evaluation import evaluate_baseline, interval_overlap, price_until
+from .event_candidates import LEGACY, EVENTS, event_anchors
 
 
-def build_domain(snapshot, weather):
+def build_domain(snapshot, weather, *, candidate_generator=LEGACY):
     """Reuse existing heuristic anchors/shifts without changing bundled caches."""
+    if candidate_generator not in (LEGACY, EVENTS):
+        raise ValueError(f'Unknown candidate generator: {candidate_generator}')
     begin = local_time(snapshot['as_of_at'])
     end = begin+timedelta(hours=72)
     new_simulate = simulator_for_policy(snapshot.get('berthing_policy'))
@@ -55,6 +60,8 @@ def build_domain(snapshot, weather):
         cid = call['call_id']
         earliest = max(begin,local_time(call['available_at']))
         proposals = {earliest,*anchors[cid]}
+        if candidate_generator == EVENTS:
+            proposals.update(event_anchors(call, fixed, previous))
         if cid in previous:
             proposals.add(local_time(previous[cid]['start_at']))
         for anchor in anchors[cid][:2]:
@@ -167,7 +174,7 @@ def make_master(domain, objective, cost_cap=None, stability=None):
 
 
 def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_cap=None,
-                 excluded_signatures=(),max_evaluations=None):
+                 excluded_signatures=(),max_evaluations=None,replay_cache=None):
     """Minimize exact replay cost/wait over the finite domain, with proof tracking.
 
     Master bounds omit unknown tail costs; evaluated schedules never do.
@@ -193,6 +200,7 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
         lower += sum(min(domain['options'][j][objective+'_lb'] for j in g) for g in domain['groups'])
     exhausted=False
     cp_sat_calls=0
+    weather_key = signature(weather.rows) if replay_cache is not None else None
     status='NOT_STARTED'
     def inspect_choice(choice, source):
         nonlocal incumbent,best
@@ -205,7 +213,18 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
         all_rows=domain['fixed']+rows
         if any(interval_overlap(a,b) for i,a in enumerate(all_rows) for b in all_rows[i+1:]):
             return
-        result=evaluate_baseline(snapshot,rows,weather)
+        if replay_cache is None:
+            result=evaluate_baseline(snapshot,rows,weather)
+        else:
+            key = signature({'version': 'REPLAY_CACHE_V1', 'snapshot': snapshot['snapshot_hash'], 'weather': weather_key, 'rows': rows})
+            if key in replay_cache:
+                result = copy.deepcopy(replay_cache[key])
+                replay_cache.move_to_end(key)
+            else:
+                result = evaluate_baseline(snapshot,rows,weather)
+                replay_cache[key] = copy.deepcopy(result)
+                if len(replay_cache) > 256:
+                    replay_cache.popitem(last=False)
         summary=result['evaluation']['summary']
         cost=summary['demurrage_increment_to_completion_cents']
         if objective=='stability':
@@ -278,9 +297,9 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
     return incumbent,record
 
 
-def cost_then_wait_search(snapshot, weather, domain, *, time_limit=180):
+def cost_then_wait_search(snapshot, weather, domain, *, time_limit=180, replay_cache=None):
     """Lexicographic A search within one time budget."""
-    first, primary = exact_search(snapshot, weather, domain, time_limit=time_limit)
+    first, primary = exact_search(snapshot, weather, domain, time_limit=time_limit, replay_cache=replay_cache)
     if first is None:
         return first, primary
     remaining = time_limit - primary['seconds']
@@ -289,7 +308,7 @@ def cost_then_wait_search(snapshot, weather, domain, *, time_limit=180):
         return first, primary
     tied, secondary = exact_search(snapshot, weather, domain, objective='wait',
         cost_cap=first['evaluation']['summary']['demurrage_increment_to_completion_cents'],
-        time_limit=remaining)
+        time_limit=remaining, replay_cache=replay_cache)
     if tied is None:
         primary['tie_break_status'] = 'NO_FEASIBLE_RESULT'
         return first, primary
