@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
 from benchmarks.v2_phase0 import fixture
-from src.daily_planning.event_candidates import EVENTS, event_anchors
+from src.daily_planning.event_candidates import EVENTS, EVENTS_WEATHER, event_anchors, weather_release_events
 from src.daily_planning.exact_search import build_domain, exact_search
+from rolling_horizon import RULE
+from datetime import timedelta
 
 
 class EventCandidatesTest(unittest.TestCase):
@@ -63,6 +65,19 @@ class EventCandidatesTest(unittest.TestCase):
         result, record = exact_search(snapshot, weather, domain, time_limit=2, cost_cap=0, warm_start=True)
         self.assertIsNone(result)
         self.assertFalse(record['warm_start_hint_used'])
+
+    def test_weather_release_expands_domain_without_losing_legacy_options(self):
+        snapshot, weather = fixture(2)
+        at, source, _, waves = weather.rows[15]
+        weather.rows[15] = (at, source, 9.0, waves)
+        release = at + timedelta(minutes=30)
+        self.assertIn(release, weather_release_events(weather, RULE, weather.first, weather.first + timedelta(hours=72)))
+        legacy = build_domain(snapshot, weather)
+        events = build_domain(snapshot, weather, candidate_generator=EVENTS_WEATHER)
+        def keys(domain):
+            return {(o['call_id'], o['row']['berth_id'], o['row']['work_start_at']) for o in domain['options'] if o['row']}
+        self.assertLess(keys(legacy), keys(events))
+        self.assertTrue(any(release.isoformat() == k[2][:19] for k in keys(events) - keys(legacy)))
 
     def test_unknown_version_rejected(self):
         snapshot,weather=fixture(2)

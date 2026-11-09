@@ -18,7 +18,7 @@ from .candidate_store import save_evaluated_candidate
 from .context import verify_snapshot
 from .evaluation import evaluate_baseline
 from .exact_search import build_domain, cost_then_wait_search, exact_search
-from .event_candidates import LEGACY, EVENTS
+from .event_candidates import LEGACY, EVENTS, EVENTS_WEATHER
 from .models import planning_run, schedule_candidate
 
 
@@ -109,9 +109,9 @@ def export_run(engine,run_id):
 
 
 def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_generator=LEGACY,warm_start=False):
-    if warm_start and candidate_generator != EVENTS:
-        raise ValueError('Warm start requires EVENTS_V1')
-    if candidate_generator not in (LEGACY, EVENTS):
+    if warm_start and candidate_generator not in (EVENTS, EVENTS_WEATHER):
+        raise ValueError('Warm start requires an event generator')
+    if candidate_generator not in (LEGACY, EVENTS, EVENTS_WEATHER):
         raise ValueError('Unknown candidate generator')
     run_id=uuid.UUID(str(run_id))
     slack=Decimal(str(cost_slack))
@@ -131,7 +131,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
     t0=time.monotonic()
     domain=build_domain(snapshot,weather,candidate_generator=candidate_generator)
     domain_seconds=time.monotonic()-t0
-    replay_cache = OrderedDict() if candidate_generator == EVENTS else None
+    replay_cache = OrderedDict() if candidate_generator in (EVENTS, EVENTS_WEATHER) else None
     first,a_record=cost_then_wait_search(snapshot,weather,domain,time_limit=time_limit,replay_cache=replay_cache,warm_start=warm_start)
     if first is None:
         raise RuntimeError(f'No evaluated feasible A candidate: {a_record}')
