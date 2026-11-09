@@ -79,6 +79,7 @@ def evaluate_with_adapter(
                                          failure_class=failure_class,
                                          reason_codes=outcome.get('reason_codes', []),
                                          affected_call_ids=outcome.get('affected_call_ids', []),
+                                         settlement_boundaries=outcome.get('settlement_boundaries', []),
                                          physical_replay=outcome.get('physical_replay')))
                     continue
                 if outcome.get('status') != 'SUCCEEDED':
@@ -215,9 +216,32 @@ def evaluate_with_adapter(
     return report
 
 
-def evaluate_monte_carlo(snapshot: Mapping, candidates: list[dict], config: Mapping) -> dict:
+def evaluate_monte_carlo(snapshot: Mapping, candidates: list[dict], config: Mapping, *,
+                         settlement_policy: str = 'LEGACY_CONTRACT_PARITY',
+                         settlement_config: Mapping | None = None) -> dict:
     """One seeded scenario draw shared by A/B/C; no database mutation."""
-    from .replay import evaluate_scenario
+    from .replay import (evaluate_scenario, LEGACY_CONTRACT_PARITY,
+                         SECOND_PRECISION_SIMULATION_V1)
+    from .golden_validation import validate_golden_workbook, validate_settlement_config
+    golden = None
+    if settlement_policy == SECOND_PRECISION_SIMULATION_V1:
+        if settlement_config is None:
+            raise ValueError('Second-precision policy requires an explicit versioned JSON configuration')
+        settlement_config = validate_settlement_config(settlement_config)
+        golden = validate_golden_workbook(settlement_config['golden_workbook_path'])
+        if golden['source']['sha256'] != settlement_config['golden_workbook_sha256']:
+            raise ValueError('Golden workbook hash differs from settlement configuration')
+        if not golden['settlement_parity_complete']:
+            raise ValueError('Golden settlement parity is incomplete; second-precision policy blocked')
+        if golden['sof_event_count'] != settlement_config['golden_sof_event_count']:
+            raise ValueError('Golden SOF count differs from settlement configuration')
+        if golden['clock_start_divergence_count'] != settlement_config['expected_clock_start_divergences']:
+            raise ValueError('Clock-start divergence count differs from audited configuration')
+        if (golden['clock_start_divergence_count']
+                and settlement_config['clock_start_divergence_policy'] == 'BLOCK'):
+            raise ValueError('Source effective-start and NOR/notice rules diverge; policy blocked')
+    elif settlement_policy != LEGACY_CONTRACT_PARITY or settlement_config is not None:
+        raise ValueError('Unsupported settlement policy/configuration combination')
     if {candidate.get('label') for candidate in candidates} != {'A', 'B', 'C'} or len(candidates) != 3:
         raise ValueError('Monte Carlo evaluation requires exactly A/B/C')
     call_ids = [row['call_id'] for row in candidates[0]['vessel_results']]
@@ -226,6 +250,13 @@ def evaluate_monte_carlo(snapshot: Mapping, candidates: list[dict], config: Mapp
         raise ValueError('Candidate vessel sets differ')
     scenarios = generate_scenarios(config, call_ids)
     report = evaluate_with_adapter(candidates, scenarios,
-        lambda candidate, scenario: evaluate_scenario(snapshot, candidate, scenario))
+        lambda candidate, scenario: evaluate_scenario(snapshot, candidate, scenario,
+            settlement_policy=settlement_policy))
     return dict(report, scenarios=scenarios, model_id=config['model_id'],
-                seed=config['seed'], input_snapshot_hash=snapshot['snapshot_hash'])
+                seed=config['seed'], input_snapshot_hash=snapshot['snapshot_hash'],
+                settlement_policy_version=settlement_policy,
+                settlement_precision=('SECOND' if settlement_policy ==
+                    SECOND_PRECISION_SIMULATION_V1 else 'MINUTE'),
+                settlement_assumptions=(dict(settlement_config) if settlement_config else None),
+                settlement_simulation_only=settlement_policy == SECOND_PRECISION_SIMULATION_V1,
+                golden_validation=golden)

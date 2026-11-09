@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "policy": "SECOND_PRECISION_SIMULATION_V1",
+  "precision": "SECOND",
+  "assumption_version": "EFFECTIVE_START_ANCHORED_60_SECOND_EXHAUSTION_V1",
+  "simulation_only": true,
+  "golden_workbook_path": "input/source_contracts.xlsx",
+  "golden_workbook_sha256": "50de0b153ea3d51b076389452e0a8bc774499032d8e322963df7bba21023509f",
+  "golden_sof_event_count": 1639,
+  "expected_clock_start_divergences": 40,
+  "clock_start_divergence_policy": "BLOCK",
+  "assumptions": {
+    "effective_start": "NOR_NOTICE_AND_EARLY_WORK_RULES",
+    "allowed_time": "SOURCE_MINUTES_CONVERTED_EXACTLY_TO_SECONDS",
+    "credit": "EXACT_SECONDS_WITH_DECIMAL_WEATHER_HALF_CREDIT",
+    "exhaustion": "NEXT_60_SECOND_BOUNDARY_FROM_EFFECTIVE_START",
+    "money": "USD_CENT_ROUND_HALF_UP_AT_FINAL_CHARGE",
+    "legal_status": "SIMULATION_ONLY_NOT_VERIFIED_CONTRACT_CLAUSE"
+  }
+}

@@ -11,13 +11,19 @@ from rolling_horizon import RULE
 from ..bootstrap_db import kst_time
 from ..context import engine_calls, local_time, verify_snapshot
 from ..daylight import WORK_POLICY
-from ..evaluation import evaluate_baseline, price_until
+from ..evaluation import evaluate_baseline
 from ..sk_physical_v3 import assert_eligible
 
 from .time_precision import (berth_overlap, first_workable_start, remaining_work_kg,
                              scaled_work_seconds, work_timeline, worked_seconds_until)
 from .weather_overlay import scenario_weather
-from .settlement import UnresolvedSubminuteSettlement, require_minute_aligned
+from .settlement import (UnresolvedSubminuteSettlement, contract_timeline,
+                         require_minute_aligned, price_accounting_at)
+from .second_precision import (POLICY_VERSION as SECOND_PRECISION_SIMULATION_V1,
+    ASSUMPTION_VERSION as SECOND_ASSUMPTION_VERSION, price_contract_seconds,
+    price_until_seconds, second_time)
+
+LEGACY_CONTRACT_PARITY = 'LEGACY_CONTRACT_PARITY'
 
 
 NO_SHOCK_BASELINE = "NO_SHOCK_BASELINE"
@@ -156,6 +162,7 @@ def _physical_replay(snapshot, candidate, shocks, weather):
                     berth_release_delay_seconds=0, commitment_deviations=[],
                     start_delay_minutes=0, completion_delay_minutes=0,
                     berth_release_delay_minutes=0,
+                    predecessor_delay_seconds=0,
                     predecessor_call_id=predecessor, delay_causes=[], frozen=frozen)
                 if any(berth_overlap(row, previous) for previous in rows):
                     raise ValueError(f'BERTH_OVERLAP: {cid}')
@@ -200,6 +207,10 @@ def _physical_replay(snapshot, candidate, shocks, weather):
             else:
                 if available < begin:
                     available = max(available, kst_time(calls[cid]['available_at']))
+                without_predecessor = first_workable_start(
+                    (max(old_berthing, available) + timedelta(minutes=phase_minutes))
+                    .replace(tzinfo=None), weather,
+                    daylight=daylight and cid not in committed)
                 proposed_berthing = max(old_berthing, available,
                                         released or old_berthing)
                 proposed = proposed_berthing + timedelta(minutes=phase_minutes)
@@ -262,12 +273,14 @@ def _physical_replay(snapshot, candidate, shocks, weather):
                 ('start', 'completion', 'berth_release') if frozen and
                 row[f'{field}_delay_seconds'] != 0]
             row['predecessor_call_id'] = predecessor
+            row['predecessor_delay_seconds'] = (0 if started or released is None else
+                max(0, int((kst_time(start)-kst_time(without_predecessor)).total_seconds())))
             row['delay_causes'] = []
             if not started and shift.total_seconds() > 0 and available > original_start:
                 row['delay_causes'].append('ARRIVAL_SHOCK')
             if shock.get('work_duration_multiplier', 1) != 1:
                 row['delay_causes'].append('WORK_DURATION_SHOCK')
-            if released and released > old_berthing:
+            if row['predecessor_delay_seconds'] > 0:
                 row['delay_causes'].append('PREVIOUS_BERTH_RELEASE')
             if any(kst_time(a) < kst_time(b) for a,b in row['weather_pause_intervals']):
                 row['delay_causes'].append('WEATHER_INTERRUPTION')
@@ -279,15 +292,19 @@ def _physical_replay(snapshot, candidate, shocks, weather):
     return sorted(rows, key=lambda r: r['call_id'])
 
 
-def _settle_replay(snapshot, candidate, physical, weather):
-    """Price exact physical outcomes only at boundaries supported by contracts."""
-    require_minute_aligned(physical)
+def _settle_replay(snapshot, candidate, physical, weather, *,
+                   settlement_policy=LEGACY_CONTRACT_PARITY):
+    """Price by selected policy without changing any physical timestamp."""
+    if settlement_policy == LEGACY_CONTRACT_PARITY:
+        require_minute_aligned(physical)
     calls = {c['call_id']: c for c in engine_calls(snapshot)}
     originals = {r['call_id']: r for r in candidate['vessel_results']}
     begin = local_time(snapshot['as_of_at'])
     freeze = begin + timedelta(hours=24)
     horizon = begin + timedelta(hours=72)
     details = []
+    def second_time(value):
+        return kst_time(value).replace(tzinfo=None)
     for row in physical:
         cid = row['call_id']
         old = originals[cid]
@@ -295,32 +312,70 @@ def _settle_replay(snapshot, candidate, physical, weather):
             details.append(dict(old, **row))
             continue
         call = calls[cid]
-        start = local_time(row['work_start_at'])
-        finish = local_time(row['completion_at'])
-        work = [(local_time(a), local_time(b)) for a, b in row['work_intervals']]
+        if settlement_policy == LEGACY_CONTRACT_PARITY:
+            accounting = contract_timeline(row, physical)
+            start = local_time(accounting['start_at'])
+            finish = local_time(accounting['completion_at'])
+        else:
+            accounting = dict(start_at=kst_time(row['work_start_at']),
+                completion_at=kst_time(row['completion_at']),
+                weather_pause_intervals=[(kst_time(a),kst_time(b))
+                    for a,b in row['weather_pause_intervals']],
+                exception_intervals=[(kst_time(a),kst_time(b),code)
+                    for a,b,code in row.get('exception_intervals',[])],
+                policy_version=SECOND_PRECISION_SIMULATION_V1,
+                assumption_version=SECOND_ASSUMPTION_VERSION,
+                precision='SECOND', simulation_only=True, adjustments=[])
+            start = second_time(row['work_start_at'])
+            finish = second_time(row['completion_at'])
+        work = [(second_time(a), second_time(b)) for a, b in row['work_intervals']]
         pauses = [[a.isoformat(), b.isoformat()] for (_, a), (b, _) in zip(work, work[1:]) if a < b]
-        weather_pauses = [(local_time(a), local_time(b)) for a, b in row['weather_pause_intervals']]
-        priced = price_contract(call['contract'], start, finish, weather_pauses, weather, RULE)
-        pricing_row = dict(row, work_pause_intervals=pauses, contract_cost=priced)
-        before = price_until(call, pricing_row, begin, weather)
+        convert = local_time if settlement_policy == LEGACY_CONTRACT_PARITY else second_time
+        weather_pauses = [(convert(a), convert(b))
+                          for a, b in accounting['weather_pause_intervals']]
+        if settlement_policy == LEGACY_CONTRACT_PARITY:
+            priced = price_contract(call['contract'], start, finish, weather_pauses,
+                weather, RULE, exception_intervals=accounting['exception_intervals'])
+            before = price_accounting_at(call['contract'], accounting, begin, weather)
+            at24 = price_accounting_at(call['contract'], accounting, min(freeze, finish), weather)
+            at72 = price_accounting_at(call['contract'], accounting, min(horizon, finish), weather)
+        else:
+            priced = price_contract_seconds(call['contract'], start, finish,
+                weather_pauses, weather, RULE,
+                exception_intervals=accounting['exception_intervals'])
+            before = price_until_seconds(call['contract'], row, begin, weather)
+            at24 = price_until_seconds(call['contract'], row,
+                min(freeze, finish), weather)
+            at72 = price_until_seconds(call['contract'], row,
+                min(horizon, finish), weather)
         if before['demurrage_cents'] != old['accrued_before_cents']:
             raise ValueError(f'HISTORICAL_CONTRACT_MISMATCH: {cid}')
-        at24 = price_until(call, pricing_row, min(freeze, finish), weather)
-        at72 = price_until(call, pricing_row, min(horizon, finish), weather)
         increments = [x['demurrage_cents'] - before['demurrage_cents']
                       for x in (at24, at72, priced)]
         if any(x < 0 for x in increments) or increments != sorted(increments):
             raise ValueError(f'CONTRACT_COST_ORDER: {cid}')
-        source = next(c for c in snapshot['calls'] if c['call_id'] == cid)
-        available = local_time(row['realized_available_at'])
+        available = second_time(row['realized_available_at'])
+        physical_start = second_time(row['work_start_at'])
+        physical_finish = second_time(row['completion_at'])
         detail = dict(old)
         detail.update(row)
+        physical_weather_seconds = sum(int((kst_time(b)-kst_time(a)).total_seconds())
+            for a,b in row['weather_pause_intervals'])
         detail.update(work_pause_intervals=pauses,
-            weather_pause_minutes=sum(int((b-a).total_seconds()/60) for a,b in weather_pauses),
+            contract_accounting=dict(accounting,
+                start_at=accounting['start_at'].isoformat(),
+                completion_at=accounting['completion_at'].isoformat(),
+                weather_pause_intervals=[[a.isoformat(), b.isoformat()]
+                    for a,b in accounting['weather_pause_intervals']],
+                exception_intervals=[[a.isoformat(),b.isoformat(),code]
+                    for a,b,code in accounting['exception_intervals']]),
+            weather_pause_seconds=physical_weather_seconds,
+            weather_pause_minutes=physical_weather_seconds / 60,
             remaining_work_minutes_at_24h=None, remaining_work_minutes_at_72h=None,
-            completed_at_72h=finish <= horizon,
-            total_wait_minutes=max(0, int((start-available).total_seconds()/60)),
-            remaining_wait_minutes=max(0, int((start-max(begin,available)).total_seconds()/60)),
+            completed_at_72h=physical_finish <= horizon,
+            total_wait_seconds=max(0, int((physical_start-available).total_seconds())),
+            total_wait_minutes=max(0, int((physical_start-available).total_seconds()/60)),
+            remaining_wait_minutes=max(0, int((physical_start-max(begin,available)).total_seconds()/60)),
             accrued_before_cents=before['demurrage_cents'],
             demurrage_increment_24h_cents=increments[0],
             demurrage_increment_72h_cents=increments[1],
@@ -352,12 +407,15 @@ def evaluate_scenario(
     scenario: Mapping[str, Any],
     *,
     recovery_mode: str = "NO_RECOVERY",
+    settlement_policy: str = LEGACY_CONTRACT_PARITY,
 ) -> dict:
     """Replay shocks without changing the snapshot or any planned decision."""
     if recovery_mode not in ("NO_RECOVERY", "LIMITED_RECOVERY"):
         raise ValueError("Unsupported recovery mode")
     if recovery_mode != "NO_RECOVERY":
         raise ScenarioReplayNotImplemented("Recovery replay is not implemented")
+    if settlement_policy not in (LEGACY_CONTRACT_PARITY, SECOND_PRECISION_SIMULATION_V1):
+        raise ValueError('Unsupported Risk settlement policy')
     if scenario.get('scenario_id') == NO_SHOCK_BASELINE:
         _require_no_shock_baseline(scenario)
     elif not scenario.get('scenario_id'):
@@ -374,6 +432,7 @@ def evaluate_scenario(
         physical = _physical_replay(snapshot, candidate, {},
             scenario_weather(weather, {}, local_time(snapshot['as_of_at'])))
     else:
+        physical = None
         try:
             shocks = scenario.get('call_shocks', {})
             if not isinstance(shocks, Mapping):
@@ -392,7 +451,8 @@ def evaluate_scenario(
                 original_rows[row['call_id']]['weather_pause_intervals']
                 for row in physical)
             details = baseline['vessel_results'] if unchanged else _settle_replay(
-                snapshot, candidate, physical, weather)
+                snapshot, candidate, physical, weather,
+                settlement_policy=settlement_policy)
         except UnresolvedSubminuteSettlement as exc:
             severity = _severity(exc.physical_replay)
             return dict(_failure(scenario, candidate, exc),
@@ -401,9 +461,21 @@ def evaluate_scenario(
                 commitment_status='DISRUPTED' if severity['commitment_deviation_count'] else 'ON_PLAN',
                 settlement_rule_status='UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE',
                 reason_codes=['UNRESOLVED_SUBMINUTE_SETTLEMENT_RULE'],
+                settlement_boundaries=exc.boundaries,
                 physical_replay=exc.physical_replay, actual_schedules=exc.physical_replay,
                 **severity)
         except (ValueError, KeyError, AssertionError) as exc:
+            if physical is not None:
+                severity = _severity(physical)
+                return dict(_failure(scenario, candidate, exc),
+                    failure_class='UNRESOLVED', physical_success=True,
+                    physical_status='FEASIBLE',
+                    commitment_status=('DISRUPTED' if severity['commitment_deviation_count']
+                                       else 'ON_PLAN'),
+                    settlement_rule_status='SETTLEMENT_VALIDATION_FAILED',
+                    reason_codes=[str(exc).split(':')[0]],
+                    physical_replay=physical, actual_schedules=physical,
+                    **severity)
             return _failure(scenario, candidate, exc)
     summary = baseline['summary']
     severity = _severity(physical) if physical else dict(
@@ -423,6 +495,12 @@ def evaluate_scenario(
             {code for row in physical for code in row['delay_causes']} |
             ({'COMMITMENT_DEVIATION'} if severity['commitment_deviation_count'] else set())),
         "cost_cents": total,
+        "settlement_policy_version": settlement_policy,
+        "settlement_assumption_version": (SECOND_ASSUMPTION_VERSION
+            if settlement_policy == SECOND_PRECISION_SIMULATION_V1 else None),
+        "settlement_precision": ('SECOND' if settlement_policy ==
+            SECOND_PRECISION_SIMULATION_V1 else 'MINUTE'),
+        "settlement_simulation_only": settlement_policy == SECOND_PRECISION_SIMULATION_V1,
         "wait_minutes": sum(r['total_wait_minutes'] for r in details),
         "completion_at": max(r['completion_at'] for r in details),
         "vessel_results": details, "actual_schedules": physical if physical else details,
