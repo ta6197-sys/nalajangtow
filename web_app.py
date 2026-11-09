@@ -34,6 +34,7 @@ from src.daily_planning.models import (berth, call_state, contract, operation_ev
 from src.daily_planning.operations import advance_run, confirm_candidate
 from src.daily_planning.optimization import optimize_run
 from src.daily_planning.evaluation import price_until
+from src.daily_planning.forecast.service import generate_forecast
 from src.daily_planning.validator import normalize_contract, time_value
 from src.daily_planning.risk.api_adapter import (get_risk_distribution_payload,
     get_risk_scenario_payload, list_risk_analyses)
@@ -713,6 +714,15 @@ def operate_day(_body):
         return updated
 
 
+
+def get_forecast_v1(engine, run_id):
+    run_id = uuid.UUID(str(run_id))
+    with engine.connect() as connection:
+        config = connection.execute(sa.select(planning_run.c.run_config).where(
+            planning_run.c.run_id == run_id)).scalar_one()
+    return generate_forecast(config['input_snapshot'])
+
+
 class Handler(BaseHTTPRequestHandler):
     def respond(self, code, data):
         raw = json.dumps(data, ensure_ascii=False, default=str).encode()
@@ -775,6 +785,19 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/status':
             try:
                 self.respond(200, current_state())
+            except Exception as exc:
+                traceback.print_exc()
+                self.respond(500, {'error': str(exc)})
+        elif path == '/api/forecast/v1':
+            try:
+                run_id = parse_qs(parsed.query).get('run_id', [None])[0]
+                if not run_id:
+                    raise ValueError('run_id query parameter required')
+                self.respond(200, get_forecast_v1(ENGINE, run_id))
+            except NoResultFound:
+                self.respond(404, {'error': 'Planning run not found'})
+            except (ValueError, KeyError) as exc:
+                self.respond(400, {'error': str(exc)})
             except Exception as exc:
                 traceback.print_exc()
                 self.respond(500, {'error': str(exc)})

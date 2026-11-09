@@ -56,10 +56,22 @@ class ApiDocsTest(unittest.TestCase):
         self.assertEqual(routes,documented)
         operation_ids=[op['operationId'] for methods in spec['paths'].values() for op in methods.values()]
         self.assertEqual(len(operation_ids),len(set(operation_ids)))
-        self.assertEqual(len(spec['paths']),16)
+        self.assertEqual(len(spec['paths']),17)
         self.assertTrue(all('get' in spec['paths'][path] and 'post' not in spec['paths'][path]
             for path in ('/api/risk/analyses','/api/risk/analyses/{analysis_id}',
                          '/api/risk/analyses/{analysis_id}/scenarios/{scenario_id}')))
+
+    def test_forecast_endpoint_is_read_only(self):
+        with (patch.object(web_app, 'get_forecast_v1', return_value={'schema_version': 'FORECAST_V1', 'read_only': True}) as forecast,
+              patch.object(web_app, 'plan_next', side_effect=AssertionError('forecast must not plan')),
+              patch.object(web_app, 'confirm_candidate', side_effect=AssertionError('forecast must not confirm'))):
+            with urlopen(self.origin + '/api/forecast/v1?run_id=00000000-0000-0000-0000-000000000001') as response:
+                payload = json.loads(response.read())
+                self.assertTrue(payload['read_only'])
+            forecast.assert_called_once()
+            with self.assertRaises(HTTPError) as exc:
+                urlopen(self.origin + '/api/forecast/v1')
+            self.assertEqual(exc.exception.code, 400)
 
     def test_unknown_assets_do_not_expose_other_files(self):
         for path in ('/docs/manifest.json','/docs/../.env','/docs/anything.js'):
