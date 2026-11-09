@@ -735,6 +735,8 @@ class Handler(BaseHTTPRequestHandler):
         static_files = {
             '/assets/app.css': ('app.css', 'text/css; charset=utf-8'),
             '/assets/risk.css': ('risk.css', 'text/css; charset=utf-8'),
+            '/assets/risk_explorer.css': ('risk_explorer.css', 'text/css; charset=utf-8'),
+            '/assets/risk_explorer.js': ('risk_explorer.js', 'text/javascript; charset=utf-8'),
             '/assets/app.js': ('app.js', 'text/javascript; charset=utf-8'),
             '/assets/risk_charts.js': ('risk_charts.js', 'text/javascript; charset=utf-8'),
             '/assets/echarts.min.js': ('vendor/echarts/echarts.min.js', 'text/javascript; charset=utf-8'),
