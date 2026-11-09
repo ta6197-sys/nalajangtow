@@ -108,7 +108,9 @@ def export_run(engine,run_id):
                 pending=summary['pending'])
 
 
-def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_generator=LEGACY):
+def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_generator=LEGACY,warm_start=False):
+    if warm_start and candidate_generator != EVENTS:
+        raise ValueError('Warm start requires EVENTS_V1')
     if candidate_generator not in (LEGACY, EVENTS):
         raise ValueError('Unknown candidate generator')
     run_id=uuid.UUID(str(run_id))
@@ -120,7 +122,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
     config=run['run_config']
     if 'optimization' in config:
         old=config['optimization']
-        if old['time_limit_per_candidate_seconds']!=time_limit or old['cost_slack_fraction']!=str(slack) or old.get('candidate_generator', LEGACY)!=candidate_generator:
+        if old['time_limit_per_candidate_seconds']!=time_limit or old['cost_slack_fraction']!=str(slack) or old.get('candidate_generator', LEGACY)!=candidate_generator or old.get('warm_start', False)!=warm_start:
             raise ValueError('Run already optimized with different settings; create a new run')
         return export_run(engine,run_id)
     snapshot=config['input_snapshot']
@@ -130,7 +132,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
     domain=build_domain(snapshot,weather,candidate_generator=candidate_generator)
     domain_seconds=time.monotonic()-t0
     replay_cache = OrderedDict() if candidate_generator == EVENTS else None
-    first,a_record=cost_then_wait_search(snapshot,weather,domain,time_limit=time_limit,replay_cache=replay_cache)
+    first,a_record=cost_then_wait_search(snapshot,weather,domain,time_limit=time_limit,replay_cache=replay_cache,warm_start=warm_start)
     if first is None:
         raise RuntimeError(f'No evaluated feasible A candidate: {a_record}')
     generated=[(1,'MIN_DEMURRAGE',first,a_record)]
@@ -139,7 +141,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
     records=[a_record]
     if config['solver_config']['top_k']>=2:
         second,b_record=exact_search(snapshot,weather,domain,objective='wait',time_limit=time_limit,
-            cost_cap=cap,excluded_signatures=[first['schedule_signature']],replay_cache=replay_cache)
+            cost_cap=cap,excluded_signatures=[first['schedule_signature']],replay_cache=replay_cache,warm_start=warm_start)
         records.append(b_record)
         if second is not None:
             generated.append((2,'MIN_WAIT_WITH_COST_LIMIT',second,b_record))
@@ -147,7 +149,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
         has_previous=bool(snapshot.get('previous_tentative_assignments'))
         objective='stability' if has_previous else 'wait'
         third,c_record=exact_search(snapshot,weather,domain,objective=objective,time_limit=time_limit,
-            cost_cap=cap,excluded_signatures=[r[2]['schedule_signature'] for r in generated],replay_cache=replay_cache)
+            cost_cap=cap,excluded_signatures=[r[2]['schedule_signature'] for r in generated],replay_cache=replay_cache,warm_start=warm_start)
         c_record['strategy']='MIN_SCHEDULE_CHANGES'
         c_record['first_run_fallback']=not has_previous
         records.append(c_record)
@@ -161,6 +163,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
         stability_enabled=True,pending=[])
     if candidate_generator != LEGACY:
         summary['candidate_generator']=candidate_generator
+        summary['warm_start']=warm_start
     if snapshot.get('berth_phase'):
         summary['berth_phase_policy'] = snapshot['berth_phase']
     if snapshot.get('sk_physical'):
@@ -187,7 +190,7 @@ def optimize_run(engine,run_id,*,time_limit=180,cost_slack='0.03',candidate_gene
         if 'optimization' in current['run_config']:
             # Another process completed this same run while the solver was busy.
             old=current['run_config']['optimization']
-            if old['time_limit_per_candidate_seconds']!=time_limit or old['cost_slack_fraction']!=str(slack) or old.get('candidate_generator', LEGACY)!=candidate_generator:
+            if old['time_limit_per_candidate_seconds']!=time_limit or old['cost_slack_fraction']!=str(slack) or old.get('candidate_generator', LEGACY)!=candidate_generator or old.get('warm_start', False)!=warm_start:
                 raise ValueError('Another process completed this run with different settings')
         else:
             if current['run_config']['input_snapshot']!=snapshot:
