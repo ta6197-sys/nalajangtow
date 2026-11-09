@@ -50,6 +50,7 @@ function render(){if(!state)return;
   renderScheduler();
   renderTradeoff(current);
   loadRisk(current?.run_id);
+  window.DockRiskExplorer?.load(current?.run_id,current?.candidates||[],selectedCandidate()?.label||'A');
   const done=state.history.filter(r=>r.actual_day_cents!=null);
   $('history').innerHTML=done.length?`<p>각 날짜는 당시 정책으로 보존됩니다. ‘주간 작업’은 야간 중단, ‘주간 시작’은 시작시각만 제한한 과거 정책입니다.</p><table><thead><tr><th>날짜</th><th>정책</th><th>A 평가</th><th>B 평가</th><th>C 평가</th><th>적용</th><th>당일 실제</th><th>누적 실제</th><th>완료</th></tr></thead><tbody>${done.map(r=>{const a=Object.fromEntries(r.candidates.map(c=>[c.label,c]));const applied=r.candidates.find(c=>c.candidate_id===r.applied_candidate_id);return `<tr><td>${r.date}</td><td>${r.berthing_policy==='DAYLIGHT_WORK_V2'?'주간 작업':r.berthing_policy==='DAYLIGHT_WEATHER_V1'?'주간 시작':'기존'}</td><td>${money(a.A?.cost_cents)}</td><td>${money(a.B?.cost_cents)}</td><td>${money(a.C?.cost_cents)}</td><td>${applied?.label||'—'}</td><td>${money(r.actual_day_cents)}</td><td>${money(r.accumulated_cents)}</td><td>${r.completed_count}</td></tr>`}).join('')}</tbody></table>`:'아직 운영한 날짜가 없습니다.';
 }
@@ -231,7 +232,7 @@ $('confirm-action').onclick=async()=>{
 $('candidates').onclick=event=>{
   if(busy)return;
   const button=event.target.closest('[data-candidate]');
-  if(button){selectedId=button.dataset.candidate;renderScheduler()}
+  if(button){selectedId=button.dataset.candidate;renderScheduler();window.DockRiskExplorer?.setCandidate(selectedCandidate()?.label||'A')}
 };
 $('compare-baseline').onchange=renderTimeline;
 $('go-confirm').onclick=()=>navigate('confirm');
