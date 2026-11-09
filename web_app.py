@@ -34,7 +34,7 @@ from src.daily_planning.models import (berth, call_state, contract, operation_ev
 from src.daily_planning.operations import advance_run, confirm_candidate
 from src.daily_planning.optimization import optimize_run
 from src.daily_planning.evaluation import price_until
-from src.daily_planning.forecast.service import generate_forecast
+from src.daily_planning.forecast.database import forecast_for_run
 from src.daily_planning.validator import normalize_contract, time_value
 from src.daily_planning.risk.api_adapter import (get_risk_distribution_payload,
     get_risk_scenario_payload, list_risk_analyses)
@@ -716,11 +716,7 @@ def operate_day(_body):
 
 
 def get_forecast_v1(engine, run_id):
-    run_id = uuid.UUID(str(run_id))
-    with engine.connect() as connection:
-        config = connection.execute(sa.select(planning_run.c.run_config).where(
-            planning_run.c.run_id == run_id)).scalar_one()
-    return generate_forecast(config['input_snapshot'])
+    return forecast_for_run(engine, run_id)
 
 
 class Handler(BaseHTTPRequestHandler):

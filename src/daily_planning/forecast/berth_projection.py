@@ -1,22 +1,25 @@
 """Read-only confirmed and provenance-verified tentative occupancy."""
-from ..context import local_time
+from .validator import forecast_time
 from ..bootstrap_db import kst_time
 
 
-def project_berths(snapshot, known_ids, as_of, forecast_end):
+def project_berths(snapshot, known_ids, as_of, forecast_end, selection_provenance=None):
     rows, missing = [], []
-    berth_ids = {berth['berth_id'] for berth in snapshot.get('berths', [])}
+    master = snapshot.get('berth_master_provenance', {})
+    verified_master = bool(master.get('source') and master.get('known_at') and forecast_time(master['known_at']) <= as_of)
+    berth_ids = {berth['berth_id'] for berth in snapshot.get('berths', [])} if verified_master else set()
     for kind, records in (('CONFIRMED', snapshot.get('commits', [])),
                           ('TENTATIVE', snapshot.get('previous_tentative_assignments', []))):
         for row in records:
             if row.get('call_id') not in known_ids:
                 continue
             if kind == 'TENTATIVE':
-                known_at = row.get('known_at')
+                provenance = (selection_provenance or {}).get(str(row.get('assignment_id')), {})
+                known_at = row.get('known_at') or provenance.get('confirmed_at')
                 if not known_at:
                     missing.append({'call_id': row['call_id'], 'field': 'tentative_known_at'})
                     continue
-                if local_time(known_at) > as_of:
+                if forecast_time(known_at) > as_of:
                     continue
                 start, end = row.get('start_at'), row.get('completion_at')
             else:
@@ -25,10 +28,10 @@ def project_berths(snapshot, known_ids, as_of, forecast_end):
             if not row.get('berth_id') or not start or not end:
                 missing.append({'call_id': row['call_id'], 'field': 'occupancy_interval'})
                 continue
-            if row['berth_id'] not in berth_ids:
+            if verified_master and row['berth_id'] not in berth_ids:
                 missing.append({'call_id': row['call_id'], 'field': 'unknown_berth'})
                 continue
-            a, b = local_time(start), local_time(end)
+            a, b = forecast_time(start), forecast_time(end)
             if a >= b:
                 raise ValueError('Invalid occupancy interval')
             if a < forecast_end and b > as_of:
@@ -36,11 +39,11 @@ def project_berths(snapshot, known_ids, as_of, forecast_end):
                              'start_at': start, 'end_at': end, 'known_at': known_at,
                              'classification': kind,
                              'source': 'SNAPSHOT_COMMIT' if kind == 'CONFIRMED' else 'PREVIOUS_SELECTED_PLAN'})
-    rows.sort(key=lambda r: (r['berth_id'], local_time(r['start_at']), r['call_id']))
+    rows.sort(key=lambda r: (r['berth_id'], forecast_time(r['start_at']), r['call_id']))
     conflicts = []
     for i, left in enumerate(rows):
         for right in rows[i + 1:]:
-            if left['berth_id'] == right['berth_id'] and max(local_time(left['start_at']), local_time(right['start_at'])) < min(local_time(left['end_at']), local_time(right['end_at'])):
+            if left['berth_id'] == right['berth_id'] and max(forecast_time(left['start_at']), forecast_time(right['start_at'])) < min(forecast_time(left['end_at']), forecast_time(right['end_at'])):
                 conflicts.append({'berth_id': left['berth_id'], 'call_ids': sorted([left['call_id'], right['call_id']]),
                                   'certainty': 'CONFIRMED' if left['classification'] == right['classification'] == 'CONFIRMED' else 'POTENTIAL'})
     return rows, conflicts, missing
@@ -48,18 +51,21 @@ def project_berths(snapshot, known_ids, as_of, forecast_end):
 
 def congestion_periods(snapshot, rows, as_of, forecast_end):
     """Only flag full active-berth occupation supported by stored intervals."""
+    master = snapshot.get('berth_master_provenance', {})
+    if not (master.get('source') and master.get('known_at') and forecast_time(master['known_at']) <= as_of):
+        return []
     active = {berth['berth_id'] for berth in snapshot.get('berths', []) if berth.get('is_active')}
     if not active:
         return []
     edges = {as_of, forecast_end}
     for row in rows:
         if row['berth_id'] in active:
-            edges.add(max(as_of, local_time(row['start_at'])))
-            edges.add(min(forecast_end, local_time(row['end_at'])))
+            edges.add(max(as_of, forecast_time(row['start_at'])))
+            edges.add(min(forecast_end, forecast_time(row['end_at'])))
     ordered = sorted(edges)
     periods = []
     for a, b in zip(ordered, ordered[1:]):
-        occupied = [r for r in rows if r['berth_id'] in active and local_time(r['start_at']) < b and local_time(r['end_at']) > a]
+        occupied = [r for r in rows if r['berth_id'] in active and forecast_time(r['start_at']) < b and forecast_time(r['end_at']) > a]
         if {r['berth_id'] for r in occupied} != active:
             continue
         confirmed = {r['berth_id'] for r in occupied if r['classification'] == 'CONFIRMED'} == active
