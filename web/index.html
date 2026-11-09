@@ -4,6 +4,7 @@
 <meta name="theme-color" content="#cf002e"><title>Docktimize | 선박 스케줄러</title>
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/risk.css">
+<link rel="stylesheet" href="/assets/risk_explorer.css">
 </head><body>
 <div class="app-shell">
 <aside class="sidebar">
@@ -52,6 +53,37 @@
       <div class="candidate-grid" id="candidates"></div>
       <div class="panel timeline-panel"><div class="panel-title"><div><h2>접안 타임라인 <span class="subtle-label">72시간 전망</span></h2><p>색 막대: 실제 작업 · 빗금: 야간 작업 중단 · 외곽선: 선석 점유. 72시간 이후 구간은 잘라 표시</p></div><label class="inline-checkbox"><input id="compare-baseline" type="checkbox"> A와 비교 표시</label></div><div class="timeline" id="timeline"></div><div id="assignment-table" class="scroll"></div></div>
       <div class="panel"><div id="tradeoffSummary" class="scroll"></div><div id="tradeoffDetails"></div></div>
+      <section class="panel rex-shell" aria-label="충격 시뮬레이션 탐색">
+        <div class="panel-title between"><div><h2>스케줄별 충격 영향 비교</h2><p class="small muted">추천안 선택 → 리스크 선택 → 동일 시나리오 A/B/C 비교</p></div><button class="secondary-btn" id="rex-reload" type="button">분석 갱신</button></div>
+        <div id="rex-state" class="small muted" role="status">저장된 분석 확인 전</div>
+        <h3>1. 추천안 비교</h3><div id="rex-candidates" class="rex-candidates"></div>
+        <div class="rex-pair">
+          <div class="rex-box"><h4>기본 체선료</h4><div id="rex-base-cost" class="rex-chart"></div></div>
+          <div class="rex-box"><h4>총 대기시간</h4><div id="rex-base-wait" class="rex-chart"></div></div>
+        </div><p id="rex-why" class="rex-explanation"></p>
+        <div class="rex-heading"><h3>2. 핵심 리스크 선택</h3><span class="rex-provenance">가상 충격 분포 · 실제 발생확률 아님</span></div>
+        <div id="rex-types" class="rex-types" role="group" aria-label="분석할 충격 선택">
+          <button data-rex-type="arrival" aria-pressed="true">ETA 도착 지연</button>
+          <button data-rex-type="work" aria-pressed="false">하역시간 증가</button>
+          <button data-rex-type="weather" aria-pressed="false">기상 악화</button>
+        </div>
+        <div class="rex-bar">
+          <div id="rex-prob" class="rex-prob">분석 결과 조회 전</div>
+          <div class="rex-control"><label for="rex-scenario">동일 충격 시나리오 선택</label><select id="rex-scenario" aria-label="동일 충격 시나리오"></select><small id="rex-coverage">정산 여부 확인 전</small></div>
+        </div>
+        <p id="rex-shock-reason" class="rex-explanation"></p>
+        <h3>3. 충격 적용 결과</h3>
+        <div id="rex-impact" class="rex-impact"></div>
+        <div class="rex-pair">
+          <div class="rex-box"><h4>동일 시나리오의 추가 체선료</h4><div id="rex-delta" class="rex-chart"></div></div>
+          <div class="rex-box"><h4>후속 지연이 발생한 표본 비율</h4><div id="rex-propagation" class="rex-chart"></div><small id="rex-propagation-note"></small></div>
+        </div>
+        <div class="rex-pair">
+          <div class="rex-box"><h4>선석별 계획 대비 충격 후 일정</h4><div id="rex-gantt" class="rex-gantt">시나리오 선택 전</div></div>
+          <div class="rex-box"><h4>Monte Carlo 비용 분포</h4><div id="rex-distribution" class="rex-chart"></div><small id="rex-cost-note"></small></div>
+        </div>
+        <div class="rex-bottom"><div><h4>운영 권고</h4><p id="rex-guidance">분석 결과를 선택하세요.</p></div><details><summary>계산 근거 · 원시 데이터</summary><pre id="rex-evidence">분석 결과 없음</pre></details></div>
+      </section>
       <section class="panel risk-panel" aria-label="저장된 Risk 분석">
         <div class="panel-title between"><h2>Risk 분석 · 저장된 시나리오</h2><button class="secondary-btn" id="risk-refresh" type="button">분석 새로고침</button></div>
         <p id="risk-analysis-status" class="small muted">저장된 분석을 확인하는 중입니다.</p>
@@ -82,4 +114,5 @@
 <script src="/assets/echarts.min.js" defer></script>
 <script src="/assets/risk_charts.js" defer></script>
 <script src="/assets/app.js" defer></script>
+<script src="/assets/risk_explorer.js" defer></script>
 </body></html>
