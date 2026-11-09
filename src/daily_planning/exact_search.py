@@ -174,7 +174,7 @@ def make_master(domain, objective, cost_cap=None, stability=None):
 
 
 def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_cap=None,
-                 excluded_signatures=(),max_evaluations=None,replay_cache=None):
+                 excluded_signatures=(),max_evaluations=None,replay_cache=None,warm_start=False):
     """Minimize exact replay cost/wait over the finite domain, with proof tracking.
 
     Master bounds omit unknown tail costs; evaluated schedules never do.
@@ -202,16 +202,21 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
     cp_sat_calls=0
     weather_key = signature(weather.rows) if replay_cache is not None else None
     status='NOT_STARTED'
-    def inspect_choice(choice, source):
-        nonlocal incumbent,best
+    hint_choice = None
+    hint_used = False
+    def inspect_choice(choice, source, reserve_hint=False):
+        nonlocal incumbent,best,hint_choice
         if choice in seen:
+            model.AddBoolOr([x[j].Not() for j in choice])
             return
         seen.add(choice)
-        model.AddBoolOr([x[j].Not() for j in choice])
+        if not reserve_hint:
+            model.AddBoolOr([x[j].Not() for j in choice])
         rows=[domain['options'][j]['row'] for j in choice if domain['options'][j]['row'] is not None]
         # Seed heuristics can fail model constraints; reject them before replay.
         all_rows=domain['fixed']+rows
         if any(interval_overlap(a,b) for i,a in enumerate(all_rows) for b in all_rows[i+1:]):
+            if reserve_hint: model.AddBoolOr([x[j].Not() for j in choice])
             return
         if replay_cache is None:
             result=evaluate_baseline(snapshot,rows,weather)
@@ -237,16 +242,19 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
         else:
             score=cost if objective=='cost' else summary['total_wait_minutes']
         allowed=result['schedule_signature'] not in excluded and (cost_cap is None or cost<=cost_cap)
+        if reserve_hint:
+            if allowed: hint_choice = choice
+            else: model.AddBoolOr([x[j].Not() for j in choice])
         trace.append(dict(evaluation_index=len(trace)+1,source=source,exact_cost_cents=cost,
                           exact_objective=score,accepted=allowed,schedule_signature=result['schedule_signature']))
         if allowed and (best is None or (score,cost,summary['total_wait_minutes'],result['schedule_signature'])
                         < (best,incumbent['evaluation']['summary']['demurrage_increment_to_completion_cents'],
                            incumbent['evaluation']['summary']['total_wait_minutes'],incumbent['schedule_signature'])):
             best,incumbent=score,result
-    for choice in domain['seeds']:
+    for seed_index, choice in enumerate(domain['seeds']):
         if time.monotonic()-started >= time_limit or (max_evaluations is not None and len(trace)>=max_evaluations):
             break
-        inspect_choice(choice,'HEURISTIC_SEED')
+        inspect_choice(choice,'HEURISTIC_SEED', reserve_hint=warm_start and seed_index == len(domain['seeds'])-1)
     while time.monotonic()-started < time_limit:
         if incumbent is not None and lower>=best:
             status='BOUND_PROOF'
@@ -256,12 +264,26 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
             break
         if incumbent is not None:
             model.Add(expression <= best-1)
+        if hint_choice is not None:
+            if objective == 'stability':
+                hint_lb = stability['fixed'] + sum(stability['coefficients'][j] for j in hint_choice)
+            else:
+                hint_lb = (domain['fixed_cost'] if objective == 'cost' else domain['fixed_wait']) + sum(domain['options'][j][objective+'_lb'] for j in hint_choice)
+            hint_cost = domain['fixed_cost'] + sum(domain['options'][j]['cost_lb'] for j in hint_choice)
+            if (best is None or hint_lb < best) and (cost_cap is None or hint_cost <= cost_cap):
+                chosen = set(hint_choice)
+                for j, variable in enumerate(x): model.AddHint(variable, int(j in chosen))
+                hint_used = True
+            else:
+                model.AddBoolOr([x[j].Not() for j in hint_choice])
+            hint_choice = None
         solver=cp_model.CpSolver()
         solver.parameters.max_time_in_seconds=max(0.001,time_limit-(time.monotonic()-started))
         solver.parameters.num_search_workers=8
         solver.parameters.random_seed=42
         result=solver.Solve(model)
         cp_sat_calls+=1
+        if warm_start: model.ClearHints()
         status=solver.StatusName(result)
         if result==cp_model.INFEASIBLE:
             exhausted=True
@@ -290,6 +312,8 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
                 option_count=len(domain['options']),evaluations=len(trace),cp_sat_calls=cp_sat_calls,cost_cap_cents=cost_cap,
                 scope='Finite generated start/berth options; exact FCFS evaluation tail; not all minute-level starts',
                 master_objective='Proven lower bound on unexplored schedules; not a simulated final cost',trace=trace)
+    if warm_start:
+        record['warm_start_hint_used'] = hint_used
     if stability:
         record.update(stability_priority='BERTH_CHANGE_COUNT_THEN_START_SHIFT_MINUTES',
                       stability_time_shift_weight=stability['weight'],
@@ -297,9 +321,9 @@ def exact_search(snapshot,weather,domain,*,objective='cost',time_limit=180,cost_
     return incumbent,record
 
 
-def cost_then_wait_search(snapshot, weather, domain, *, time_limit=180, replay_cache=None):
+def cost_then_wait_search(snapshot, weather, domain, *, time_limit=180, replay_cache=None, warm_start=False):
     """Lexicographic A search within one time budget."""
-    first, primary = exact_search(snapshot, weather, domain, time_limit=time_limit, replay_cache=replay_cache)
+    first, primary = exact_search(snapshot, weather, domain, time_limit=time_limit, replay_cache=replay_cache, warm_start=warm_start)
     if first is None:
         return first, primary
     remaining = time_limit - primary['seconds']
@@ -308,7 +332,7 @@ def cost_then_wait_search(snapshot, weather, domain, *, time_limit=180, replay_c
         return first, primary
     tied, secondary = exact_search(snapshot, weather, domain, objective='wait',
         cost_cap=first['evaluation']['summary']['demurrage_increment_to_completion_cents'],
-        time_limit=remaining, replay_cache=replay_cache)
+        time_limit=remaining, replay_cache=replay_cache, warm_start=warm_start)
     if tied is None:
         primary['tie_break_status'] = 'NO_FEASIBLE_RESULT'
         return first, primary

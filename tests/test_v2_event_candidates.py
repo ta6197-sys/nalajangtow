@@ -35,6 +35,16 @@ class EventCandidatesTest(unittest.TestCase):
         exact_search(snapshot, weather, domain, time_limit=2, replay_cache=cache)
         self.assertGreater(len(cache), len(old_keys))
 
+    def test_warm_start_keeps_valid_candidate_and_bound(self):
+        snapshot, weather = fixture(4)
+        domain = build_domain(snapshot, weather, candidate_generator=EVENTS)
+        legacy, legacy_record = exact_search(snapshot, weather, domain, time_limit=2)
+        hinted, record = exact_search(snapshot, weather, domain, time_limit=2, warm_start=True)
+        self.assertEqual(hinted['evaluation']['summary']['demurrage_increment_to_completion_cents'], legacy['evaluation']['summary']['demurrage_increment_to_completion_cents'])
+        self.assertLessEqual(record['valid_lower_bound'], record['exact_objective'])
+        self.assertIn('warm_start_hint_used', record)
+        self.assertEqual(record['solver_status'], legacy_record['solver_status'])
+
     def test_unknown_version_rejected(self):
         snapshot,weather=fixture(2)
         with self.assertRaises(ValueError): build_domain(snapshot,weather,candidate_generator='unknown')
