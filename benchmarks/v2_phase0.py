@@ -15,6 +15,9 @@ sys.path.insert(0, str(ROOT))
 from ortools.sat.python import cp_model
 from src.daily_planning import exact_search as search
 from src.daily_planning.context import signature
+import weather_optimizer
+import rolling_horizon
+from src.daily_planning import evaluation
 from weather_optimizer import WeatherSeries
 
 
@@ -43,7 +46,7 @@ def run(n, budget):
     total = time.perf_counter()
     t = time.perf_counter(); snapshot, weather = fixture(n); preparation = time.perf_counter()-t
     t = time.perf_counter(); domain = search.build_domain(snapshot, weather); domain_time = time.perf_counter()-t
-    durations = {'solver_seconds':0., 'replay_seconds':0., 'solver_calls':0, 'replay_calls':0}
+    durations = {'solver_seconds':0., 'replay_seconds':0., 'solver_calls':0, 'replay_calls':0, 'pricing_seconds':0., 'pricing_calls':0}
     real_solve, real_replay = cp_model.CpSolver.Solve, search.evaluate_baseline
     def solve(self, *args, **kwargs):
         start = time.perf_counter()
@@ -55,8 +58,14 @@ def run(n, budget):
         try: return real_replay(*args, **kwargs)
         finally:
             durations['replay_calls'] += 1; durations['replay_seconds'] += time.perf_counter()-start
+    real_price = weather_optimizer.price_contract
+    def price(*args, **kwargs):
+        start = time.perf_counter()
+        try: return real_price(*args, **kwargs)
+        finally:
+            durations['pricing_calls'] += 1; durations['pricing_seconds'] += time.perf_counter()-start
     records=[]; candidates=[]
-    with patch.object(cp_model.CpSolver, 'Solve', solve), patch.object(search, 'evaluate_baseline', replay):
+    with patch.object(weather_optimizer, 'price_contract', price), patch.object(rolling_horizon, 'price_contract', price), patch.object(evaluation, 'price_contract', price), patch.object(cp_model.CpSolver, 'Solve', solve), patch.object(search, 'evaluate_baseline', replay):
         for label in 'ABC':
             t=time.perf_counter()
             if label=='A': result, record = search.cost_then_wait_search(snapshot, weather, domain, time_limit=budget)

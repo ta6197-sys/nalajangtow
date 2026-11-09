@@ -7,15 +7,17 @@
       "fixture": "SYNTHETIC",
       "calls": 2,
       "berths": 2,
-      "preparation_seconds": 0.0021423750004032627,
-      "domain_seconds": 0.0013253330034785904,
+      "preparation_seconds": 0.0022939589980524033,
+      "domain_seconds": 0.0008960409977589734,
       "options": 26,
       "physical_options": 24,
       "timing": {
-        "solver_seconds": 0.025307833013357595,
-        "replay_seconds": 0.0035175429948139936,
+        "solver_seconds": 0.03399595798691735,
+        "replay_seconds": 0.0038429180131061003,
         "solver_calls": 8,
-        "replay_calls": 15
+        "replay_calls": 15,
+        "pricing_seconds": 0.0011187530035385862,
+        "pricing_calls": 120
       },
       "candidates": [
         {
@@ -40,13 +42,13 @@
       "searches": [
         {
           "label": "A",
-          "wall_seconds": 0.025486917002126575,
+          "wall_seconds": 0.03734720799548086,
           "solver": {
             "objective": "cost_then_wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.000865,
-            "time_limit_seconds": 1.975394,
+            "seconds": 0.000963,
+            "time_limit_seconds": 1.963637,
             "exact_objective": 0,
             "valid_lower_bound": 0,
             "relative_gap": 0,
@@ -76,7 +78,7 @@
             ],
             "primary_cost_search": {
               "status": "OPTIMAL",
-              "seconds": 0.024606,
+              "seconds": 0.036363,
               "valid_lower_bound": 15063,
               "relative_gap": 0
             }
@@ -84,12 +86,12 @@
         },
         {
           "label": "B",
-          "wall_seconds": 0.0026926249993266538,
+          "wall_seconds": 0.0029901669986429624,
           "solver": {
             "objective": "wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.002684,
+            "seconds": 0.002981,
             "time_limit_seconds": 2,
             "exact_objective": 0,
             "valid_lower_bound": 0,
@@ -130,12 +132,12 @@
         },
         {
           "label": "C",
-          "wall_seconds": 0.004732542001875117,
+          "wall_seconds": 0.004682165999838617,
           "solver": {
             "objective": "wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.004726,
+            "seconds": 0.004673,
             "time_limit_seconds": 2,
             "exact_objective": 0,
             "valid_lower_bound": 0,
@@ -183,21 +185,23 @@
           }
         }
       ],
-      "total_seconds": 0.03640583300148137
+      "total_seconds": 0.04824558299878845
     },
     {
       "fixture": "SYNTHETIC",
       "calls": 4,
       "berths": 2,
-      "preparation_seconds": 0.0018646250027813949,
-      "domain_seconds": 0.001295540998398792,
+      "preparation_seconds": 0.0018845830054488033,
+      "domain_seconds": 0.001350167003693059,
       "options": 52,
       "physical_options": 48,
       "timing": {
-        "solver_seconds": 0.22386191396799404,
-        "replay_seconds": 0.03974991194263566,
+        "solver_seconds": 0.21273383803054458,
+        "replay_seconds": 0.03675437400670489,
         "solver_calls": 74,
-        "replay_calls": 81
+        "replay_calls": 81,
+        "pricing_seconds": 0.011506083712447435,
+        "pricing_calls": 1296
       },
       "candidates": [
         {
@@ -222,13 +226,13 @@
       "searches": [
         {
           "label": "A",
-          "wall_seconds": 0.2573769579976215,
+          "wall_seconds": 0.24489433400594862,
           "solver": {
             "objective": "cost_then_wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.002104,
-            "time_limit_seconds": 1.744766,
+            "seconds": 0.001617,
+            "time_limit_seconds": 1.756758,
             "exact_objective": 0,
             "valid_lower_bound": 0,
             "relative_gap": 0,
@@ -258,7 +262,7 @@
             ],
             "primary_cost_search": {
               "status": "OPTIMAL",
-              "seconds": 0.255234,
+              "seconds": 0.243242,
               "valid_lower_bound": 33355,
               "relative_gap": 0
             }
@@ -266,12 +270,12 @@
         },
         {
           "label": "B",
-          "wall_seconds": 0.005627000005915761,
+          "wall_seconds": 0.004520916998444591,
           "solver": {
             "objective": "wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.005607,
+            "seconds": 0.004509,
             "time_limit_seconds": 2,
             "exact_objective": 0,
             "valid_lower_bound": 0,
@@ -312,12 +316,12 @@
         },
         {
           "label": "C",
-          "wall_seconds": 0.008729291999770794,
+          "wall_seconds": 0.007364167002378963,
           "solver": {
             "objective": "wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.008713,
+            "seconds": 0.007351,
             "time_limit_seconds": 2,
             "exact_objective": 0,
             "valid_lower_bound": 0,
@@ -365,21 +369,23 @@
           }
         }
       ],
-      "total_seconds": 0.27492120799433906
+      "total_seconds": 0.2600566670007538
     },
     {
       "fixture": "SYNTHETIC",
       "calls": 8,
       "berths": 2,
-      "preparation_seconds": 0.0027207079983782023,
-      "domain_seconds": 0.0037051670005894266,
+      "preparation_seconds": 0.0019428340019658208,
+      "domain_seconds": 0.002816582993546035,
       "options": 104,
       "physical_options": 96,
       "timing": {
-        "solver_seconds": 1.7712809489967185,
-        "replay_seconds": 0.2187540079903556,
-        "solver_calls": 256,
-        "replay_calls": 261
+        "solver_seconds": 1.764642207090219,
+        "replay_seconds": 0.22523742000339553,
+        "solver_calls": 253,
+        "replay_calls": 258,
+        "pricing_seconds": 0.07431873386667576,
+        "pricing_calls": 8256
       },
       "candidates": [
         {
@@ -404,19 +410,19 @@
       "searches": [
         {
           "label": "A",
-          "wall_seconds": 2.0000162500000442,
+          "wall_seconds": 2.0004698339980678,
           "solver": {
             "objective": "cost",
             "solver_status": "FEASIBLE",
             "termination": "UNKNOWN",
-            "seconds": 1.999987,
+            "seconds": 2.00044,
             "time_limit_seconds": 2,
             "exact_objective": 70710,
             "valid_lower_bound": 24563,
             "relative_gap": 0.6526233913166455,
             "option_count": 104,
-            "evaluations": 254,
-            "cp_sat_calls": 253,
+            "evaluations": 251,
+            "cp_sat_calls": 250,
             "cost_cap_cents": null,
             "scope": "Finite generated start/berth options; exact FCFS evaluation tail; not all minute-level starts",
             "master_objective": "Proven lower bound on unexplored schedules; not a simulated final cost",
@@ -459,7 +465,7 @@
                 "exact_cost_cents": 2992708,
                 "exact_objective": 2992708,
                 "accepted": true,
-                "schedule_signature": "648981563ce8b7aaa2ae7f5e932d86caebe97fd2653598a6d94ba07fd55b5125"
+                "schedule_signature": "34d8e49e90cb34b495c203b958d9cc9f486336c6fadccba4a0a725119b65256f"
               },
               {
                 "evaluation_index": 6,
@@ -467,7 +473,7 @@
                 "exact_cost_cents": 2992708,
                 "exact_objective": 2992708,
                 "accepted": true,
-                "schedule_signature": "34d8e49e90cb34b495c203b958d9cc9f486336c6fadccba4a0a725119b65256f"
+                "schedule_signature": "648981563ce8b7aaa2ae7f5e932d86caebe97fd2653598a6d94ba07fd55b5125"
               },
               {
                 "evaluation_index": 7,
@@ -539,7 +545,7 @@
                 "exact_cost_cents": 2529832,
                 "exact_objective": 2529832,
                 "accepted": true,
-                "schedule_signature": "2d86daa0d8d280adb0bcc23bb9b90e3de702b255bd7c3e505bade6e20122adf1"
+                "schedule_signature": "38adf5ed03f0eff78b80b6db2b1e38097123b807a163e4cf79c9add59b0976db"
               },
               {
                 "evaluation_index": 16,
@@ -555,7 +561,7 @@
                 "exact_cost_cents": 2529832,
                 "exact_objective": 2529832,
                 "accepted": true,
-                "schedule_signature": "38adf5ed03f0eff78b80b6db2b1e38097123b807a163e4cf79c9add59b0976db"
+                "schedule_signature": "64a62baf4d9d7a45f713c35e828e6cb796e16c3cb60030b56486f07cde63d010"
               },
               {
                 "evaluation_index": 18,
@@ -563,7 +569,7 @@
                 "exact_cost_cents": 2529832,
                 "exact_objective": 2529832,
                 "accepted": true,
-                "schedule_signature": "64a62baf4d9d7a45f713c35e828e6cb796e16c3cb60030b56486f07cde63d010"
+                "schedule_signature": "2d86daa0d8d280adb0bcc23bb9b90e3de702b255bd7c3e505bade6e20122adf1"
               },
               {
                 "evaluation_index": 19,
@@ -571,7 +577,7 @@
                 "exact_cost_cents": 2977167,
                 "exact_objective": 2977167,
                 "accepted": true,
-                "schedule_signature": "f2a76115aa47b4d06025c83374a6eaf45ee6d126f1ca292cb115362172d42c7f"
+                "schedule_signature": "8d6e7acb81b1e1c888f380f1202410d1da801b490dd132158d66ed9058fbe2d0"
               },
               {
                 "evaluation_index": 20,
@@ -579,7 +585,7 @@
                 "exact_cost_cents": 2977167,
                 "exact_objective": 2977167,
                 "accepted": true,
-                "schedule_signature": "8d6e7acb81b1e1c888f380f1202410d1da801b490dd132158d66ed9058fbe2d0"
+                "schedule_signature": "f2a76115aa47b4d06025c83374a6eaf45ee6d126f1ca292cb115362172d42c7f"
               },
               {
                 "evaluation_index": 21,
@@ -587,7 +593,7 @@
                 "exact_cost_cents": 2552396,
                 "exact_objective": 2552396,
                 "accepted": true,
-                "schedule_signature": "1572a99c4daf6667d46f6b86f259ed483224592c724e33cac6343ce35f3dbd41"
+                "schedule_signature": "f0d3f7d4fda3a901d82b22c696f4d08639f8a9d453300329462e3f6ab9f665ce"
               },
               {
                 "evaluation_index": 22,
@@ -595,7 +601,7 @@
                 "exact_cost_cents": 2552396,
                 "exact_objective": 2552396,
                 "accepted": true,
-                "schedule_signature": "f0d3f7d4fda3a901d82b22c696f4d08639f8a9d453300329462e3f6ab9f665ce"
+                "schedule_signature": "de0ea2e059f4446ad5c0019ae1ed48fb0132d373026b1d1347b4aa6a06f47271"
               },
               {
                 "evaluation_index": 23,
@@ -603,7 +609,7 @@
                 "exact_cost_cents": 2552396,
                 "exact_objective": 2552396,
                 "accepted": true,
-                "schedule_signature": "de0ea2e059f4446ad5c0019ae1ed48fb0132d373026b1d1347b4aa6a06f47271"
+                "schedule_signature": "f2cb539519d29d4a2c789206613a45730b0434a1a7fab03949a92e657159c956"
               },
               {
                 "evaluation_index": 24,
@@ -611,7 +617,7 @@
                 "exact_cost_cents": 2552396,
                 "exact_objective": 2552396,
                 "accepted": true,
-                "schedule_signature": "f2cb539519d29d4a2c789206613a45730b0434a1a7fab03949a92e657159c956"
+                "schedule_signature": "1572a99c4daf6667d46f6b86f259ed483224592c724e33cac6343ce35f3dbd41"
               },
               {
                 "evaluation_index": 25,
@@ -619,7 +625,7 @@
                 "exact_cost_cents": 2573875,
                 "exact_objective": 2573875,
                 "accepted": true,
-                "schedule_signature": "8c9fe764860c50245d8fac6c7d49ea805c7829e4a4153c31da606fcfefaf71f1"
+                "schedule_signature": "40c2db6c9eb42bbe44fa4032c74bae01c3dff931b6f87dc420baefacfb2a8c0c"
               },
               {
                 "evaluation_index": 26,
@@ -627,7 +633,7 @@
                 "exact_cost_cents": 2573875,
                 "exact_objective": 2573875,
                 "accepted": true,
-                "schedule_signature": "5bfbd9e8381186d7b12b020124993e2c2ab89a9c0bca0a358bd7c828b757aa94"
+                "schedule_signature": "9f80c02353fe6e488128a8277ba19df1c8070ee32cc7299ac772f98746901f64"
               },
               {
                 "evaluation_index": 27,
@@ -635,7 +641,7 @@
                 "exact_cost_cents": 2573875,
                 "exact_objective": 2573875,
                 "accepted": true,
-                "schedule_signature": "9f80c02353fe6e488128a8277ba19df1c8070ee32cc7299ac772f98746901f64"
+                "schedule_signature": "5bfbd9e8381186d7b12b020124993e2c2ab89a9c0bca0a358bd7c828b757aa94"
               },
               {
                 "evaluation_index": 28,
@@ -643,7 +649,7 @@
                 "exact_cost_cents": 2573875,
                 "exact_objective": 2573875,
                 "accepted": true,
-                "schedule_signature": "40c2db6c9eb42bbe44fa4032c74bae01c3dff931b6f87dc420baefacfb2a8c0c"
+                "schedule_signature": "8c9fe764860c50245d8fac6c7d49ea805c7829e4a4153c31da606fcfefaf71f1"
               },
               {
                 "evaluation_index": 29,
@@ -683,7 +689,7 @@
                 "exact_cost_cents": 2504958,
                 "exact_objective": 2504958,
                 "accepted": true,
-                "schedule_signature": "bb7b394fbcdc77bd3a856a1066796412c5a4d7e46baac677b98ebe375463ac65"
+                "schedule_signature": "ea666fcd8d4ccf8a854e799e4693e07f33c56c2094dc59ebedc462e4bdc7a20f"
               },
               {
                 "evaluation_index": 34,
@@ -691,7 +697,7 @@
                 "exact_cost_cents": 2504958,
                 "exact_objective": 2504958,
                 "accepted": true,
-                "schedule_signature": "ea666fcd8d4ccf8a854e799e4693e07f33c56c2094dc59ebedc462e4bdc7a20f"
+                "schedule_signature": "bb7b394fbcdc77bd3a856a1066796412c5a4d7e46baac677b98ebe375463ac65"
               },
               {
                 "evaluation_index": 35,
@@ -699,7 +705,7 @@
                 "exact_cost_cents": 2532708,
                 "exact_objective": 2532708,
                 "accepted": true,
-                "schedule_signature": "479367f57b8139a0a9a4e708ccb203cd7c38a115500501bde46ff4136f4f333b"
+                "schedule_signature": "7d1aa8a12ffa2a202b6192bb266dea176d37dc0b2b0f68f0434a41722fa81440"
               },
               {
                 "evaluation_index": 36,
@@ -707,7 +713,7 @@
                 "exact_cost_cents": 2532708,
                 "exact_objective": 2532708,
                 "accepted": true,
-                "schedule_signature": "acaaeea7190d4f8cd5397e8d1baed1fc56a91f5b0bc0086eb6aba5c633cea771"
+                "schedule_signature": "3a26b2e4833861880f6738f1d896a4d1122f2397f5bce52c9d11a2075033943b"
               },
               {
                 "evaluation_index": 37,
@@ -715,7 +721,7 @@
                 "exact_cost_cents": 2532708,
                 "exact_objective": 2532708,
                 "accepted": true,
-                "schedule_signature": "3a26b2e4833861880f6738f1d896a4d1122f2397f5bce52c9d11a2075033943b"
+                "schedule_signature": "479367f57b8139a0a9a4e708ccb203cd7c38a115500501bde46ff4136f4f333b"
               },
               {
                 "evaluation_index": 38,
@@ -723,7 +729,7 @@
                 "exact_cost_cents": 2532708,
                 "exact_objective": 2532708,
                 "accepted": true,
-                "schedule_signature": "7d1aa8a12ffa2a202b6192bb266dea176d37dc0b2b0f68f0434a41722fa81440"
+                "schedule_signature": "acaaeea7190d4f8cd5397e8d1baed1fc56a91f5b0bc0086eb6aba5c633cea771"
               },
               {
                 "evaluation_index": 39,
@@ -731,7 +737,7 @@
                 "exact_cost_cents": 2536187,
                 "exact_objective": 2536187,
                 "accepted": true,
-                "schedule_signature": "b9912f6a5307c6cb10b3b0874e0a40be780b936297e172f45eba556f5fd492ec"
+                "schedule_signature": "47266d77f22d72168f755dec366de8209f9d4962ee01982cfdd2ec98c963022f"
               },
               {
                 "evaluation_index": 40,
@@ -747,7 +753,7 @@
                 "exact_cost_cents": 2536187,
                 "exact_objective": 2536187,
                 "accepted": true,
-                "schedule_signature": "47266d77f22d72168f755dec366de8209f9d4962ee01982cfdd2ec98c963022f"
+                "schedule_signature": "b9912f6a5307c6cb10b3b0874e0a40be780b936297e172f45eba556f5fd492ec"
               },
               {
                 "evaluation_index": 42,
@@ -771,7 +777,7 @@
                 "exact_cost_cents": 2555313,
                 "exact_objective": 2555313,
                 "accepted": true,
-                "schedule_signature": "c28a7fc4026e717674cae3d646804b5ebcc20999dbca4fab9b479d937a7e2ccf"
+                "schedule_signature": "59e90257237a16860ff696fdcc3e119074e44f85604be1fe937d4c5e63412fbd"
               },
               {
                 "evaluation_index": 45,
@@ -787,7 +793,7 @@
                 "exact_cost_cents": 2555313,
                 "exact_objective": 2555313,
                 "accepted": true,
-                "schedule_signature": "59e90257237a16860ff696fdcc3e119074e44f85604be1fe937d4c5e63412fbd"
+                "schedule_signature": "c28a7fc4026e717674cae3d646804b5ebcc20999dbca4fab9b479d937a7e2ccf"
               },
               {
                 "evaluation_index": 47,
@@ -795,7 +801,7 @@
                 "exact_cost_cents": 2557666,
                 "exact_objective": 2557666,
                 "accepted": true,
-                "schedule_signature": "5a0ee680994b2e6c1003feba1e2b4cc9283ac8ce52194c1975a201eb5e34050a"
+                "schedule_signature": "a08e7aa2c0e856c9a3a36819a89ff8422458a78e47bf4a2cb9d67c9e8c6abc5c"
               },
               {
                 "evaluation_index": 48,
@@ -803,7 +809,7 @@
                 "exact_cost_cents": 2557666,
                 "exact_objective": 2557666,
                 "accepted": true,
-                "schedule_signature": "20fe135c4fc5b7a345a01ee0a41d65c78e4480a544c33ae8aafc4992837f9a68"
+                "schedule_signature": "5a0ee680994b2e6c1003feba1e2b4cc9283ac8ce52194c1975a201eb5e34050a"
               },
               {
                 "evaluation_index": 49,
@@ -811,7 +817,7 @@
                 "exact_cost_cents": 2557666,
                 "exact_objective": 2557666,
                 "accepted": true,
-                "schedule_signature": "b83a0eecc565ed8926cf4de3e4f0e81a5cdff1dafe72e5c6b3137a2554ab7e5f"
+                "schedule_signature": "20fe135c4fc5b7a345a01ee0a41d65c78e4480a544c33ae8aafc4992837f9a68"
               },
               {
                 "evaluation_index": 50,
@@ -819,7 +825,7 @@
                 "exact_cost_cents": 2557666,
                 "exact_objective": 2557666,
                 "accepted": true,
-                "schedule_signature": "a08e7aa2c0e856c9a3a36819a89ff8422458a78e47bf4a2cb9d67c9e8c6abc5c"
+                "schedule_signature": "b83a0eecc565ed8926cf4de3e4f0e81a5cdff1dafe72e5c6b3137a2554ab7e5f"
               },
               {
                 "evaluation_index": 51,
@@ -827,7 +833,7 @@
                 "exact_cost_cents": 2562251,
                 "exact_objective": 2562251,
                 "accepted": true,
-                "schedule_signature": "2240f15784165730eaf58334f0909e1036f3526ef443e2b6131c254cca32e51c"
+                "schedule_signature": "e11a75a43e0a634acf895a1aeafaf5696926c7caefec1d627468bb7517a6d002"
               },
               {
                 "evaluation_index": 52,
@@ -835,7 +841,7 @@
                 "exact_cost_cents": 2562251,
                 "exact_objective": 2562251,
                 "accepted": true,
-                "schedule_signature": "e11a75a43e0a634acf895a1aeafaf5696926c7caefec1d627468bb7517a6d002"
+                "schedule_signature": "0c6fbe12db8804a39a16a508b47af318856ddf6d30653c796199a76a71011109"
               },
               {
                 "evaluation_index": 53,
@@ -843,7 +849,7 @@
                 "exact_cost_cents": 2562251,
                 "exact_objective": 2562251,
                 "accepted": true,
-                "schedule_signature": "0c6fbe12db8804a39a16a508b47af318856ddf6d30653c796199a76a71011109"
+                "schedule_signature": "2240f15784165730eaf58334f0909e1036f3526ef443e2b6131c254cca32e51c"
               },
               {
                 "evaluation_index": 54,
@@ -859,7 +865,7 @@
                 "exact_cost_cents": 2580251,
                 "exact_objective": 2580251,
                 "accepted": true,
-                "schedule_signature": "f1e7ab8f22f869d56fcb2edf0112e2f6a15ba3d34f031df6127c4e4d9ab834e0"
+                "schedule_signature": "457731d2e4935732f10b81ecf1ad7195f584564929e618247efb931ba5388b90"
               },
               {
                 "evaluation_index": 56,
@@ -867,7 +873,7 @@
                 "exact_cost_cents": 2580251,
                 "exact_objective": 2580251,
                 "accepted": true,
-                "schedule_signature": "c3961bb6818e911a3a2639480ccef310e2050b3286a54c538969dd2be5ca21d0"
+                "schedule_signature": "f1e7ab8f22f869d56fcb2edf0112e2f6a15ba3d34f031df6127c4e4d9ab834e0"
               },
               {
                 "evaluation_index": 57,
@@ -875,7 +881,7 @@
                 "exact_cost_cents": 2580251,
                 "exact_objective": 2580251,
                 "accepted": true,
-                "schedule_signature": "6960efb23012eebb7d0d7e0ccc4fdbf105b3e58bc99643536b187cdd8003f349"
+                "schedule_signature": "c3961bb6818e911a3a2639480ccef310e2050b3286a54c538969dd2be5ca21d0"
               },
               {
                 "evaluation_index": 58,
@@ -883,7 +889,7 @@
                 "exact_cost_cents": 2580251,
                 "exact_objective": 2580251,
                 "accepted": true,
-                "schedule_signature": "457731d2e4935732f10b81ecf1ad7195f584564929e618247efb931ba5388b90"
+                "schedule_signature": "6960efb23012eebb7d0d7e0ccc4fdbf105b3e58bc99643536b187cdd8003f349"
               },
               {
                 "evaluation_index": 59,
@@ -891,7 +897,7 @@
                 "exact_cost_cents": 2583750,
                 "exact_objective": 2583750,
                 "accepted": true,
-                "schedule_signature": "b7e838069be3f6b1d9a5ccb92e41fac5144440703723e987b56b3b2b60698910"
+                "schedule_signature": "bb9a6a0b5e75d3df8225a714bc0de176c496fa783d258a49c51c685b13e4ba8e"
               },
               {
                 "evaluation_index": 60,
@@ -899,7 +905,7 @@
                 "exact_cost_cents": 2583750,
                 "exact_objective": 2583750,
                 "accepted": true,
-                "schedule_signature": "9d846e08a11c5b728fbffc1e830716947353e6873c77f1bc6af31212bdd29b34"
+                "schedule_signature": "a89f4d9d1edca27da088404efbe2445359f7ce428390d06f136c0eed0ff8d183"
               },
               {
                 "evaluation_index": 61,
@@ -907,7 +913,7 @@
                 "exact_cost_cents": 2583750,
                 "exact_objective": 2583750,
                 "accepted": true,
-                "schedule_signature": "a89f4d9d1edca27da088404efbe2445359f7ce428390d06f136c0eed0ff8d183"
+                "schedule_signature": "9d846e08a11c5b728fbffc1e830716947353e6873c77f1bc6af31212bdd29b34"
               },
               {
                 "evaluation_index": 62,
@@ -915,7 +921,7 @@
                 "exact_cost_cents": 2583750,
                 "exact_objective": 2583750,
                 "accepted": true,
-                "schedule_signature": "bb9a6a0b5e75d3df8225a714bc0de176c496fa783d258a49c51c685b13e4ba8e"
+                "schedule_signature": "b7e838069be3f6b1d9a5ccb92e41fac5144440703723e987b56b3b2b60698910"
               },
               {
                 "evaluation_index": 63,
@@ -923,7 +929,7 @@
                 "exact_cost_cents": 2609397,
                 "exact_objective": 2609397,
                 "accepted": true,
-                "schedule_signature": "d14fec76eff803d8030876d70025174bda9de571e9320c0c252c24e9d3a03a9b"
+                "schedule_signature": "7af2fb57718364111dd8f7be5d50ee36ec687d9247a14208a2d5f2004fbbddd0"
               },
               {
                 "evaluation_index": 64,
@@ -939,7 +945,7 @@
                 "exact_cost_cents": 2609397,
                 "exact_objective": 2609397,
                 "accepted": true,
-                "schedule_signature": "bb763d5382b428fd6da8ecd641cda869d7a768b9a0bd2fdf82cf1be132fc3c32"
+                "schedule_signature": "d14fec76eff803d8030876d70025174bda9de571e9320c0c252c24e9d3a03a9b"
               },
               {
                 "evaluation_index": 66,
@@ -947,7 +953,7 @@
                 "exact_cost_cents": 2609397,
                 "exact_objective": 2609397,
                 "accepted": true,
-                "schedule_signature": "7af2fb57718364111dd8f7be5d50ee36ec687d9247a14208a2d5f2004fbbddd0"
+                "schedule_signature": "bb763d5382b428fd6da8ecd641cda869d7a768b9a0bd2fdf82cf1be132fc3c32"
               },
               {
                 "evaluation_index": 67,
@@ -963,7 +969,7 @@
                 "exact_cost_cents": 2507958,
                 "exact_objective": 2507958,
                 "accepted": true,
-                "schedule_signature": "0379a9c30f01d95d12eb89027c5109d08fe96287a5a29861c977d0bf62fb6e86"
+                "schedule_signature": "8eb95e7b6559ee1cb8b502ef76c67d3d1d050cca5a87ece0c22d5dc8d9a32c21"
               },
               {
                 "evaluation_index": 69,
@@ -971,7 +977,7 @@
                 "exact_cost_cents": 2507958,
                 "exact_objective": 2507958,
                 "accepted": true,
-                "schedule_signature": "8eb95e7b6559ee1cb8b502ef76c67d3d1d050cca5a87ece0c22d5dc8d9a32c21"
+                "schedule_signature": "65f1fa261a3418690f37563de983d0603eff1454a8e37554b997d293ce29af46"
               },
               {
                 "evaluation_index": 70,
@@ -979,7 +985,7 @@
                 "exact_cost_cents": 2507958,
                 "exact_objective": 2507958,
                 "accepted": true,
-                "schedule_signature": "65f1fa261a3418690f37563de983d0603eff1454a8e37554b997d293ce29af46"
+                "schedule_signature": "0379a9c30f01d95d12eb89027c5109d08fe96287a5a29861c977d0bf62fb6e86"
               },
               {
                 "evaluation_index": 71,
@@ -1003,7 +1009,7 @@
                 "exact_cost_cents": 2539083,
                 "exact_objective": 2539083,
                 "accepted": true,
-                "schedule_signature": "64401919970985c4cd89c1d23ab3e28cdb591f8794fe9d963bf386edddce5278"
+                "schedule_signature": "8df3d812d30658089be5314e130d4b0f0a7565b40c014e1e30171ec14d59e2e6"
               },
               {
                 "evaluation_index": 74,
@@ -1011,7 +1017,7 @@
                 "exact_cost_cents": 2539083,
                 "exact_objective": 2539083,
                 "accepted": true,
-                "schedule_signature": "8df3d812d30658089be5314e130d4b0f0a7565b40c014e1e30171ec14d59e2e6"
+                "schedule_signature": "a4431af1cbee57c922c7c8320fc68bb4610be709f4fc88f91812cab6cde4896b"
               },
               {
                 "evaluation_index": 75,
@@ -1027,7 +1033,7 @@
                 "exact_cost_cents": 2539083,
                 "exact_objective": 2539083,
                 "accepted": true,
-                "schedule_signature": "a4431af1cbee57c922c7c8320fc68bb4610be709f4fc88f91812cab6cde4896b"
+                "schedule_signature": "64401919970985c4cd89c1d23ab3e28cdb591f8794fe9d963bf386edddce5278"
               },
               {
                 "evaluation_index": 77,
@@ -1035,7 +1041,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "56d2648e01d3fee1b2b06889f8e9e8f77b742e06ccbadbbdb043874720fbd037"
+                "schedule_signature": "41d929e252116585970c2b0f390b4d04384efb511e19ffba0e94860b8ed189ca"
               },
               {
                 "evaluation_index": 78,
@@ -1043,7 +1049,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "41d929e252116585970c2b0f390b4d04384efb511e19ffba0e94860b8ed189ca"
+                "schedule_signature": "e43341a96c28e29817e3659ebda6685533b60a59575f198a40b9aa6b4c61fe39"
               },
               {
                 "evaluation_index": 79,
@@ -1051,7 +1057,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "f5267428f2c9a8043438208e9492aa3c5a77a09b7584d446e51d398402b27cf5"
+                "schedule_signature": "f187f463316b410a4c022279457db9bee6beb2ce5c49f271ed899f7185ed050f"
               },
               {
                 "evaluation_index": 80,
@@ -1059,7 +1065,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "f187f463316b410a4c022279457db9bee6beb2ce5c49f271ed899f7185ed050f"
+                "schedule_signature": "efcd97a2c2218f21f3cf25a0438bda1d5bf1d29d4cddb6c3b87dc2472eb5c154"
               },
               {
                 "evaluation_index": 81,
@@ -1067,7 +1073,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "83f0e7d5bff9a51fe938733ae3fd020110c1341b011b815ae653257a949f7dea"
+                "schedule_signature": "f5267428f2c9a8043438208e9492aa3c5a77a09b7584d446e51d398402b27cf5"
               },
               {
                 "evaluation_index": 82,
@@ -1075,7 +1081,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "40fe2f849ef01772033086a18d67df2d360c0641a6b3b392b29501536eb6b8f2"
+                "schedule_signature": "83f0e7d5bff9a51fe938733ae3fd020110c1341b011b815ae653257a949f7dea"
               },
               {
                 "evaluation_index": 83,
@@ -1083,7 +1089,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "efcd97a2c2218f21f3cf25a0438bda1d5bf1d29d4cddb6c3b87dc2472eb5c154"
+                "schedule_signature": "40fe2f849ef01772033086a18d67df2d360c0641a6b3b392b29501536eb6b8f2"
               },
               {
                 "evaluation_index": 84,
@@ -1091,7 +1097,7 @@
                 "exact_cost_cents": 2117291,
                 "exact_objective": 2117291,
                 "accepted": true,
-                "schedule_signature": "e43341a96c28e29817e3659ebda6685533b60a59575f198a40b9aa6b4c61fe39"
+                "schedule_signature": "56d2648e01d3fee1b2b06889f8e9e8f77b742e06ccbadbbdb043874720fbd037"
               },
               {
                 "evaluation_index": 85,
@@ -1099,7 +1105,7 @@
                 "exact_cost_cents": 2558334,
                 "exact_objective": 2558334,
                 "accepted": true,
-                "schedule_signature": "853b511c5c5906b7433f63c5901c3b27cdd907857b1121723a9e1c95997c5303"
+                "schedule_signature": "00793621cfd974be0501416e64cf340b74fa2b8c57ee833a155d295330632dd0"
               },
               {
                 "evaluation_index": 86,
@@ -1107,23 +1113,23 @@
                 "exact_cost_cents": 2558334,
                 "exact_objective": 2558334,
                 "accepted": true,
-                "schedule_signature": "a5f7f8a55204cdaefcd4310719646b2b3821d3683b09148b2daa3c3cd9c48641"
+                "schedule_signature": "326a8c9b27bdeeb84c93a4183a9275066b78b6dda509fabced554c634d4c14bc"
               },
               {
                 "evaluation_index": 87,
                 "source": "CP_SAT",
-                "exact_cost_cents": 2542667,
-                "exact_objective": 2542667,
+                "exact_cost_cents": 2558334,
+                "exact_objective": 2558334,
                 "accepted": true,
-                "schedule_signature": "1cf562d347d6edb2f78fcb0223f0d14bb98a445e2d37d37fef27f7940c3c60c6"
+                "schedule_signature": "a5f7f8a55204cdaefcd4310719646b2b3821d3683b09148b2daa3c3cd9c48641"
               },
               {
                 "evaluation_index": 88,
                 "source": "CP_SAT",
-                "exact_cost_cents": 2542667,
-                "exact_objective": 2542667,
+                "exact_cost_cents": 2558334,
+                "exact_objective": 2558334,
                 "accepted": true,
-                "schedule_signature": "1562d4b384bb025ec71623729579286be5427ef5d966a1ff79706d71e1d9c8b1"
+                "schedule_signature": "853b511c5c5906b7433f63c5901c3b27cdd907857b1121723a9e1c95997c5303"
               },
               {
                 "evaluation_index": 89,
@@ -1131,7 +1137,7 @@
                 "exact_cost_cents": 2542667,
                 "exact_objective": 2542667,
                 "accepted": true,
-                "schedule_signature": "610b47d7e1cfc0685870358614b77f054b7756cf424fe32f08eced91433ce02a"
+                "schedule_signature": "1562d4b384bb025ec71623729579286be5427ef5d966a1ff79706d71e1d9c8b1"
               },
               {
                 "evaluation_index": 90,
@@ -1144,18 +1150,18 @@
               {
                 "evaluation_index": 91,
                 "source": "CP_SAT",
-                "exact_cost_cents": 2558334,
-                "exact_objective": 2558334,
+                "exact_cost_cents": 2542667,
+                "exact_objective": 2542667,
                 "accepted": true,
-                "schedule_signature": "326a8c9b27bdeeb84c93a4183a9275066b78b6dda509fabced554c634d4c14bc"
+                "schedule_signature": "1cf562d347d6edb2f78fcb0223f0d14bb98a445e2d37d37fef27f7940c3c60c6"
               },
               {
                 "evaluation_index": 92,
                 "source": "CP_SAT",
-                "exact_cost_cents": 2558334,
-                "exact_objective": 2558334,
+                "exact_cost_cents": 2542667,
+                "exact_objective": 2542667,
                 "accepted": true,
-                "schedule_signature": "00793621cfd974be0501416e64cf340b74fa2b8c57ee833a155d295330632dd0"
+                "schedule_signature": "610b47d7e1cfc0685870358614b77f054b7756cf424fe32f08eced91433ce02a"
               },
               {
                 "evaluation_index": 93,
@@ -1163,7 +1169,7 @@
                 "exact_cost_cents": 2565168,
                 "exact_objective": 2565168,
                 "accepted": true,
-                "schedule_signature": "42fd266f520c8296273639c83a91753e0207c5f06a3b9d34cabedfe74fffaaf4"
+                "schedule_signature": "a5c00774085a5f7cf90979131159bfb9ce7a71f9de8df59a4961cc94e2d6fef7"
               },
               {
                 "evaluation_index": 94,
@@ -1171,7 +1177,7 @@
                 "exact_cost_cents": 2565168,
                 "exact_objective": 2565168,
                 "accepted": true,
-                "schedule_signature": "a5c00774085a5f7cf90979131159bfb9ce7a71f9de8df59a4961cc94e2d6fef7"
+                "schedule_signature": "22be19c642f3299d5c2f441bf222410ef74f2c645cdd73d210ecb7498af30111"
               },
               {
                 "evaluation_index": 95,
@@ -1179,7 +1185,7 @@
                 "exact_cost_cents": 2565168,
                 "exact_objective": 2565168,
                 "accepted": true,
-                "schedule_signature": "22be19c642f3299d5c2f441bf222410ef74f2c645cdd73d210ecb7498af30111"
+                "schedule_signature": "efe0d53712bb0dc1acafd0b2b3ab5ffeaf9b06db03782c68521f644b2a603d65"
               },
               {
                 "evaluation_index": 96,
@@ -1187,7 +1193,7 @@
                 "exact_cost_cents": 2565168,
                 "exact_objective": 2565168,
                 "accepted": true,
-                "schedule_signature": "efe0d53712bb0dc1acafd0b2b3ab5ffeaf9b06db03782c68521f644b2a603d65"
+                "schedule_signature": "42fd266f520c8296273639c83a91753e0207c5f06a3b9d34cabedfe74fffaaf4"
               },
               {
                 "evaluation_index": 97,
@@ -1195,7 +1201,7 @@
                 "exact_cost_cents": 2564167,
                 "exact_objective": 2564167,
                 "accepted": true,
-                "schedule_signature": "72c8e49ddd8290d33e37c59647255ab37a2b4d9ae3f172faa27eb3b6cc18905c"
+                "schedule_signature": "7aadf3a48614e85ac6c6c185ed6c1ef6d1491f3fc819e59eaf6a62c760146fab"
               },
               {
                 "evaluation_index": 98,
@@ -1203,7 +1209,7 @@
                 "exact_cost_cents": 2564167,
                 "exact_objective": 2564167,
                 "accepted": true,
-                "schedule_signature": "08b2e79edba93fb9c58ac00928ee7ce3e7ef1bf1074c375d38eb63d298b23760"
+                "schedule_signature": "88ce04575a43654b4bffd064d07cca3d32d8322be4031501a65f21c849f850ec"
               },
               {
                 "evaluation_index": 99,
@@ -1211,7 +1217,7 @@
                 "exact_cost_cents": 2564167,
                 "exact_objective": 2564167,
                 "accepted": true,
-                "schedule_signature": "7aadf3a48614e85ac6c6c185ed6c1ef6d1491f3fc819e59eaf6a62c760146fab"
+                "schedule_signature": "08b2e79edba93fb9c58ac00928ee7ce3e7ef1bf1074c375d38eb63d298b23760"
               },
               {
                 "evaluation_index": 100,
@@ -1219,7 +1225,7 @@
                 "exact_cost_cents": 2564167,
                 "exact_objective": 2564167,
                 "accepted": true,
-                "schedule_signature": "88ce04575a43654b4bffd064d07cca3d32d8322be4031501a65f21c849f850ec"
+                "schedule_signature": "72c8e49ddd8290d33e37c59647255ab37a2b4d9ae3f172faa27eb3b6cc18905c"
               },
               {
                 "evaluation_index": 101,
@@ -1243,7 +1249,7 @@
                 "exact_cost_cents": 2590126,
                 "exact_objective": 2590126,
                 "accepted": true,
-                "schedule_signature": "216ec65b8d9b94a4ce8e2162d6e6a228dddffa981a517de7554d443b33e3d1c0"
+                "schedule_signature": "c8e2fc706a0c894fe4d3626a67e5432a8bc58924426b2db46808ff61259790d7"
               },
               {
                 "evaluation_index": 104,
@@ -1251,7 +1257,7 @@
                 "exact_cost_cents": 2590126,
                 "exact_objective": 2590126,
                 "accepted": true,
-                "schedule_signature": "59b80d428bf7fc34b03fea2685e821fe777800fa78aa789bb6467ab041de9db9"
+                "schedule_signature": "216ec65b8d9b94a4ce8e2162d6e6a228dddffa981a517de7554d443b33e3d1c0"
               },
               {
                 "evaluation_index": 105,
@@ -1259,7 +1265,7 @@
                 "exact_cost_cents": 2590126,
                 "exact_objective": 2590126,
                 "accepted": true,
-                "schedule_signature": "13ab34d19861326922f3d2025f17e8bd4e3ba7e9df5520f6c557a2a25a66e36f"
+                "schedule_signature": "59b80d428bf7fc34b03fea2685e821fe777800fa78aa789bb6467ab041de9db9"
               },
               {
                 "evaluation_index": 106,
@@ -1267,7 +1273,7 @@
                 "exact_cost_cents": 2590126,
                 "exact_objective": 2590126,
                 "accepted": true,
-                "schedule_signature": "c8e2fc706a0c894fe4d3626a67e5432a8bc58924426b2db46808ff61259790d7"
+                "schedule_signature": "13ab34d19861326922f3d2025f17e8bd4e3ba7e9df5520f6c557a2a25a66e36f"
               },
               {
                 "evaluation_index": 107,
@@ -1291,7 +1297,7 @@
                 "exact_cost_cents": 2069605,
                 "exact_objective": 2069605,
                 "accepted": true,
-                "schedule_signature": "40d2bd5b0ddc20a4f572e13c5459a6b2fdd64fc57f0bb67aad0859fb4e1e3dc6"
+                "schedule_signature": "29c2e74258877b8a0285da1197adce9c92cc0a2b82b006cc992e3fd5f52aaf8e"
               },
               {
                 "evaluation_index": 110,
@@ -1299,7 +1305,7 @@
                 "exact_cost_cents": 2069605,
                 "exact_objective": 2069605,
                 "accepted": true,
-                "schedule_signature": "bd3d015ce153731b31d5c1658a65cdb6a4947421d59f5a519362b2da404c03ec"
+                "schedule_signature": "40d2bd5b0ddc20a4f572e13c5459a6b2fdd64fc57f0bb67aad0859fb4e1e3dc6"
               },
               {
                 "evaluation_index": 111,
@@ -1307,7 +1313,7 @@
                 "exact_cost_cents": 2069605,
                 "exact_objective": 2069605,
                 "accepted": true,
-                "schedule_signature": "18e073c5c5a1924fa7e1dbcbfaa8eaa97101b019e383908d19b66685605c7964"
+                "schedule_signature": "bd3d015ce153731b31d5c1658a65cdb6a4947421d59f5a519362b2da404c03ec"
               },
               {
                 "evaluation_index": 112,
@@ -1323,7 +1329,7 @@
                 "exact_cost_cents": 2069605,
                 "exact_objective": 2069605,
                 "accepted": true,
-                "schedule_signature": "29c2e74258877b8a0285da1197adce9c92cc0a2b82b006cc992e3fd5f52aaf8e"
+                "schedule_signature": "18e073c5c5a1924fa7e1dbcbfaa8eaa97101b019e383908d19b66685605c7964"
               },
               {
                 "evaluation_index": 114,
@@ -1339,7 +1345,7 @@
                 "exact_cost_cents": 2510793,
                 "exact_objective": 2510793,
                 "accepted": true,
-                "schedule_signature": "253a9efffd66edafce5972f0c0a1ab4822ff715aa33166c1fc8173c012968429"
+                "schedule_signature": "8fe767d6920dd7c7a8655296f7a1c40239470e004f5c5a31bd03b391fde3df1a"
               },
               {
                 "evaluation_index": 116,
@@ -1347,7 +1353,7 @@
                 "exact_cost_cents": 2510793,
                 "exact_objective": 2510793,
                 "accepted": true,
-                "schedule_signature": "8fe767d6920dd7c7a8655296f7a1c40239470e004f5c5a31bd03b391fde3df1a"
+                "schedule_signature": "253a9efffd66edafce5972f0c0a1ab4822ff715aa33166c1fc8173c012968429"
               },
               {
                 "evaluation_index": 117,
@@ -1355,7 +1361,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "84e4edd623dee178b46ee65e9301df46292776833597c4c3114daab24f1a8b8c"
+                "schedule_signature": "9d66312108d7aeda4234554e4ae0726c9cd8f755360312d1d3b35256e900add3"
               },
               {
                 "evaluation_index": 118,
@@ -1363,7 +1369,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "091555e395e37983aebbecc06420fb54e82fe66bfa3e4ab0c3fa1b4b19ce168f"
+                "schedule_signature": "68bd59d8f7b7c94d6eeeb47591a7d843d5106031a033d8412730cd84ac325ebd"
               },
               {
                 "evaluation_index": 119,
@@ -1371,7 +1377,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "9d66312108d7aeda4234554e4ae0726c9cd8f755360312d1d3b35256e900add3"
+                "schedule_signature": "2783091a78613c419dcc3d6df1ca9e4bfad63ac8c75b3eec30b60af692be9082"
               },
               {
                 "evaluation_index": 120,
@@ -1379,7 +1385,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "68bd59d8f7b7c94d6eeeb47591a7d843d5106031a033d8412730cd84ac325ebd"
+                "schedule_signature": "ad37b96d568ae6f17490e9a17b83e4c81976427fcf8bb4a4cff72f7e04bc231e"
               },
               {
                 "evaluation_index": 121,
@@ -1387,7 +1393,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "37607eccfbd50dc6dfb5c2469240e3bf7d377acef79710c4f191743b5acd6fa6"
+                "schedule_signature": "84e4edd623dee178b46ee65e9301df46292776833597c4c3114daab24f1a8b8c"
               },
               {
                 "evaluation_index": 122,
@@ -1395,7 +1401,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "ad37b96d568ae6f17490e9a17b83e4c81976427fcf8bb4a4cff72f7e04bc231e"
+                "schedule_signature": "091555e395e37983aebbecc06420fb54e82fe66bfa3e4ab0c3fa1b4b19ce168f"
               },
               {
                 "evaluation_index": 123,
@@ -1411,7 +1417,7 @@
                 "exact_cost_cents": 2092396,
                 "exact_objective": 2092396,
                 "accepted": true,
-                "schedule_signature": "2783091a78613c419dcc3d6df1ca9e4bfad63ac8c75b3eec30b60af692be9082"
+                "schedule_signature": "37607eccfbd50dc6dfb5c2469240e3bf7d377acef79710c4f191743b5acd6fa6"
               },
               {
                 "evaluation_index": 125,
@@ -1419,7 +1425,7 @@
                 "exact_cost_cents": 2097854,
                 "exact_objective": 2097854,
                 "accepted": true,
-                "schedule_signature": "e1a6478e5b7a26c3facd4b1b7750746616b2568f009af607efef9239fe29f440"
+                "schedule_signature": "b74b95e63c2ae88fedd62d059beb8f1dcacad1e5066fb82b7a6ea160c29e8c5b"
               },
               {
                 "evaluation_index": 126,
@@ -1427,7 +1433,7 @@
                 "exact_cost_cents": 2097854,
                 "exact_objective": 2097854,
                 "accepted": true,
-                "schedule_signature": "b74b95e63c2ae88fedd62d059beb8f1dcacad1e5066fb82b7a6ea160c29e8c5b"
+                "schedule_signature": "66e935969e2d3b1c55de1ec439add1ada6f0a47c7eb8c0c624283dae1c3ac0fd"
               },
               {
                 "evaluation_index": 127,
@@ -1435,7 +1441,7 @@
                 "exact_cost_cents": 2097854,
                 "exact_objective": 2097854,
                 "accepted": true,
-                "schedule_signature": "66e935969e2d3b1c55de1ec439add1ada6f0a47c7eb8c0c624283dae1c3ac0fd"
+                "schedule_signature": "3920ea73ec24d52ad715a0f8ccd8d00e05d25dd7f81cbbea5bfeb605c9850825"
               },
               {
                 "evaluation_index": 128,
@@ -1443,7 +1449,7 @@
                 "exact_cost_cents": 2097854,
                 "exact_objective": 2097854,
                 "accepted": true,
-                "schedule_signature": "78ef2953bd547a6206367cd1190f3b9f9be12710205addac6564df2786784bb2"
+                "schedule_signature": "e1a6478e5b7a26c3facd4b1b7750746616b2568f009af607efef9239fe29f440"
               },
               {
                 "evaluation_index": 129,
@@ -1451,7 +1457,7 @@
                 "exact_cost_cents": 2097854,
                 "exact_objective": 2097854,
                 "accepted": true,
-                "schedule_signature": "3920ea73ec24d52ad715a0f8ccd8d00e05d25dd7f81cbbea5bfeb605c9850825"
+                "schedule_signature": "78ef2953bd547a6206367cd1190f3b9f9be12710205addac6564df2786784bb2"
               },
               {
                 "evaluation_index": 130,
@@ -1483,7 +1489,7 @@
                 "exact_cost_cents": 2542083,
                 "exact_objective": 2542083,
                 "accepted": true,
-                "schedule_signature": "83adea8ce80d962190f473ce6d18adb5a90af74147295d0d6f06568c606cff2b"
+                "schedule_signature": "07a113eede49946f8313a26beec901bbdab1e44ff8e7100c0d8295a0de46475a"
               },
               {
                 "evaluation_index": 134,
@@ -1491,7 +1497,7 @@
                 "exact_cost_cents": 2542083,
                 "exact_objective": 2542083,
                 "accepted": true,
-                "schedule_signature": "07a113eede49946f8313a26beec901bbdab1e44ff8e7100c0d8295a0de46475a"
+                "schedule_signature": "83adea8ce80d962190f473ce6d18adb5a90af74147295d0d6f06568c606cff2b"
               },
               {
                 "evaluation_index": 135,
@@ -1499,7 +1505,7 @@
                 "exact_cost_cents": 2542083,
                 "exact_objective": 2542083,
                 "accepted": true,
-                "schedule_signature": "a1c3140cfae6055e05dd95e6b4e863d70f3199f9790b490d6b5e886c7a76e1e8"
+                "schedule_signature": "830ac503e51ba738699c8fa47cd03b465ae01cc8072805c74ad6ed543f76b5fb"
               },
               {
                 "evaluation_index": 136,
@@ -1507,7 +1513,7 @@
                 "exact_cost_cents": 2542083,
                 "exact_objective": 2542083,
                 "accepted": true,
-                "schedule_signature": "830ac503e51ba738699c8fa47cd03b465ae01cc8072805c74ad6ed543f76b5fb"
+                "schedule_signature": "a1c3140cfae6055e05dd95e6b4e863d70f3199f9790b490d6b5e886c7a76e1e8"
               },
               {
                 "evaluation_index": 137,
@@ -1515,7 +1521,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "d67e9dbd703eb68937b96634faea4beba80c6f9fda62e135ae22d5256b1c266d"
+                "schedule_signature": "c1d5de44453f54d4f592832422c1d444588e231295f2deb4ed19be8e180217b8"
               },
               {
                 "evaluation_index": 138,
@@ -1523,7 +1529,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "ad8f2aaf8e7c671e1cb24a2d4f4ab4ceed368e0c718df3521db19eccb54c5cf7"
+                "schedule_signature": "7661d1d1a1175d47b67b365332fe781b84c696731b2de068c2b9640cc81cba57"
               },
               {
                 "evaluation_index": 139,
@@ -1531,7 +1537,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "be10a3e32c9dc5defb0840ea8fc0e79769ba231ac4ef771aef209387afeb10e4"
+                "schedule_signature": "438bc0e8ec224b8999dafa2c97f626a8e351d1be6a160f75e53fd67154be7eae"
               },
               {
                 "evaluation_index": 140,
@@ -1539,7 +1545,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "43b0f670d04bc8fb2dd632b6133b9d1c1419397a49df0563361f3eb2620f2208"
+                "schedule_signature": "712115a1f3dd8090f07f19ef3d07397588595bcdcfbca4c02ad91024b303afba"
               },
               {
                 "evaluation_index": 141,
@@ -1547,7 +1553,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "438bc0e8ec224b8999dafa2c97f626a8e351d1be6a160f75e53fd67154be7eae"
+                "schedule_signature": "43b0f670d04bc8fb2dd632b6133b9d1c1419397a49df0563361f3eb2620f2208"
               },
               {
                 "evaluation_index": 142,
@@ -1555,7 +1561,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "712115a1f3dd8090f07f19ef3d07397588595bcdcfbca4c02ad91024b303afba"
+                "schedule_signature": "ad8f2aaf8e7c671e1cb24a2d4f4ab4ceed368e0c718df3521db19eccb54c5cf7"
               },
               {
                 "evaluation_index": 143,
@@ -1563,7 +1569,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "7661d1d1a1175d47b67b365332fe781b84c696731b2de068c2b9640cc81cba57"
+                "schedule_signature": "d67e9dbd703eb68937b96634faea4beba80c6f9fda62e135ae22d5256b1c266d"
               },
               {
                 "evaluation_index": 144,
@@ -1571,7 +1577,7 @@
                 "exact_cost_cents": 2120146,
                 "exact_objective": 2120146,
                 "accepted": true,
-                "schedule_signature": "c1d5de44453f54d4f592832422c1d444588e231295f2deb4ed19be8e180217b8"
+                "schedule_signature": "be10a3e32c9dc5defb0840ea8fc0e79769ba231ac4ef771aef209387afeb10e4"
               },
               {
                 "evaluation_index": 145,
@@ -1627,7 +1633,7 @@
                 "exact_cost_cents": 2123625,
                 "exact_objective": 2123625,
                 "accepted": true,
-                "schedule_signature": "14370e09d8e9b2afea374f2be9edafcc62c0e722257068c45c6c5625c94949fe"
+                "schedule_signature": "f7468f5540254fb3c39266e2f6ad99b0a41fdcff5e0eee311d962a02f47c18d8"
               },
               {
                 "evaluation_index": 152,
@@ -1635,7 +1641,7 @@
                 "exact_cost_cents": 2123625,
                 "exact_objective": 2123625,
                 "accepted": true,
-                "schedule_signature": "f7468f5540254fb3c39266e2f6ad99b0a41fdcff5e0eee311d962a02f47c18d8"
+                "schedule_signature": "8bc70f8e6ac7ce7bcd5349d20b512bf5f2e4723c234ef02535ba5bc87a3d5968"
               },
               {
                 "evaluation_index": 153,
@@ -1643,7 +1649,7 @@
                 "exact_cost_cents": 2123625,
                 "exact_objective": 2123625,
                 "accepted": true,
-                "schedule_signature": "8bc70f8e6ac7ce7bcd5349d20b512bf5f2e4723c234ef02535ba5bc87a3d5968"
+                "schedule_signature": "14370e09d8e9b2afea374f2be9edafcc62c0e722257068c45c6c5625c94949fe"
               },
               {
                 "evaluation_index": 154,
@@ -1659,7 +1665,7 @@
                 "exact_cost_cents": 2123625,
                 "exact_objective": 2123625,
                 "accepted": true,
-                "schedule_signature": "95df1e2fd3ef5b42258e5f55548f7c5d1727cf622e4e4b789f992702c3292ffa"
+                "schedule_signature": "36d84c61e807eb372ba0954ded1b7c26bcc76a4cf3acac63a019734941e07271"
               },
               {
                 "evaluation_index": 156,
@@ -1667,7 +1673,7 @@
                 "exact_cost_cents": 2123625,
                 "exact_objective": 2123625,
                 "accepted": true,
-                "schedule_signature": "36d84c61e807eb372ba0954ded1b7c26bcc76a4cf3acac63a019734941e07271"
+                "schedule_signature": "95df1e2fd3ef5b42258e5f55548f7c5d1727cf622e4e4b789f992702c3292ffa"
               },
               {
                 "evaluation_index": 157,
@@ -1675,7 +1681,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "a888c4e0fd1b13e7b31c52682a5b12e8e018701e685e2fbd889a350641ceca4b"
+                "schedule_signature": "219356d83ed8a70b03ef9021186b4762814d40c020b4ba4e968af8fd7ea1e28e"
               },
               {
                 "evaluation_index": 158,
@@ -1683,7 +1689,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "c8f4b378610ad078db42e15b5a2b72220243537bfe3db2efe5bd98f08255f279"
+                "schedule_signature": "21c476860b20e3fbcebae9a42e041662b2d17b63638f288205d7eb0bcc2fff45"
               },
               {
                 "evaluation_index": 159,
@@ -1691,7 +1697,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "1a4d9d713f9ef3f9b0df64e1bfc177444806fac50a335be11e4ab166533f4329"
+                "schedule_signature": "a888c4e0fd1b13e7b31c52682a5b12e8e018701e685e2fbd889a350641ceca4b"
               },
               {
                 "evaluation_index": 160,
@@ -1699,7 +1705,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "eceb14fe77a479c45d5a9f61be58de888b34ce75353309381d83ec60e75fb376"
+                "schedule_signature": "30487dc0a4b954b12e0b882e04c05f224f625b402c2ed01dc74e061735aaf282"
               },
               {
                 "evaluation_index": 161,
@@ -1715,7 +1721,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "21c476860b20e3fbcebae9a42e041662b2d17b63638f288205d7eb0bcc2fff45"
+                "schedule_signature": "eceb14fe77a479c45d5a9f61be58de888b34ce75353309381d83ec60e75fb376"
               },
               {
                 "evaluation_index": 163,
@@ -1723,7 +1729,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "30487dc0a4b954b12e0b882e04c05f224f625b402c2ed01dc74e061735aaf282"
+                "schedule_signature": "1a4d9d713f9ef3f9b0df64e1bfc177444806fac50a335be11e4ab166533f4329"
               },
               {
                 "evaluation_index": 164,
@@ -1731,7 +1737,7 @@
                 "exact_cost_cents": 2127166,
                 "exact_objective": 2127166,
                 "accepted": true,
-                "schedule_signature": "219356d83ed8a70b03ef9021186b4762814d40c020b4ba4e968af8fd7ea1e28e"
+                "schedule_signature": "c8f4b378610ad078db42e15b5a2b72220243537bfe3db2efe5bd98f08255f279"
               },
               {
                 "evaluation_index": 165,
@@ -1739,7 +1745,7 @@
                 "exact_cost_cents": 2568209,
                 "exact_objective": 2568209,
                 "accepted": true,
-                "schedule_signature": "8a673749d0830e3f549b6d9b93eae5fae35bb1c87eefa224214618abad9f1c8d"
+                "schedule_signature": "febc454971f2d6af19d9083a92bae0ee996a9d302fcbc87045ed054273e58792"
               },
               {
                 "evaluation_index": 166,
@@ -1747,7 +1753,7 @@
                 "exact_cost_cents": 2568209,
                 "exact_objective": 2568209,
                 "accepted": true,
-                "schedule_signature": "6ff4bbc29cc2d211dd10365ba526e72ab69339efb26a60d50795c237805038c2"
+                "schedule_signature": "481e0078ac4a98d38542e100c5eced10b9a5e2132e68cbb0741bb70a1b386e89"
               },
               {
                 "evaluation_index": 167,
@@ -1755,7 +1761,7 @@
                 "exact_cost_cents": 2568209,
                 "exact_objective": 2568209,
                 "accepted": true,
-                "schedule_signature": "481e0078ac4a98d38542e100c5eced10b9a5e2132e68cbb0741bb70a1b386e89"
+                "schedule_signature": "6ff4bbc29cc2d211dd10365ba526e72ab69339efb26a60d50795c237805038c2"
               },
               {
                 "evaluation_index": 168,
@@ -1763,7 +1769,7 @@
                 "exact_cost_cents": 2568209,
                 "exact_objective": 2568209,
                 "accepted": true,
-                "schedule_signature": "febc454971f2d6af19d9083a92bae0ee996a9d302fcbc87045ed054273e58792"
+                "schedule_signature": "8a673749d0830e3f549b6d9b93eae5fae35bb1c87eefa224214618abad9f1c8d"
               },
               {
                 "evaluation_index": 169,
@@ -1771,7 +1777,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "0d7827d39c26c890d4bdede1dd2dbf54105961d839e500507e76954596b661d4"
+                "schedule_signature": "bba00b750d19fd27421adbfd753bb0b77caacc799123d24f90701c91accadf33"
               },
               {
                 "evaluation_index": 170,
@@ -1779,7 +1785,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "bba00b750d19fd27421adbfd753bb0b77caacc799123d24f90701c91accadf33"
+                "schedule_signature": "4d41d2525cc3917f7c73480ca8e2d805b0e899563ebb191ff2591f6c5bf8c077"
               },
               {
                 "evaluation_index": 171,
@@ -1787,7 +1793,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "d36a84f25ee3b5afcdd2e8b041ce90bbd56c8fa842c4fa553130aad4dd12581e"
+                "schedule_signature": "e8801efbf16c2f27fe225f08a6451b8a8469512b397ade8e1ca9e4a33c1ba1a9"
               },
               {
                 "evaluation_index": 172,
@@ -1795,7 +1801,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "62b49c17e0b9d3943d09acbce94b7d5d52f500e9765d6db1138138798fed113a"
+                "schedule_signature": "874470052b7b93c611e61f198d5f565b8e8e623fc205ef72cd1bf17b7a662bd4"
               },
               {
                 "evaluation_index": 173,
@@ -1803,7 +1809,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "874470052b7b93c611e61f198d5f565b8e8e623fc205ef72cd1bf17b7a662bd4"
+                "schedule_signature": "d36a84f25ee3b5afcdd2e8b041ce90bbd56c8fa842c4fa553130aad4dd12581e"
               },
               {
                 "evaluation_index": 174,
@@ -1819,7 +1825,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "4d41d2525cc3917f7c73480ca8e2d805b0e899563ebb191ff2591f6c5bf8c077"
+                "schedule_signature": "0d7827d39c26c890d4bdede1dd2dbf54105961d839e500507e76954596b661d4"
               },
               {
                 "evaluation_index": 176,
@@ -1827,7 +1833,7 @@
                 "exact_cost_cents": 2148271,
                 "exact_objective": 2148271,
                 "accepted": true,
-                "schedule_signature": "e8801efbf16c2f27fe225f08a6451b8a8469512b397ade8e1ca9e4a33c1ba1a9"
+                "schedule_signature": "62b49c17e0b9d3943d09acbce94b7d5d52f500e9765d6db1138138798fed113a"
               },
               {
                 "evaluation_index": 177,
@@ -1835,7 +1841,7 @@
                 "exact_cost_cents": 2570522,
                 "exact_objective": 2570522,
                 "accepted": true,
-                "schedule_signature": "cfdd28d23c15f4d374528a9e037ce1c06e6af4f4887a76624f6eab2bf53d119e"
+                "schedule_signature": "aa7a3463e7897b38fd4dd66c3cec032374b8f76040b38783afd1345ab4de844d"
               },
               {
                 "evaluation_index": 178,
@@ -1843,7 +1849,7 @@
                 "exact_cost_cents": 2570522,
                 "exact_objective": 2570522,
                 "accepted": true,
-                "schedule_signature": "aa7a3463e7897b38fd4dd66c3cec032374b8f76040b38783afd1345ab4de844d"
+                "schedule_signature": "cfdd28d23c15f4d374528a9e037ce1c06e6af4f4887a76624f6eab2bf53d119e"
               },
               {
                 "evaluation_index": 179,
@@ -1851,7 +1857,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "33b087f91b376e09eee9ef8a2977db1055942dc7c34f1bc5bbf212aa8bc830d0"
+                "schedule_signature": "8ce20a1329c29c02c1515d5c87ce837c19c8f0d707ced48ac40f91dcaaf383af"
               },
               {
                 "evaluation_index": 180,
@@ -1859,7 +1865,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "13ab1ac16d69b9474536a2efd78b2f770c733c60868f881c1f848e83af518442"
+                "schedule_signature": "217a8e48030de474ab1962150f4d3ec0b136527e77087ea41725f6f72f3aff4f"
               },
               {
                 "evaluation_index": 181,
@@ -1867,7 +1873,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "14a43e9e8b3e6600c9debd5ad110d581e7698e63b5e7c932553055c5503247bc"
+                "schedule_signature": "5e53df0c8ec647d114c87dd6a9cbee743881c13d43e18e4e25ed90c7d8b2d10e"
               },
               {
                 "evaluation_index": 182,
@@ -1875,7 +1881,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "5e53df0c8ec647d114c87dd6a9cbee743881c13d43e18e4e25ed90c7d8b2d10e"
+                "schedule_signature": "13ab1ac16d69b9474536a2efd78b2f770c733c60868f881c1f848e83af518442"
               },
               {
                 "evaluation_index": 183,
@@ -1883,7 +1889,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "8ce20a1329c29c02c1515d5c87ce837c19c8f0d707ced48ac40f91dcaaf383af"
+                "schedule_signature": "14a43e9e8b3e6600c9debd5ad110d581e7698e63b5e7c932553055c5503247bc"
               },
               {
                 "evaluation_index": 184,
@@ -1891,7 +1897,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "217a8e48030de474ab1962150f4d3ec0b136527e77087ea41725f6f72f3aff4f"
+                "schedule_signature": "1245547540a7c7ddd6358222853a69691377291a195fa2cf1a6336d79f52719e"
               },
               {
                 "evaluation_index": 185,
@@ -1899,7 +1905,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "1245547540a7c7ddd6358222853a69691377291a195fa2cf1a6336d79f52719e"
+                "schedule_signature": "9cc478cf1b4776144b1746f1b2a76db03e423ef9c38cc89b5cea2eeeef9f984c"
               },
               {
                 "evaluation_index": 186,
@@ -1907,7 +1913,7 @@
                 "exact_cost_cents": 2152876,
                 "exact_objective": 2152876,
                 "accepted": true,
-                "schedule_signature": "9cc478cf1b4776144b1746f1b2a76db03e423ef9c38cc89b5cea2eeeef9f984c"
+                "schedule_signature": "33b087f91b376e09eee9ef8a2977db1055942dc7c34f1bc5bbf212aa8bc830d0"
               },
               {
                 "evaluation_index": 187,
@@ -1915,7 +1921,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "0962ad462dbac16f2fea07fbc207f521a3f1e7aa386d4d52d35ddf0a8752bf57"
+                "schedule_signature": "133607c0186020d770bc9fdbbad8fe1e7bf6dca7d8e5cd431b8ee6ab9fa0b9a9"
               },
               {
                 "evaluation_index": 188,
@@ -1931,7 +1937,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "9456d3dbf45e8bca988147a32d1ade3176ead8e04a827f4c941c7c6caebfac67"
+                "schedule_signature": "0962ad462dbac16f2fea07fbc207f521a3f1e7aa386d4d52d35ddf0a8752bf57"
               },
               {
                 "evaluation_index": 190,
@@ -1939,7 +1945,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "133607c0186020d770bc9fdbbad8fe1e7bf6dca7d8e5cd431b8ee6ab9fa0b9a9"
+                "schedule_signature": "9204cf632189bcbb4643d73639adfb0d3121407e5d08e2c3a974c314bda37989"
               },
               {
                 "evaluation_index": 191,
@@ -1947,7 +1953,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "9204cf632189bcbb4643d73639adfb0d3121407e5d08e2c3a974c314bda37989"
+                "schedule_signature": "fd85f9b2e718d7bf11ae81fa13557f427fa33558cb8fee82a5e2238fceb4ed08"
               },
               {
                 "evaluation_index": 192,
@@ -1955,7 +1961,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "4d7827c9fd4881cfdb61e3c1a5041ac208a47f5dacb537ab6927bef34f93cce4"
+                "schedule_signature": "f3b97a6bc254436683a50d856650fa4805de69d661d73e4012cb7f8c5c58dbb5"
               },
               {
                 "evaluation_index": 193,
@@ -1963,7 +1969,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "fd85f9b2e718d7bf11ae81fa13557f427fa33558cb8fee82a5e2238fceb4ed08"
+                "schedule_signature": "9456d3dbf45e8bca988147a32d1ade3176ead8e04a827f4c941c7c6caebfac67"
               },
               {
                 "evaluation_index": 194,
@@ -1971,7 +1977,7 @@
                 "exact_cost_cents": 2177500,
                 "exact_objective": 2177500,
                 "accepted": true,
-                "schedule_signature": "f3b97a6bc254436683a50d856650fa4805de69d661d73e4012cb7f8c5c58dbb5"
+                "schedule_signature": "4d7827c9fd4881cfdb61e3c1a5041ac208a47f5dacb537ab6927bef34f93cce4"
               },
               {
                 "evaluation_index": 195,
@@ -1979,7 +1985,7 @@
                 "exact_cost_cents": 2599689,
                 "exact_objective": 2599689,
                 "accepted": true,
-                "schedule_signature": "030288b3fc811eb4a1f69fea398e6cf37d42761a05f4e486a95d33d316adbf8c"
+                "schedule_signature": "6079c8f180e3691cd397a5b14a23afc0a6e403e373617d976806a37df2359a75"
               },
               {
                 "evaluation_index": 196,
@@ -1995,7 +2001,7 @@
                 "exact_cost_cents": 2599689,
                 "exact_objective": 2599689,
                 "accepted": true,
-                "schedule_signature": "6079c8f180e3691cd397a5b14a23afc0a6e403e373617d976806a37df2359a75"
+                "schedule_signature": "030288b3fc811eb4a1f69fea398e6cf37d42761a05f4e486a95d33d316adbf8c"
               },
               {
                 "evaluation_index": 198,
@@ -2027,7 +2033,7 @@
                 "exact_cost_cents": 2072584,
                 "exact_objective": 2072584,
                 "accepted": true,
-                "schedule_signature": "f58817b8bb998257588a7bdf8d35054b19db622df293b42b0feaa42d0d6d6ecd"
+                "schedule_signature": "2098257f3db3136f8d1ed246d22ecf0cd5cc3e71a7e196c16074ab57b578f681"
               },
               {
                 "evaluation_index": 202,
@@ -2035,7 +2041,7 @@
                 "exact_cost_cents": 2072584,
                 "exact_objective": 2072584,
                 "accepted": true,
-                "schedule_signature": "2098257f3db3136f8d1ed246d22ecf0cd5cc3e71a7e196c16074ab57b578f681"
+                "schedule_signature": "f58817b8bb998257588a7bdf8d35054b19db622df293b42b0feaa42d0d6d6ecd"
               },
               {
                 "evaluation_index": 203,
@@ -2059,7 +2065,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "94150a2a4e257595eab5e51cea1ed1954f44e24194b0a18a56ef390f51d47793"
+                "schedule_signature": "54e5674f12fa0bbf694d9988a13a38a54d77c8922ad2521482fbaecae86393d5"
               },
               {
                 "evaluation_index": 206,
@@ -2067,7 +2073,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "24c5d4056d5f26919e511d44f6817b9bdb00809ec3a688bed4e93daa53fe8cb5"
+                "schedule_signature": "62813c57f52a28149d81ad2f06e155d0a104f0d4e2fa17c1b57ddf576def7647"
               },
               {
                 "evaluation_index": 207,
@@ -2075,7 +2081,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "4ff985694a7daf947a34a511d8a2e7b81ce50aaf4c8d76963ae4e1d009ac3a67"
+                "schedule_signature": "94150a2a4e257595eab5e51cea1ed1954f44e24194b0a18a56ef390f51d47793"
               },
               {
                 "evaluation_index": 208,
@@ -2083,7 +2089,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "ed36d3e2889fc943021c2bfa4bc1e543ed9943ad62fbcf1e2a68c97e5afe469f"
+                "schedule_signature": "00f9560fcb13311dcc7c58392c2ce187a1a062d04c09781716ceddab5ab940be"
               },
               {
                 "evaluation_index": 209,
@@ -2091,7 +2097,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "0fd578b1e8e9b6c47c0a977636ea9959ce95ce9d2ec35cbb0f71aa94e3d0c270"
+                "schedule_signature": "ed36d3e2889fc943021c2bfa4bc1e543ed9943ad62fbcf1e2a68c97e5afe469f"
               },
               {
                 "evaluation_index": 210,
@@ -2099,7 +2105,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "54e5674f12fa0bbf694d9988a13a38a54d77c8922ad2521482fbaecae86393d5"
+                "schedule_signature": "24c5d4056d5f26919e511d44f6817b9bdb00809ec3a688bed4e93daa53fe8cb5"
               },
               {
                 "evaluation_index": 211,
@@ -2107,7 +2113,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "00f9560fcb13311dcc7c58392c2ce187a1a062d04c09781716ceddab5ab940be"
+                "schedule_signature": "4ff985694a7daf947a34a511d8a2e7b81ce50aaf4c8d76963ae4e1d009ac3a67"
               },
               {
                 "evaluation_index": 212,
@@ -2115,7 +2121,7 @@
                 "exact_cost_cents": 2076084,
                 "exact_objective": 2076084,
                 "accepted": true,
-                "schedule_signature": "62813c57f52a28149d81ad2f06e155d0a104f0d4e2fa17c1b57ddf576def7647"
+                "schedule_signature": "0fd578b1e8e9b6c47c0a977636ea9959ce95ce9d2ec35cbb0f71aa94e3d0c270"
               },
               {
                 "evaluation_index": 213,
@@ -2123,7 +2129,7 @@
                 "exact_cost_cents": 2098542,
                 "exact_objective": 2098542,
                 "accepted": true,
-                "schedule_signature": "1d8835e42cf3c5c6a220cd0a6ce6dfc0bb22aa1ad4978fd76c5c6f50471eb542"
+                "schedule_signature": "e1fa6946ceb540831cbc2c6177179fb055d7d551f621a56f8956cfaf6d05e50e"
               },
               {
                 "evaluation_index": 214,
@@ -2147,7 +2153,7 @@
                 "exact_cost_cents": 2098542,
                 "exact_objective": 2098542,
                 "accepted": true,
-                "schedule_signature": "81f6763bbcce0336458aecf538947bd751cf874c822aaef2ffd72ea4c4b8f703"
+                "schedule_signature": "1d8835e42cf3c5c6a220cd0a6ce6dfc0bb22aa1ad4978fd76c5c6f50471eb542"
               },
               {
                 "evaluation_index": 217,
@@ -2155,7 +2161,7 @@
                 "exact_cost_cents": 2098542,
                 "exact_objective": 2098542,
                 "accepted": true,
-                "schedule_signature": "e728ab7d32fc8f8e7cd151aa9c6da41e1418ec13ec52a2c227fcb5d46371920f"
+                "schedule_signature": "8e7c5b47f1b80891c59bd07c2675c4002abc1c1b0b5455997450bd799538fad7"
               },
               {
                 "evaluation_index": 218,
@@ -2163,7 +2169,7 @@
                 "exact_cost_cents": 2098542,
                 "exact_objective": 2098542,
                 "accepted": true,
-                "schedule_signature": "8e7c5b47f1b80891c59bd07c2675c4002abc1c1b0b5455997450bd799538fad7"
+                "schedule_signature": "e728ab7d32fc8f8e7cd151aa9c6da41e1418ec13ec52a2c227fcb5d46371920f"
               },
               {
                 "evaluation_index": 219,
@@ -2171,7 +2177,7 @@
                 "exact_cost_cents": 2098542,
                 "exact_objective": 2098542,
                 "accepted": true,
-                "schedule_signature": "e1fa6946ceb540831cbc2c6177179fb055d7d551f621a56f8956cfaf6d05e50e"
+                "schedule_signature": "81f6763bbcce0336458aecf538947bd751cf874c822aaef2ffd72ea4c4b8f703"
               },
               {
                 "evaluation_index": 220,
@@ -2195,7 +2201,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "54b83bfdc2153a85799fef49812d1e2843c57aba9ee3712648a55a9ac1ce3809"
+                "schedule_signature": "44194f4c1b16e92bfb44e62948080868325d64fc97e9cf4eac9bbaa254015426"
               },
               {
                 "evaluation_index": 223,
@@ -2203,7 +2209,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "44194f4c1b16e92bfb44e62948080868325d64fc97e9cf4eac9bbaa254015426"
+                "schedule_signature": "862b9702c248e391d1c036d1fe8ce428fb137a35e65a74039747e0a52ab2aa85"
               },
               {
                 "evaluation_index": 224,
@@ -2211,7 +2217,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "c39febbf4701210ff1aa11168f15e1fdc930ebd31a697a147c2f8017acad1875"
+                "schedule_signature": "71442ca360ab13704e41286ae58290a3a3271d6f872a5b8158d9406668ac4cea"
               },
               {
                 "evaluation_index": 225,
@@ -2219,7 +2225,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "a8ee71e539200963f27633c9465cdf672f8cf4d56f3f40e484509a3a3228c3a7"
+                "schedule_signature": "f208c98b8a66fc11446480d86915ebd77bfbeeba815b40467843e7a4b8992eb3"
               },
               {
                 "evaluation_index": 226,
@@ -2227,7 +2233,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "862b9702c248e391d1c036d1fe8ce428fb137a35e65a74039747e0a52ab2aa85"
+                "schedule_signature": "a8ee71e539200963f27633c9465cdf672f8cf4d56f3f40e484509a3a3228c3a7"
               },
               {
                 "evaluation_index": 227,
@@ -2235,7 +2241,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "71442ca360ab13704e41286ae58290a3a3271d6f872a5b8158d9406668ac4cea"
+                "schedule_signature": "c39febbf4701210ff1aa11168f15e1fdc930ebd31a697a147c2f8017acad1875"
               },
               {
                 "evaluation_index": 228,
@@ -2243,7 +2249,7 @@
                 "exact_cost_cents": 2103834,
                 "exact_objective": 2103834,
                 "accepted": true,
-                "schedule_signature": "f208c98b8a66fc11446480d86915ebd77bfbeeba815b40467843e7a4b8992eb3"
+                "schedule_signature": "54b83bfdc2153a85799fef49812d1e2843c57aba9ee3712648a55a9ac1ce3809"
               },
               {
                 "evaluation_index": 229,
@@ -2251,7 +2257,7 @@
                 "exact_cost_cents": 3011083,
                 "exact_objective": 3011083,
                 "accepted": true,
-                "schedule_signature": "51aaa39971ab55f40a178ec2175c770edb69cdf0b4f99a92a0eb26b5dc5ee956"
+                "schedule_signature": "55a1945397d23b1717201d70848e6740b2fa1f44bf36e46f0eca32c3a5c61925"
               },
               {
                 "evaluation_index": 230,
@@ -2259,7 +2265,7 @@
                 "exact_cost_cents": 3011083,
                 "exact_objective": 3011083,
                 "accepted": true,
-                "schedule_signature": "55a1945397d23b1717201d70848e6740b2fa1f44bf36e46f0eca32c3a5c61925"
+                "schedule_signature": "51aaa39971ab55f40a178ec2175c770edb69cdf0b4f99a92a0eb26b5dc5ee956"
               },
               {
                 "evaluation_index": 231,
@@ -2267,7 +2273,7 @@
                 "exact_cost_cents": 2102292,
                 "exact_objective": 2102292,
                 "accepted": true,
-                "schedule_signature": "72e40776842962cad97a44a13b0668c761fc07a77dd34c0d02facf6af78f0156"
+                "schedule_signature": "16d334cf65ff0cc95671c7e4ce5408574c0c6f6c5109b4e262c20089f2a0f6fc"
               },
               {
                 "evaluation_index": 232,
@@ -2283,7 +2289,7 @@
                 "exact_cost_cents": 2102292,
                 "exact_objective": 2102292,
                 "accepted": true,
-                "schedule_signature": "ef49b8c22b597b9b412a2dcaa1dbb4890b7303c53dd504e0718877d8fc4c9da2"
+                "schedule_signature": "06b3aa3c868d0758090c89882c13838b6e91664084beef4cb911e3ab3dd3253f"
               },
               {
                 "evaluation_index": 234,
@@ -2291,7 +2297,7 @@
                 "exact_cost_cents": 2102292,
                 "exact_objective": 2102292,
                 "accepted": true,
-                "schedule_signature": "16d334cf65ff0cc95671c7e4ce5408574c0c6f6c5109b4e262c20089f2a0f6fc"
+                "schedule_signature": "b0017ab239b533647f50413faa39ae59f86b21a1fc5b947b7f0bffecfdccf668"
               },
               {
                 "evaluation_index": 235,
@@ -2299,7 +2305,7 @@
                 "exact_cost_cents": 2102292,
                 "exact_objective": 2102292,
                 "accepted": true,
-                "schedule_signature": "06b3aa3c868d0758090c89882c13838b6e91664084beef4cb911e3ab3dd3253f"
+                "schedule_signature": "ef49b8c22b597b9b412a2dcaa1dbb4890b7303c53dd504e0718877d8fc4c9da2"
               },
               {
                 "evaluation_index": 236,
@@ -2307,7 +2313,7 @@
                 "exact_cost_cents": 2102292,
                 "exact_objective": 2102292,
                 "accepted": true,
-                "schedule_signature": "b6a1b688ea51582a28c09d437a11ae024ca5693d0d1da24a242efb895c55f1eb"
+                "schedule_signature": "72e40776842962cad97a44a13b0668c761fc07a77dd34c0d02facf6af78f0156"
               },
               {
                 "evaluation_index": 237,
@@ -2315,7 +2321,7 @@
                 "exact_cost_cents": 2102292,
                 "exact_objective": 2102292,
                 "accepted": true,
-                "schedule_signature": "b0017ab239b533647f50413faa39ae59f86b21a1fc5b947b7f0bffecfdccf668"
+                "schedule_signature": "b6a1b688ea51582a28c09d437a11ae024ca5693d0d1da24a242efb895c55f1eb"
               },
               {
                 "evaluation_index": 238,
@@ -2328,10 +2334,10 @@
               {
                 "evaluation_index": 239,
                 "source": "CP_SAT",
-                "exact_cost_cents": 2126292,
-                "exact_objective": 2126292,
+                "exact_cost_cents": 2107500,
+                "exact_objective": 2107500,
                 "accepted": true,
-                "schedule_signature": "24baf76d352733e4d03caf792513fd695e718d6d53a44b360932d0a7fd8813a0"
+                "schedule_signature": "2b6bfc845e85d1252cabf68efe523191f925f6e516826ce4f7e21f4060d5fcf5"
               },
               {
                 "evaluation_index": 240,
@@ -2355,58 +2361,10 @@
                 "exact_cost_cents": 2107500,
                 "exact_objective": 2107500,
                 "accepted": true,
-                "schedule_signature": "2b6bfc845e85d1252cabf68efe523191f925f6e516826ce4f7e21f4060d5fcf5"
-              },
-              {
-                "evaluation_index": 243,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2107500,
-                "exact_objective": 2107500,
-                "accepted": true,
-                "schedule_signature": "c3379ce17c4438e15a466aabe703646c7334f1aad262fb66eee130d8ea485118"
-              },
-              {
-                "evaluation_index": 244,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2107500,
-                "exact_objective": 2107500,
-                "accepted": true,
                 "schedule_signature": "0e07d0cc390aec6363c9dc861ce656c765e4fcadaf306d14c39ac4d20cea5d0c"
               },
               {
-                "evaluation_index": 245,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2126292,
-                "exact_objective": 2126292,
-                "accepted": true,
-                "schedule_signature": "3c067de5b59cb48c7997e7545d7e751ca0647e6759d2a1c4cf225cd3276d47ea"
-              },
-              {
-                "evaluation_index": 246,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2107500,
-                "exact_objective": 2107500,
-                "accepted": true,
-                "schedule_signature": "0fde4571fe631558b028484ec9b6736f24aa7c4215b760d53d1df61470cd10ec"
-              },
-              {
-                "evaluation_index": 247,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2107500,
-                "exact_objective": 2107500,
-                "accepted": true,
-                "schedule_signature": "c76768a0aa754cebe126c87f0e6425c83ae70d514671b2d3b4ebe3a7ac690480"
-              },
-              {
-                "evaluation_index": 248,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2126292,
-                "exact_objective": 2126292,
-                "accepted": true,
-                "schedule_signature": "c7cd6ed8d095c0d87bc1e1ac95defa08d36a0f1e41ae130fdf65ff17d8a19e74"
-              },
-              {
-                "evaluation_index": 249,
+                "evaluation_index": 243,
                 "source": "CP_SAT",
                 "exact_cost_cents": 2126292,
                 "exact_objective": 2126292,
@@ -2414,7 +2372,39 @@
                 "schedule_signature": "15b0a4daa59540407f8eb63299e48721b93ddd1f8389ac7542f72f081c00e41e"
               },
               {
-                "evaluation_index": 250,
+                "evaluation_index": 244,
+                "source": "CP_SAT",
+                "exact_cost_cents": 2126292,
+                "exact_objective": 2126292,
+                "accepted": true,
+                "schedule_signature": "c7cd6ed8d095c0d87bc1e1ac95defa08d36a0f1e41ae130fdf65ff17d8a19e74"
+              },
+              {
+                "evaluation_index": 245,
+                "source": "CP_SAT",
+                "exact_cost_cents": 2126292,
+                "exact_objective": 2126292,
+                "accepted": true,
+                "schedule_signature": "24baf76d352733e4d03caf792513fd695e718d6d53a44b360932d0a7fd8813a0"
+              },
+              {
+                "evaluation_index": 246,
+                "source": "CP_SAT",
+                "exact_cost_cents": 2107500,
+                "exact_objective": 2107500,
+                "accepted": true,
+                "schedule_signature": "c76768a0aa754cebe126c87f0e6425c83ae70d514671b2d3b4ebe3a7ac690480"
+              },
+              {
+                "evaluation_index": 247,
+                "source": "CP_SAT",
+                "exact_cost_cents": 2107500,
+                "exact_objective": 2107500,
+                "accepted": true,
+                "schedule_signature": "0fde4571fe631558b028484ec9b6736f24aa7c4215b760d53d1df61470cd10ec"
+              },
+              {
+                "evaluation_index": 248,
                 "source": "CP_SAT",
                 "exact_cost_cents": 2107500,
                 "exact_objective": 2107500,
@@ -2422,36 +2412,28 @@
                 "schedule_signature": "2797adc6386f13c5e04dc66765bacf483dd2ab02a03a10edf5a9a888ff5fc048"
               },
               {
+                "evaluation_index": 249,
+                "source": "CP_SAT",
+                "exact_cost_cents": 2107500,
+                "exact_objective": 2107500,
+                "accepted": true,
+                "schedule_signature": "c3379ce17c4438e15a466aabe703646c7334f1aad262fb66eee130d8ea485118"
+              },
+              {
+                "evaluation_index": 250,
+                "source": "CP_SAT",
+                "exact_cost_cents": 2126292,
+                "exact_objective": 2126292,
+                "accepted": true,
+                "schedule_signature": "3c067de5b59cb48c7997e7545d7e751ca0647e6759d2a1c4cf225cd3276d47ea"
+              },
+              {
                 "evaluation_index": 251,
                 "source": "CP_SAT",
                 "exact_cost_cents": 2126500,
                 "exact_objective": 2126500,
                 "accepted": true,
-                "schedule_signature": "f4d8808980a806400b2fc60df1e24ef07101d7cdaa458f1dc5fb1adbbc3b7315"
-              },
-              {
-                "evaluation_index": 252,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2126500,
-                "exact_objective": 2126500,
-                "accepted": true,
-                "schedule_signature": "f2d83e2a895765ce492ef0a2ddbe061e99d15298f806ce99b989946ebf10032c"
-              },
-              {
-                "evaluation_index": 253,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2126500,
-                "exact_objective": 2126500,
-                "accepted": true,
-                "schedule_signature": "0ab02a97dc4751cfd323209b0fa5a0c9b421454918b62dfec357516e7ff53a45"
-              },
-              {
-                "evaluation_index": 254,
-                "source": "CP_SAT",
-                "exact_cost_cents": 2126500,
-                "exact_objective": 2126500,
-                "accepted": true,
-                "schedule_signature": "013011c7d701251d29f7acf3e6832ea875cff59976dfc920d018b12c2d724207"
+                "schedule_signature": "7e6f9cd37e7974f2561f73a3375a66bb7b2a3062e1e59b33beb829ac5773a713"
               }
             ],
             "tie_break_status": "TIME_LIMIT"
@@ -2459,12 +2441,12 @@
         },
         {
           "label": "B",
-          "wall_seconds": 0.007639167000888847,
+          "wall_seconds": 0.00782512500154553,
           "solver": {
             "objective": "wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.007613,
+            "seconds": 0.007801,
             "time_limit_seconds": 2,
             "exact_objective": 0,
             "valid_lower_bound": 0,
@@ -2505,12 +2487,12 @@
         },
         {
           "label": "C",
-          "wall_seconds": 0.011820624997199047,
+          "wall_seconds": 0.012722457999188919,
           "solver": {
             "objective": "wait",
             "solver_status": "OPTIMAL",
             "termination": "BOUND_PROOF",
-            "seconds": 0.011804,
+            "seconds": 0.012702,
             "time_limit_seconds": 2,
             "exact_objective": 0,
             "valid_lower_bound": 0,
@@ -2558,7 +2540,7 @@
           }
         }
       ],
-      "total_seconds": 2.025949375005439
+      "total_seconds": 2.0258115410033497
     }
   ]
 }
