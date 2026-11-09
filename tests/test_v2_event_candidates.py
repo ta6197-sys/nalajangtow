@@ -45,6 +45,25 @@ class EventCandidatesTest(unittest.TestCase):
         self.assertIn('warm_start_hint_used', record)
         self.assertEqual(record['solver_status'], legacy_record['solver_status'])
 
+    def test_hint_respects_excluded_schedule_and_cost_cap(self):
+        snapshot, weather = fixture(2)
+        domain = build_domain(snapshot, weather, candidate_generator=EVENTS)
+        first, _ = exact_search(snapshot, weather, domain, time_limit=2, warm_start=True)
+        cap = first['evaluation']['summary']['demurrage_increment_to_completion_cents']
+        alternate, record = exact_search(snapshot, weather, domain, objective='wait', time_limit=2,
+                                         cost_cap=cap, excluded_signatures=[first['schedule_signature']], warm_start=True)
+        self.assertIsNotNone(alternate)
+        self.assertNotEqual(alternate['schedule_signature'], first['schedule_signature'])
+        self.assertLessEqual(alternate['evaluation']['summary']['demurrage_increment_to_completion_cents'], cap)
+        self.assertLessEqual(record['valid_lower_bound'], record['exact_objective'])
+
+    def test_rejected_cost_cap_cannot_produce_hint_or_candidate(self):
+        snapshot, weather = fixture(2)
+        domain = build_domain(snapshot, weather, candidate_generator=EVENTS)
+        result, record = exact_search(snapshot, weather, domain, time_limit=2, cost_cap=0, warm_start=True)
+        self.assertIsNone(result)
+        self.assertFalse(record['warm_start_hint_used'])
+
     def test_unknown_version_rejected(self):
         snapshot,weather=fixture(2)
         with self.assertRaises(ValueError): build_domain(snapshot,weather,candidate_generator='unknown')
