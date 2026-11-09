@@ -2114,7 +2114,8 @@
           "unassigned_call_ids",
           "missing_data",
           "read_only",
-          "congestion_periods"
+          "congestion_periods",
+          "selection_provenance_hash"
         ],
         "properties": {
           "schema_version": {
@@ -2192,6 +2193,10 @@
               "type": "object",
               "additionalProperties": true
             }
+          },
+          "selection_provenance_hash": {
+            "type": "string",
+            "description": "Hash of verified selected-plan provenance used by the projection."
           }
         }
       }
