@@ -1,0 +1,52 @@
+.rex-shell{margin-top:22px;display:grid;gap:16px}
+.rex-shell h3{font-size:17px;margin:10px 0 2px}
+.rex-shell h4{font-size:14px;margin:0 0 12px}
+.rex-shell .panel-title{margin-bottom:0}
+.rex-candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rex-candidate{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:9px;padding:19px;background:#fff;border:1px solid #e3e5eb;border-radius:12px;color:#202634;cursor:pointer;min-width:0;transition:border-color .15s,box-shadow .15s}
+.rex-candidate[aria-pressed=true]{border:2px solid #d10036;box-shadow:0 4px 16px rgba(190,0,42,.1);padding:18px}
+.rex-candidate:hover{border-color:#ba5669}
+.rex-overline{font-size:13px;color:#555e70;font-weight:700}
+.rex-candidate b{font-size:24px;font-weight:750;letter-spacing:-.03em}
+.rex-candidate small{font-size:13px;color:#586173}
+.rex-help{font-size:12px;color:#9a173a;line-height:1.6}
+.rex-muted{opacity:.65;cursor:default}
+.rex-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.rex-box{border:1px solid #e7e9ee;border-radius:12px;background:#fff;padding:16px;min-width:0}
+.rex-box>small{font-size:11px;color:#7a8290;display:block;line-height:1.5}
+.rex-chart{height:225px;width:100%;display:flex;align-items:center;justify-content:center;font-size:13px;color:#737b89}
+.rex-explanation{border-left:3px solid #c80035;padding:10px 14px;background:#fbf8f9;color:#576070;font-size:13px;line-height:1.65;margin:0}
+.rex-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.rex-provenance{font-size:12px;font-weight:650;color:#985600;background:#fff6e5;padding:7px 11px;border-radius:8px}
+.rex-types{display:flex;gap:8px;flex-wrap:wrap}
+.rex-types button{background:#fff;color:#4d5767;border:1px solid #dae0e9;border-radius:10px;padding:11px 17px;font-size:13px;font-weight:700;cursor:pointer}
+.rex-types button[aria-pressed=true]{border-color:#c80035;color:#bd0031;background:#fff4f7}
+.rex-bar{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;border:1px solid #e6e9ed;border-radius:12px;padding:17px;background:#fafbfc}
+.rex-prob{display:flex;flex-direction:column;gap:7px}
+.rex-prob strong{font-size:25px}
+.rex-prob small,.rex-control small{color:#747d8d;font-size:12px}
+.rex-progress{height:9px;border-radius:10px;background:#e6e9ed;overflow:hidden}
+.rex-progress span{display:block;height:100%;background:#c80035;border-radius:10px}
+.rex-control{display:flex;flex-direction:column;gap:8px}
+.rex-control label{font-size:13px;font-weight:700}
+.rex-control select{width:100%;padding:11px;border:1px solid #d5dce4;border-radius:8px;background:white}
+.rex-impact{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.rex-impact>div{border:1px solid #e6e9ed;padding:15px;border-radius:10px;display:flex;flex-direction:column;gap:8px}
+.rex-impact small{font-size:12px;color:#677183}
+.rex-impact b{font-size:19px}
+.rex-gantt{width:100%;min-height:225px;max-height:380px;overflow-y:auto;color:#777d86;font-size:12px}
+.rex-gantt-legend{margin:3px 0 11px;color:#737e8e}
+.rex-gantt-row{display:grid;grid-template-columns:116px 1fr 60px;align-items:center;gap:8px;margin:9px 0;cursor:pointer}
+.rex-gantt-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.rex-gantt-track{position:relative;height:22px;border-radius:4px;background:repeating-linear-gradient(90deg,#f5f5f6 0,#f5f5f6 1px,#fafafa 1px,#fafafa 20%);overflow:hidden}
+.rex-plan-bar,.rex-actual-bar{position:absolute;height:8px;border-radius:3px;min-width:2px}
+.rex-plan-bar{top:3px;border:1px solid #8491a6;background:transparent}
+.rex-actual-bar{bottom:3px;background:#d10036}
+.rex-gantt-row:hover{background:#faf2f4}
+.rex-bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rex-bottom>div,.rex-bottom>details{padding:16px;border:1px solid #e7e9ee;border-radius:11px;min-width:0}
+.rex-bottom p{font-size:13px;line-height:1.65;color:#576070}
+.rex-bottom summary{font-size:13px;font-weight:700;cursor:pointer}
+.rex-bottom pre{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:310px;overflow:auto}
+@media(max-width:1000px){.rex-candidates{grid-template-columns:1fr}.rex-pair,.rex-bar,.rex-bottom{grid-template-columns:1fr}}
+@media(max-width:600px){.rex-impact{grid-template-columns:1fr}.rex-gantt-row{grid-template-columns:95px 1fr 48px}}
