@@ -21,7 +21,7 @@ function chart(id,options){
 function bars(id,series,yName,format){
  chart(id,{tooltip:{trigger:'axis',valueFormatter:v=>v==null?'미산출':format(v)},legend:{top:0},grid:{left:73,right:20,top:40,bottom:34},xAxis:{type:'category',data:['A','B','C']},yAxis:{type:'value',name:yName,scale:true},series:series.map(s=>({name:s.name,type:'bar',data:s.data,barMaxWidth:45}))});
 }
-function setCandidate(label){selected=label;$('rex-candidates').querySelectorAll('[data-rex-candidate]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.rexCandidate===label)));drawBase();drawRisk();}
+function setCandidate(label){selected=label;$('rex-candidates').querySelectorAll('[data-rex-candidate]').forEach(node=>node.setAttribute('aria-pressed',String(node.dataset.rexCandidate===label)));drawBase();drawRisk();if(report&&scenarioId)loadDetail();}
 function drawBase(){
  const available=Object.fromEntries(candidates.map(c=>[c.label,c]));
  const finite=Object.values(available),minCost=Math.min(...finite.map(c=>c.cost_cents)),minWait=Math.min(...finite.map(c=>c.wait_minutes));
@@ -142,7 +142,7 @@ async function load(runId,base=[],candidate='A',force=false){
  }catch(e){if(ticket===sequence)fallback('rex-state',e.message)}
 }
 function init(){
- $('rex-candidates').addEventListener('click',e=>{const b=e.target.closest('[data-rex-candidate]');if(b){setCandidate(b.dataset.rexCandidate);loadDetail()}});
+ $('rex-candidates').addEventListener('click',e=>{const b=e.target.closest('[data-rex-candidate]');if(b){setCandidate(b.dataset.rexCandidate)}});
  $('rex-types').addEventListener('click',e=>{const b=e.target.closest('[data-rex-type]');if(!b)return;kind=b.dataset.rexType;$('rex-types').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderProbability();selectScenarios()});
  $('rex-scenario').addEventListener('change',e=>{scenarioId=e.target.value;drawRisk();loadDetail()});
  $('rex-reload').addEventListener('click',()=>load(run,candidates,selected,true));
