@@ -1,25 +1,31 @@
 """Evidence-backed finite ETB anchors; none is an operational commitment."""
 from datetime import timedelta
-from ..integrated_input.validator import timestamp
+import time
+from ..integrated_input.validator import timestamp,tokens
 from ..integrated_input.provenance import canonical, digest
 from ..physical_scheduling.compatibility import compatibility
 from ..physical_scheduling.policy import validate_policy
 
 VERSION='V3_ETB_EVENTS_V1'
 FLOW_VERSION='V3_ETB_FLOW_EVENTS_V2'
+RELEASE_VERSION='V3_ETB_TENTATIVE_RELEASES_V3'
 
 
-def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previous_schedule=(), completed_rows=(), event_policy=VERSION):
+def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previous_schedule=(), completed_rows=(), event_policy=VERSION, deadline=None):
     """Return source-labelled ETB anchors inside the 72-hour start horizon.
 
     Availability is POB availability; physical constraints are rechecked by the
     independent replay. Previous timestamps are optional hints, never locks.
     """
-    if event_policy not in (VERSION,FLOW_VERSION):raise ValueError('Unknown candidate event policy')
+    def check_deadline():
+        if deadline is not None and time.monotonic()>=deadline:raise TimeoutError('Candidate generation exceeded shared time budget')
+    check_deadline()
+    if event_policy not in (VERSION,FLOW_VERSION,RELEASE_VERSION):raise ValueError('Unknown candidate event policy')
     begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
     flow_events=set()
-    if event_policy==FLOW_VERSION:
+    if event_policy in (FLOW_VERSION,RELEASE_VERSION):
         for segment in snapshot['fixed_process_flows']['segments']:
+            check_deadline()
             for key in ('start_at','end_at'):
                 at=timestamp(segment[key])
                 if begin<=at<end:flow_events.add(at)
@@ -42,6 +48,7 @@ def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previ
     completed=completed_call_ids(snapshot,completed_rows,policy,as_of_at=as_of_at,locked_ids=locked_ids)
     result={};audit={};outside=[]
     for cid,call in sorted(calls.items()):
+        check_deadline()
         if cid in locked_ids or cid in completed:continue
         eligible=timestamp(call['fix_etb_at']) if call['fixed_etb_is_hard'] else timestamp(call['eta_at'])
         if eligible>=end:outside.append(cid);continue
@@ -70,6 +77,49 @@ def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previ
                     add(max(begin,timestamp(call['eta_at']),timestamp(window['start_at']))+maneuver,'PILOTAGE_WINDOW:'+bid)
         result[cid]=[at.isoformat() for at in sorted(anchors)]
         audit[cid]=[{'etb_at':at.isoformat(),'sources':sorted(anchors[at])} for at in sorted(anchors)]
+    if event_policy==RELEASE_VERSION:
+        # One bounded expansion from independently replayed seed options. These
+        # timestamps are search hints, never commitments or proof of feasibility.
+        from ..physical_scheduling.phases import replay
+        released=[]
+        for sid,times in result.items():
+            check_deadline()
+            source_call=calls[sid]
+            for berth in berths:
+                if compatibility(source_call,berth):continue
+                for value in times:
+                    check_deadline()
+                    try:
+                        row=replay(source_call,berth,value,policy,restrictions=snapshot['workbook_tables']['restrictions']['rows'])
+                        if timestamp(row['pob_at'])<begin or validate_result(snapshot,[row],policy)['status']!='VALID':continue
+                        released.append(row)
+                    except (ValueError,KeyError,TypeError):continue
+        groups=snapshot['workbook_tables']['groups']['rows']
+        for cid,call in sorted(calls.items()):
+            check_deadline()
+            if cid not in result or call['fixed_etb_is_hard']:continue
+            anchors={timestamp(row['etb_at']):set(row['sources']) for row in audit[cid]}
+            for berth in berths:
+                if compatibility(call,berth):continue
+                bid=berth['berth_id'];config=policy['berths'][bid]
+                earliest=max(begin,timestamp(call['eta_at']))+timedelta(seconds=config['berthing_seconds']+config.get('pilot_boarding_to_berthing_seconds',0))
+                for row in released:
+                    if row['call_id']==cid:continue
+                    events=[]
+                    if row['berth_id']==bid:
+                        events.append((timestamp(row['physical_clearance_at'])+timedelta(seconds=config['berthing_seconds']),'BERTH_CLEARANCE'))
+                        events.append((timestamp(row['switching_end_at']),'SWITCH_RELEASE'))
+                    for group in groups:
+                        members=tokens(group['berth_ids'])
+                        if bid not in members or row['berth_id'] not in members or bid==row['berth_id']:continue
+                        if group['rule_type']=='SAME_CARGO_NOT_CONCURRENT' and call['cargo_group']==row['cargo_group']:
+                            events.append((timestamp(row['etu_at']),'GROUP_CLEARANCE'))
+                        elif group['rule_type']=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP':
+                            events.append((max(timestamp(row['work_end_at']),timestamp(row['etu_at'])-timedelta(minutes=120)),'CROSS_BERTH_BOUNDARY'))
+                    for at,kind in events:
+                        if earliest<=at<end:anchors.setdefault(at,set()).add('TENTATIVE_'+kind+':'+row['call_id']+':'+row['berth_id'])
+            result[cid]=[at.isoformat() for at in sorted(anchors)]
+            audit[cid]=[{'etb_at':at.isoformat(),'sources':sorted(anchors[at])} for at in sorted(anchors)]
     return {'model_version':event_policy,'candidate_etbs':result,'anchors':audit,'outside_horizon_call_ids':outside,'completed_call_ids':sorted(completed),
             'input_fingerprint':digest(canonical({'snapshot':snapshot,'as_of_at':as_of_at,'policy':policy,'commitments':locked,'previous_schedule':previous_schedule,**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'event_policy':event_policy} if event_policy!=VERSION else {})}).encode()),
             'scope':'Finite evidence-backed anchors only; not exhaustive or automatically feasible', 'operational_approval':False}

@@ -20,6 +20,9 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
     try:
         begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
         if isinstance(time_limit_seconds,bool) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:raise ValueError('Invalid solver budget')
+        deadline=started+float(time_limit_seconds)
+        def check_deadline():
+            if time.perf_counter()>=deadline:raise TimeoutError('Berth candidate generation or model construction exceeded budget')
         if snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V3':raise ValueError('Normalized V3 snapshot required')
         if 'source_input' in snapshot:
             from ..integrated_input.validator import validate
@@ -45,6 +48,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         if check['status']!='VALID':return failure('INVALID_INPUT','COMMITMENT_VALIDATION_FAILED',check['issues'])
         outside=[];options=[];groups=[];rejected=[]
         for cid,call in sorted(calls.items()):
+            check_deadline()
             if cid in locked_ids or cid in completed:continue
             eligible_time=timestamp(call['fix_etb_at']) if call['fixed_etb_is_hard'] else timestamp(call['eta_at'])
             if eligible_time>=end:outside.append(cid);continue
@@ -55,6 +59,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             for berth in active:
                 if compatibility(call,berth):continue
                 for at in times:
+                    check_deadline()
                     if not begin<=at<end:continue
                     try:
                         row=replay(call,berth,at.isoformat(),policy,restrictions=snapshot['workbook_tables']['restrictions']['rows'])
@@ -72,9 +77,11 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         base_options=list(options)
         dock=set(policy.get('dock_4142_berths',[]))
         for base in base_options:
+            check_deadline()
             release_times=sorted({row['switching_end_at'] for row in base_options+locked
                                   if row['call_id']!=base['call_id'] and (row['berth_id']==base['berth_id'] or {row['berth_id'],base['berth_id']}<=dock)},key=timestamp)
             for release in release_times:
+                check_deadline()
                 if timestamp(release)<=timestamp(base['etb_at']):continue
                 try:
                     row=replay(calls[base['call_id']],berths[base['berth_id']],base['etb_at'],policy,
@@ -110,7 +117,9 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             m.Add(sum(x[index] for index in indices)<=len(indices)-1)
         conflicts=0
         for i,a in enumerate(options):
+            check_deadline()
             for j in range(i+1,len(options)):
+                if j%128==0:check_deadline()
                 b=options[j]
                 if a['call_id']!=b['call_id'] and pair_conflicts(a,b,snapshot,policy):m.AddBoolOr([x[i].Not(),x[j].Not()]);conflicts+=1
         tug_intervals=[];demands=[]
@@ -124,7 +133,8 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 tug_intervals.append(interval);demands.append(demand)
         if tug_intervals:m.AddCumulative(tug_intervals,demands,policy['tug_capacity'])
         m.Minimize(0)
-        solver=cp_model.CpSolver();solver.parameters.max_time_in_seconds=float(time_limit_seconds);solver.parameters.num_search_workers=1;solver.parameters.random_seed=42
+        check_deadline()
+        solver=cp_model.CpSolver();solver.parameters.max_time_in_seconds=max(0.000001,deadline-time.perf_counter());solver.parameters.num_search_workers=1;solver.parameters.random_seed=42
         result=solver.Solve(m)
         if result not in (cp_model.FEASIBLE,cp_model.OPTIMAL):return failure('INFEASIBLE' if result==cp_model.INFEASIBLE else 'TIME_LIMIT_NO_INCUMBENT','NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only')
         rows=locked+[row for i,row in enumerate(options) if solver.Value(x[i])]
@@ -146,5 +156,6 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             'independent_validation':independent,'seconds':time.perf_counter()-started,
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
+    except TimeoutError as exc:return failure('TIME_LIMIT_NO_INCUMBENT','TIME_BUDGET_EXHAUSTED',exc,scope='No feasibility claim')
     except ImportError as exc:return failure('SOLVER_UNAVAILABLE','SOLVER_UNAVAILABLE',exc)
     except (ValueError,KeyError,TypeError,OverflowError) as exc:return failure('INVALID_INPUT','MISSING_OR_INVALID_PHYSICAL_POLICY',exc)

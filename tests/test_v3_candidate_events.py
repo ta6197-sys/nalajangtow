@@ -42,3 +42,26 @@ class CandidateEventsTest(unittest.TestCase):
         self.s['calls'][0].update(fixed_etb_is_hard=True,fix_etb_at='2026-11-03T04:00:00+09:00')
         r=self.generate(event_policy='V3_ETB_FLOW_EVENTS_V2')
         self.assertEqual(r['candidate_etbs']['SYN-A'],['2026-11-03T04:00:00+09:00'])
+    def test_tentative_release_generates_new_feasible_sequence(self):
+        from src.daily_planning.physical_scheduling.service import solve_berth_schedule
+        self.s['calls'].append(dict(self.s['calls'][0],call_id='SYN-B'))
+        self.s['fixed_process_flows']={'segments':[]}
+        old=self.generate();new=self.generate(event_policy='V3_ETB_TENTATIVE_RELEASES_V3')
+        self.assertTrue(any(source.startswith('TENTATIVE_BERTH_CLEARANCE:') for row in new['anchors']['SYN-B'] for source in row['sources']))
+        self.assertGreater(len(new['candidate_etbs']['SYN-B']),len(old['candidate_etbs']['SYN-B']))
+        failed=solve_berth_schedule(self.s,as_of_at=START,policy=self.p,candidate_etbs=old['candidate_etbs'])
+        solved=solve_berth_schedule(self.s,as_of_at=START,policy=self.p,candidate_etbs=new['candidate_etbs'])
+        self.assertEqual(failed['status'],'INFEASIBLE',failed);self.assertEqual(solved['status'],'BERTH_SUBSYSTEM_FEASIBLE',solved)
+    def test_tentative_release_does_not_move_fix(self):
+        self.s['calls'].append(dict(self.s['calls'][0],call_id='SYN-B',fixed_etb_is_hard=True,fix_etb_at='2026-11-03T04:00:00+09:00'))
+        self.s['fixed_process_flows']={'segments':[]}
+        r=self.generate(event_policy='V3_ETB_TENTATIVE_RELEASES_V3')
+        self.assertEqual(r['candidate_etbs']['SYN-B'],['2026-11-03T04:00:00+09:00'])
+    def test_candidate_deadline_does_not_claim_infeasibility(self):
+        from unittest.mock import patch
+        with patch('src.daily_planning.integrated_v3.candidates.time.monotonic',return_value=2):
+            with self.assertRaises(TimeoutError):self.generate(deadline=1)
+    def test_physical_preprocessing_obeys_budget(self):
+        from src.daily_planning.physical_scheduling.service import solve_berth_schedule
+        r=solve_berth_schedule(self.s,as_of_at=START,policy=self.p,candidate_etbs={'SYN-A':['2026-11-03T01:00:00+09:00']},time_limit_seconds=1e-12)
+        self.assertEqual(r['status'],'TIME_LIMIT_NO_INCUMBENT',r);self.assertEqual(r['issues'][0]['code'],'TIME_BUDGET_EXHAUSTED')
