@@ -29,3 +29,42 @@ class V3InventoryTests(unittest.TestCase):
         x=dict(self.x[0]);x.pop('tank_id');x['eligible_tank_ids']=['T','U']
         r=solve_v3_allocation(self.s,[x],start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00')
         self.assertEqual(r['status'],'VALID',r);self.assertEqual(r['assignments'][0]['tank_id'],'U')
+
+    def test_partial_segments_exact_conservation(self):
+        self.x[0].update(start_at='2026-11-03T05:30:01+09:00',end_at='2026-11-03T06:30:02+09:00',segments=[{'start_at':'2026-11-03T05:30:01+09:00','end_at':'2026-11-03T06:30:01+09:00','rate_bbl_per_hour':'3599/36'},{'start_at':'2026-11-03T06:30:01+09:00','end_at':'2026-11-03T06:30:02+09:00','rate_bbl_per_hour':'100'}])
+        r=self.run_projection();self.assertEqual(r['status'],'VALID',r);self.assertEqual(r['carried_inventory_bbl']['T'],'140')
+
+    def test_carry_transfer_at_24_hours(self):
+        self.x[0].update(start_at='2026-11-03T23:30:00+09:00',end_at='2026-11-04T00:30:00+09:00')
+        first=validate_v3_inventory(self.s,self.x,start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T00:00:00+09:00')
+        self.assertEqual(first['status'],'VALID',first);self.assertEqual(first['carried_transfers'][0]['remaining_bbl'],'50')
+        second=validate_v3_inventory(self.s,self.x,start_at='2026-11-04T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00',initial_inventory=first['carried_inventory_bbl'],carried_transfers=first['carried_transfers'])
+        self.assertEqual(second['status'],'VALID',second);self.assertEqual(second['inventories']['T'][-1]['inventory_bbl'],'140')
+        first['carried_transfers'][0]['remaining_bbl']='49'
+        self.assertEqual(validate_v3_inventory(self.s,self.x,start_at='2026-11-04T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00',initial_inventory=first['carried_inventory_bbl'],carried_transfers=first['carried_transfers'])['status'],'INVALID_INPUT')
+
+    def test_underflow_and_flow_overlap(self):
+        self.s['tanks'][0]['initial_inventory_bbl']='10'
+        self.assertEqual(self.run_projection()['status'],'INVALID')
+        self.s['fixed_process_flows']['segments'][1]['start_at']='2026-11-03T05:59:59+09:00'
+        self.assertEqual(self.run_projection()['status'],'INVALID_INPUT')
+
+    def test_same_tank_policy_is_not_assumed(self):
+        self.s['calls'].append(dict(self.s['calls'][0],call_id='D'))
+        self.x.append(dict(self.x[0],call_id='D'))
+        r=self.run_projection();self.assertIn('PENDING_SAME_TANK_CONCURRENCY',[v['code'] for v in r['issues']])
+        r=validate_v3_inventory(self.s,self.x,start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00',same_tank_policy='ALLOW')
+        self.assertEqual(r['status'],'VALID',r)
+
+    def test_fix_must_match(self):
+        self.s['calls'][0].update(fixed_etb_is_hard=True,fix_etb_at='2026-11-03T04:30:00+09:00')
+        self.x[0]['etb_at']='2026-11-03T04:31:00+09:00'
+        self.assertEqual(self.run_projection()['status'],'INVALID_INPUT')
+        self.x[0]['etb_at']='2026-11-03T04:30:00+09:00'
+        self.assertEqual(self.run_projection()['status'],'VALID')
+
+    def test_transfer_completes_after_72_hours(self):
+        self.s['fixed_process_flows']['segments'][1]['end_at']='2026-11-07T00:00:00+09:00'
+        self.x[0].update(start_at='2026-11-05T23:30:00+09:00',end_at='2026-11-06T00:30:00+09:00')
+        r=validate_v3_inventory(self.s,self.x,start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-06T01:00:00+09:00')
+        self.assertEqual(r['status'],'VALID',r);self.assertEqual(r['inventories']['T'][-1]['inventory_bbl'],'140')
