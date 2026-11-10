@@ -13,3 +13,9 @@ Reproduce the isolated synthetic integration checks:
 ```
 PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/opt/homebrew/lib/python3.11/site-packages .venv/bin/python -m unittest tests.test_v3_integration_checkpoint
 ```
+
+## Finite feasibility search follow-up
+
+`search_feasibility(snapshot, *, as_of_at, candidate_etbs, policy, commitments=(), initial_inventory=None, carried_transfers=None, tank_commitments=None, same_tank_policy=None, time_limit_seconds=30, max_iterations=20)` repeats berth CP-SAT proposals and the independent tank check. Only an `INFEASIBLE` result from finite tank assignment triggers a no-good, which excludes the exact complete set of physical rows. It does not forbid a berth/time appearing in another schedule. Timeout, invalid inputs, missing data and unresolved policy stop with an unresolved result, without excluding a candidate. The elapsed time budget is passed to each subsequent subsystem; Python preprocessing and deterministic validation can overrun it, so it is not yet a strict preemptive global deadline.
+
+An isolated integration fixture used an initial 94 bbl, maximum 100 bbl and external inflow of 5 bbl/hour until 02:00. The initial 02:00 berth proposal overflowed before loading; excluding that complete selection allowed the 01:00 proposal to validate. Source data and quantities were not altered. Search is restricted to caller-provided ETBs and existing physical options. `PHYSICAL_AND_TANK_ONLY` remains an unapproved subsystem result; it is not a cost-optimized schedule. Objective, authoritative contract pricing, actual-duration propagation, full 24-hour freeze, complete scenario coverage and final integrated validation remain open.
