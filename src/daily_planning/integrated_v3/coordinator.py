@@ -15,7 +15,7 @@ VERSION='V3_INTEGRATION_CHECKPOINT_V1'
 
 def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=None,
                        carried_transfers=None, tank_commitments=None,
-                       same_tank_policy=None, time_limit_seconds=30, inventory_cuts=False):
+                       same_tank_policy=None, time_limit_seconds=30, inventory_cuts=False, protected_call_ids=()):
     """Validate a supplied berth candidate and propose tank allocation.
 
     Input rows must be the existing physical scheduler's full replay format.
@@ -33,7 +33,12 @@ def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=No
         transfer_inputs=[];finish=begin+timedelta(hours=72)
         commitments={x['call_id']:x for x in (tank_commitments or [])}
         if len(commitments)!=len(tank_commitments or []):raise ValueError('Duplicate tank commitment')
+        protected=set(protected_call_ids)
+        if not protected<={row['call_id'] for row in rows}:raise ValueError('Protected call absent from physical rows')
         for row in rows:
+            if timestamp(row['work_end_at'])<=begin:
+                if row['call_id'] not in protected:raise ValueError('Completed transfer requires an explicit protected physical row')
+                continue
             c=calls[row['call_id']];b=berths[row['berth_id']];vol=number(c['cargo_volume_bbl']);ratio=number(c['physical']['bbl_per_mt'])
             rates=[number(v) for v in (c.get('transfer_rate_mt_h'),b.get('max_transfer_rate_mt_h')) if v not in (None,'')]
             if not rates or min(rates)<=0 or ratio<=0:raise ValueError('Missing valid vessel/berth rate for '+row['call_id'])

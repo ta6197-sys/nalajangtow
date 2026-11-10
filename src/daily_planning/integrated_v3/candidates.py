@@ -6,15 +6,23 @@ from ..physical_scheduling.compatibility import compatibility
 from ..physical_scheduling.policy import validate_policy
 
 VERSION='V3_ETB_EVENTS_V1'
+FLOW_VERSION='V3_ETB_FLOW_EVENTS_V2'
 
 
-def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previous_schedule=(), completed_rows=()):
+def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previous_schedule=(), completed_rows=(), event_policy=VERSION):
     """Return source-labelled ETB anchors inside the 72-hour start horizon.
 
     Availability is POB availability; physical constraints are rechecked by the
     independent replay. Previous timestamps are optional hints, never locks.
     """
+    if event_policy not in (VERSION,FLOW_VERSION):raise ValueError('Unknown candidate event policy')
     begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
+    flow_events=set()
+    if event_policy==FLOW_VERSION:
+        for segment in snapshot['fixed_process_flows']['segments']:
+            for key in ('start_at','end_at'):
+                at=timestamp(segment[key])
+                if begin<=at<end:flow_events.add(at)
     berths=[b for b in snapshot['berths'] if b.get('active')=='Y']
     validate_policy(policy,[b['berth_id'] for b in berths])
     calls={c['call_id']:c for c in snapshot['calls']}
@@ -48,7 +56,10 @@ def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previ
                 if compatibility(call,berth):continue
                 bid=berth['berth_id'];config=policy['berths'][bid]
                 maneuver=timedelta(seconds=config['berthing_seconds']+config.get('pilot_boarding_to_berthing_seconds',0))
-                add(max(begin,timestamp(call['eta_at']))+maneuver,'AVAILABILITY:'+bid)
+                earliest=max(begin,timestamp(call['eta_at']))+maneuver
+                add(earliest,'AVAILABILITY:'+bid)
+                for at in flow_events:
+                    if at>=earliest:add(at,'FIXED_PROCESS_FLOW_BOUNDARY')
                 for row in locked:
                     if row['berth_id']==bid:
                         add(timestamp(row['physical_clearance_at'])+timedelta(seconds=config['berthing_seconds']),'COMMITTED_CLEARANCE:'+bid)
@@ -59,6 +70,6 @@ def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previ
                     add(max(begin,timestamp(call['eta_at']),timestamp(window['start_at']))+maneuver,'PILOTAGE_WINDOW:'+bid)
         result[cid]=[at.isoformat() for at in sorted(anchors)]
         audit[cid]=[{'etb_at':at.isoformat(),'sources':sorted(anchors[at])} for at in sorted(anchors)]
-    return {'model_version':VERSION,'candidate_etbs':result,'anchors':audit,'outside_horizon_call_ids':outside,'completed_call_ids':sorted(completed),
-            'input_fingerprint':digest(canonical({'snapshot':snapshot,'as_of_at':as_of_at,'policy':policy,'commitments':locked,'previous_schedule':previous_schedule,**({'completed_rows':list(completed_rows)} if completed_rows else {})}).encode()),
+    return {'model_version':event_policy,'candidate_etbs':result,'anchors':audit,'outside_horizon_call_ids':outside,'completed_call_ids':sorted(completed),
+            'input_fingerprint':digest(canonical({'snapshot':snapshot,'as_of_at':as_of_at,'policy':policy,'commitments':locked,'previous_schedule':previous_schedule,**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'event_policy':event_policy} if event_policy!=VERSION else {})}).encode()),
             'scope':'Finite evidence-backed anchors only; not exhaustive or automatically feasible', 'operational_approval':False}
