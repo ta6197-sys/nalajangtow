@@ -12,7 +12,7 @@ from .validator import validate_result,pair_conflicts,restriction_conflicts
 MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=()):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -20,13 +20,19 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
     try:
         begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
         if isinstance(time_limit_seconds,bool) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:raise ValueError('Invalid solver budget')
+        if conflict_filter not in ('NONE','SAFE_ENVELOPE_V1'):raise ValueError('Unknown conflict filter')
+        if phase_release_policy not in ('ALL_OPTIONS_V1','LOCKED_ONLY_V1'):raise ValueError('Unknown phase release policy')
         deadline=started+float(time_limit_seconds)
         def check_deadline():
             if time.perf_counter()>=deadline:raise TimeoutError('Berth candidate generation or model construction exceeded budget')
         if snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V3':raise ValueError('Normalized V3 snapshot required')
         if 'source_input' in snapshot:
             from ..integrated_input.validator import validate
-            preflight=validate(snapshot)
+            if snapshot['fixed_process_flows'].get('extension_provenance'):
+                from ..integrated_input.flow_extension import validate_extended_snapshot,check_extension_available
+                check_extension_available(snapshot,as_of_at=as_of_at,projection_end_at=end.isoformat())
+                preflight=validate_extended_snapshot(snapshot)
+            else:preflight=validate(snapshot)
             if not preflight['data_preflight_pass']:return failure('INVALID_INPUT','V3_DATA_PREFLIGHT_FAILED',preflight['issues'])
         calls={c['call_id']:c for c in snapshot['calls']};berths={b['berth_id']:b for b in snapshot['berths']}
         if len(calls)!=len(snapshot['calls']) or len(berths)!=len(snapshot['berths']):raise ValueError('Duplicate source identity')
@@ -78,7 +84,8 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         dock=set(policy.get('dock_4142_berths',[]))
         for base in base_options:
             check_deadline()
-            release_times=sorted({row['switching_end_at'] for row in base_options+locked
+            release_sources=(base_options+locked) if phase_release_policy=='ALL_OPTIONS_V1' else locked
+            release_times=sorted({row['switching_end_at'] for row in release_sources
                                   if row['call_id']!=base['call_id'] and (row['berth_id']==base['berth_id'] or {row['berth_id'],base['berth_id']}<=dock)},key=timestamp)
             for release in release_times:
                 check_deadline()
@@ -115,13 +122,16 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             indices=[option_index[key] for key in selected]
             if any(sum(index in group for index in indices)!=1 for group in groups):continue
             m.Add(sum(x[index] for index in indices)<=len(indices)-1)
-        conflicts=0
-        for i,a in enumerate(options):
-            check_deadline()
-            for j in range(i+1,len(options)):
-                if j%128==0:check_deadline()
-                b=options[j]
-                if a['call_id']!=b['call_id'] and pair_conflicts(a,b,snapshot,policy):m.AddBoolOr([x[i].Not(),x[j].Not()]);conflicts+=1
+        conflicts=0;pair_checks=0
+        if conflict_filter=='SAFE_ENVELOPE_V1':
+            from .conflict_index import iter_potential_pairs
+            pairs=iter_potential_pairs(snapshot,policy,options,check_deadline=check_deadline)
+        else:
+            pairs=((i,j) for i in range(len(options)) for j in range(i+1,len(options)) if options[i]['call_id']!=options[j]['call_id'])
+        for i,j in pairs:
+            if pair_checks%128==0:check_deadline()
+            pair_checks+=1
+            if pair_conflicts(options[i],options[j],snapshot,policy):m.AddBoolOr([x[i].Not(),x[j].Not()]);conflicts+=1
         tug_intervals=[];demands=[]
         def offset(value):return int((timestamp(value)-begin).total_seconds())
         for i,row in enumerate(options+locked if policy.get('tug_capacity') is not None else []):
@@ -133,29 +143,42 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 tug_intervals.append(interval);demands.append(demand)
         if tug_intervals:m.AddCumulative(tug_intervals,demands,policy['tug_capacity'])
         m.Minimize(0)
-        check_deadline()
-        solver=cp_model.CpSolver();solver.parameters.max_time_in_seconds=max(0.000001,deadline-time.perf_counter());solver.parameters.num_search_workers=1;solver.parameters.random_seed=42
-        result=solver.Solve(m)
-        if result not in (cp_model.FEASIBLE,cp_model.OPTIMAL):return failure('INFEASIBLE' if result==cp_model.INFEASIBLE else 'TIME_LIMIT_NO_INCUMBENT','NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only')
-        rows=locked+[row for i,row in enumerate(options) if solver.Value(x[i])]
-        rows.sort(key=lambda row:(timestamp(row['etb_at']),row['call_id']))
-        independent=validate_result(snapshot,rows,policy)
-        if independent['status']!='VALID':return failure('VALIDATION_FAILED','INDEPENDENT_VALIDATION_FAILED',independent['issues'])
-        for row in locked:
-            if row not in rows:return failure('VALIDATION_FAILED','COMMITMENT_CHANGED',row['call_id'])
-        return {'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
+        solver=cp_model.CpSolver();solver.parameters.num_search_workers=1;solver.parameters.random_seed=42
+        emitted=0
+        while True:
+            check_deadline()
+            solver.parameters.max_time_in_seconds=max(0.000001,deadline-time.perf_counter())
+            result=solver.Solve(m)
+            if result not in (cp_model.FEASIBLE,cp_model.OPTIMAL):
+                if candidate_visitor is not None and result==cp_model.INFEASIBLE:
+                    return {'status':'ENUMERATION_EXHAUSTED','emitted':emitted,'operational_approval':False}
+                return failure('INFEASIBLE' if result==cp_model.INFEASIBLE else 'TIME_LIMIT_NO_INCUMBENT','NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only')
+            selected=[i for i in range(len(options)) if solver.Value(x[i])]
+            rows=locked+[options[i] for i in selected]
+            rows.sort(key=lambda row:(timestamp(row['etb_at']),row['call_id']))
+            independent=validate_result(snapshot,rows,policy)
+            if independent['status']!='VALID':return failure('VALIDATION_FAILED','INDEPENDENT_VALIDATION_FAILED',independent['issues'])
+            for row in locked:
+                if row not in rows:return failure('VALIDATION_FAILED','COMMITMENT_CHANGED',row['call_id'])
+            payload={'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
             'model_version':MODEL_VERSION,'policy_id':policy.get('policy_id',policy['schema_version']),'event_definition_issues':definition_issues,
             'input_fingerprint':digest(canonical(snapshot).encode()),
-            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
+            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
             'boundaries':{'as_of_at':begin.isoformat(),'optimization_end_at':end.isoformat(),'freeze_end_at':(begin+timedelta(hours=24)).isoformat()},
             'completed_call_ids':sorted(completed),
             'outside_horizon_call_ids':outside,
             'future_fix_call_ids':[cid for cid in outside if calls[cid]['fixed_etb_is_hard']],
             'pending_validation':['TANK_INVENTORY_AND_TRANSFER_RATES','CONTRACT_SETTLEMENT','EXTERNAL_WEATHER_BEYOND_SOURCE_RESTRICTIONS'] + (['FUTURE_FIX_ASSIGNMENTS_BEYOND_DETAILED_HORIZON'] if any(calls[cid]['fixed_etb_is_hard'] for cid in outside) else []),
-            'option_count':len(options),'pair_conflict_count':conflicts,
+            'option_count':len(options),'pair_conflict_count':conflicts,'pair_checks':pair_checks,'conflict_filter':conflict_filter,'phase_release_policy':phase_release_policy,
             'independent_validation':independent,'seconds':time.perf_counter()-started,
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
+
+            if candidate_visitor is None:return payload
+            emitted+=1
+            if candidate_visitor(payload) is False:return {'status':'ENUMERATION_STOPPED','emitted':emitted,'operational_approval':False}
+            if not selected:return {'status':'ENUMERATION_EXHAUSTED','emitted':emitted,'operational_approval':False}
+            m.Add(sum(x[i] for i in selected)<=len(selected)-1)
     except TimeoutError as exc:return failure('TIME_LIMIT_NO_INCUMBENT','TIME_BUDGET_EXHAUSTED',exc,scope='No feasibility claim')
     except ImportError as exc:return failure('SOLVER_UNAVAILABLE','SOLVER_UNAVAILABLE',exc)
     except (ValueError,KeyError,TypeError,OverflowError) as exc:return failure('INVALID_INPUT','MISSING_OR_INVALID_PHYSICAL_POLICY',exc)
