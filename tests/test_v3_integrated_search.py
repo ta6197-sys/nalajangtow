@@ -40,3 +40,7 @@ class IntegratedSearchTest(unittest.TestCase):
         self.assertEqual(r['status'],'PHYSICAL_AND_TANK_ONLY',r)
         self.assertEqual(r['berth_result']['schedule'][0]['etb_at'],TIMES[0])
         self.assertEqual([entry['tank_status'] for entry in r['iterations']],['INFEASIBLE','VALID'])
+    def test_berth_timeout_is_reported_as_timeout(self):
+        with patch('src.daily_planning.integrated_v3.search.solve_berth_schedule',return_value={'status':'TIME_LIMIT_NO_INCUMBENT','issues':[{'code':'TIME_BUDGET_EXHAUSTED'}]}):
+            r=self.search()
+        self.assertEqual(r['status'],'TIME_LIMIT_NO_INCUMBENT');self.assertEqual(r['berth_result']['issues'][0]['code'],'TIME_BUDGET_EXHAUSTED')

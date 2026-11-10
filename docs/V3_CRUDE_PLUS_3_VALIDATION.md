@@ -100,3 +100,11 @@ PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/op
  results/v3_crude_plus_search_cuts_evidence/d40227f4bd9026ffd33e47df/normalized_snapshot.json \
  --output results/v3_crude_plus_rolling/rolling_flow_v2.json --days 7 --seconds-per-day 30 --flow-anchors
 ```
+
+## Day-3 tentative-release candidate experiment
+
+The opt-in `V3_ETB_TENTATIVE_RELEASES_V3` event policy retains V2 anchors and performs one bounded expansion using independently replayed tentative seed options. It adds candidate times derived from same-berth physical clearance and switching, documented cargo-group clearance and the existing versioned 4142 overlap boundary. These are candidate hints only; seed rows are not confirmed, whole-schedule feasibility is not implied, FIX remains unchanged, and no continuous-time completeness is claimed. Synthetic regression verifies a two-vessel sequence unavailable in V1 becomes available without moving FIX.
+
+A controlled single-run comparison used the *same* day-3 simulated state, protected work and 30-second budget from `rolling_flow_v2.json`. V2 generated 53 call/time anchors and exhausted that restricted berth domain in 1.50 seconds. V3 generated 127 anchors but reached `TIME_LIMIT_NO_INCUMBENT` during berth model construction after 30.01 seconds, with no validated incumbent. It does not establish that V3 or the scenario is infeasible, and it does not justify claiming a performance improvement. The previous preprocessor did not respect the solver time budget; deadline checks now cover seed generation, physical option construction, pair-conflict construction and remaining CP-SAT time. These are cooperative checks, not a hard preemptive wall-clock guarantee.
+
+`benchmarks.v3_release_candidate_trial` repeats either policy against the same stored synthetic state; use a fresh output path. The candidate model builds pairwise conflicts, and candidate growth exposed this construction bottleneck. An independently validated full rolling result, weather and contract cost remain outstanding.
