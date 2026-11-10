@@ -12,9 +12,9 @@ from .validator import validate
 from .provenance import canonical,digest,VERSION,KST
 
 
-def run(data_dir,output_dir,dry_run=False):
+def run(data_dir,output_dir,dry_run=False,*,scenario='V3_ORIGINAL'):
     try:
-        bundle=load_inputs(data_dir);snapshot=normalize(bundle);report=validate(snapshot)
+        bundle=load_inputs(data_dir,scenario=scenario);snapshot=normalize(bundle);report=validate(snapshot)
     except (InputError,ValueError,KeyError,TypeError) as exc:
         return {'status':getattr(exc,'code','INVALID_SCHEMA'),'data_preflight_pass':False,
                 'issues':[{'code':getattr(exc,'code','INVALID_SCHEMA'),'explanation':str(exc)}]},None
@@ -26,6 +26,7 @@ def run(data_dir,output_dir,dry_run=False):
         'data_origin':bundle['source'].get('data_origin'),'seed':bundle['source'].get('seed'),
         'operating_policy':bundle['source'].get('operational_rules'), 'normalization_version':VERSION,'git_commit':code,
         'normalized_snapshot_sha256':digest(canonical(snapshot).encode()),'operational_approval':False}
+    if scenario!='V3_ORIGINAL':manifest['scenario_id']=scenario
     run_id=digest(canonical(manifest).encode())[:24]
     manifest.update(run_id=run_id,generation_timestamp=datetime.now(KST).isoformat())
     summary={'counts':report['counts'],'data_preflight_pass':report['data_preflight_pass'],
@@ -51,8 +52,9 @@ def run(data_dir,output_dir,dry_run=False):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--data-dir',required=True,type=Path)
     parser.add_argument('--output-dir',type=Path,default=Path('results/v3_preflight'));parser.add_argument('--dry-run',action='store_true')
+    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3'),default='V3_ORIGINAL')
     args=parser.parse_args()
-    try:report,manifest=run(args.data_dir,args.output_dir,args.dry_run)
+    try:report,manifest=run(args.data_dir,args.output_dir,args.dry_run,scenario=args.scenario)
     except (ValueError,OSError) as exc:
         print(json.dumps({'status':'INVALID_SCHEMA','issues':[str(exc)]},ensure_ascii=False));return 2
     print(json.dumps({'validation':report,'manifest':manifest,'dry_run':args.dry_run},ensure_ascii=False,indent=2))

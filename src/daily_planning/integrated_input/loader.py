@@ -6,6 +6,7 @@ import unicodedata
 from .provenance import cell,digest
 
 FILES=('Docktimize_11선석_ETA_NOR_FIX_외부공정유량_v3.xlsx','Docktimize_최적화입력_ETA_NOR_FIX_v3.json','Docktimize_공정유량_6h_v3.json')
+SCENARIO_FILES={'V3_ORIGINAL':FILES,'V3_CRUDE_PLUS_3':('Docktimize_11선석_ETA_NOR_FIX_외부공정유량_v3_CRUDE_PLUS.xlsx','Docktimize_최적화입력_ETA_NOR_FIX_v3_CRUDE_PLUS.json',FILES[2])}
 SHEETS={'contracts':('03_계약조건',{'case_id','contract_clause_ko','nor_tender_local'}),
  'sof':('04_SOF이력',{'event_id','case_id','event_code'}),
  'eta':('12_ETA_ETB',{'case_id','eta_local','etb_local','fixed_etb_local'}),
@@ -22,20 +23,22 @@ class InputError(ValueError):
     def __init__(self,code,message): self.code=code;super().__init__(message)
 
 
-def load_inputs(data_dir):
+def load_inputs(data_dir, *, scenario='V3_ORIGINAL'):
+    if scenario not in SCENARIO_FILES:raise InputError('INVALID_SCHEMA','Unknown scenario: '+str(scenario))
+    files=SCENARIO_FILES[scenario]
     root=Path(data_dir)
     paths={}
     if not root.is_dir(): raise InputError('MISSING_INPUT',str(root))
-    for name in FILES:
+    for name in files:
         matches=[p for p in root.iterdir() if p.is_file() and unicodedata.normalize('NFC',p.name)==name]
         if not matches: raise InputError('MISSING_INPUT',name)
         if len(matches)!=1: raise InputError('INVALID_SCHEMA','Ambiguous Unicode filenames: '+name)
         paths[name]=matches[0]
     raw={name:path.read_bytes() for name,path in paths.items()}
-    artifacts=[{'filename':paths[name].name,'logical_filename':name,'sha256':digest(raw[name]),'bytes':len(raw[name])} for name in FILES]
+    artifacts=[{'filename':paths[name].name,'logical_filename':name,'sha256':digest(raw[name]),'bytes':len(raw[name])} for name in files]
     try:
-        source=json.loads(raw[FILES[1]],parse_float=str)
-        flows=json.loads(raw[FILES[2]],parse_float=str)
+        source=json.loads(raw[files[1]],parse_float=str)
+        flows=json.loads(raw[files[2]],parse_float=str)
         if not isinstance(source,dict) or not isinstance(flows,dict):raise InputError('INVALID_SCHEMA','JSON roots must be objects')
         for key in ('cargo_calls','berths','tanks'):
             if not isinstance(source.get(key),list) or any(not isinstance(r,dict) for r in source[key]):raise InputError('INVALID_SCHEMA','Invalid '+key+' array')
@@ -43,7 +46,7 @@ def load_inputs(data_dir):
         if not isinstance(flows.get('segments'),list) or any(not isinstance(r,dict) for r in flows['segments']):raise InputError('INVALID_SCHEMA','Invalid flow segments')
         if not isinstance(source.get('planning_policy'),dict) or not isinstance(source.get('operational_rules'),dict):raise InputError('INVALID_SCHEMA','Missing policy objects')
         from openpyxl import load_workbook
-        workbook=load_workbook(io.BytesIO(raw[FILES[0]]),read_only=True,data_only=True)
+        workbook=load_workbook(io.BytesIO(raw[files[0]]),read_only=True,data_only=True)
         tables={}
         try:
             all_tables={}
