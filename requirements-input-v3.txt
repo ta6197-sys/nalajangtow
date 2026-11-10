@@ -1,0 +1,2 @@
+# Offline workbook ingestion only; no database or optimization dependencies.
+openpyxl>=3.1,<4
