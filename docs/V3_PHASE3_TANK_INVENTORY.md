@@ -35,3 +35,19 @@ For undecided tanks, HiGHS now runs in a separate Python process, so loading it 
 A source-backed partial trial used DEM-0112, BERTH-04, TANK-03 and 81,360 bbl, at an illustrative time derived from ETA. The applicable maximum was 8,814 bbl/hour and total transfer time 33,231 seconds with an exact reduced final-second rate. The 96-hour projection returned tank inventory-limit violations, as expected for this trial; it does not prove that this vessel or the full 140-call scenario is unschedulable. No source input was altered.
 
 Test evidence before the final reporting-grid addition: 286 tests run, 285 passed, one skipped. After adding the grid, the 14 focused V3 tests passed. Coverage remains insufficient to declare full Phase 3 acceptance: actual complete scenario, exhaustive commitment carryover, solver status behavior under timeouts and independent validation of all required constraints remain open. The earlier paragraphs describing carryover and partial segments as unsupported are superseded by this section.
+
+## Protected commitments, budget handling and source trials
+
+`validate_v3_inventory(..., commitments=...)` and `solve_v3_allocation(..., commitments=...)` accept an explicit list of complete transfer definitions relevant to the projection. Each must appear unchanged in `transfers`; missing, shifted, reassigned or otherwise altered definitions return `COMMITMENT_CHANGED`. The service does not independently retrieve or authenticate a commitment list. `commitments=None` is explicitly `NOT_PROVIDED` and remains pending, while an explicitly supplied empty list records that the caller supplied no relevant commitments. FIX ETB is still independently checked against the normalized source. Supplying commitments is not an operational confirmation and does not validate berth phases or weather.
+
+A positive, finite time budget is required. A process timeout returns `TIME_LIMIT_NO_INCUMBENT`; this check was tested using an injected timeout, not by claiming a particular machine's runtime. The isolated assignment solver does not yet establish whether a timed-out solver had an unloadable incumbent, so no unvalidated proposal is returned.
+
+Three repeatable, independent, illustrative source-backed trials can be run using:
+
+```bash
+PYTHONPATH=/opt/homebrew/lib/python3.11/site-packages .venv/bin/python -m benchmarks.v3_tank_source_trial results/v3_preflight/670af17c193ab3d738703352/normalized_snapshot.json --count 3
+```
+
+On this dataset the three test calls DEM-0112, DEM-0011 and DEM-0047 all returned inventory-limit violations under their illustrative single-vessel allocations. These are neither executable schedules nor a proof of infeasibility for different allocations or the full 140-call scenario. The script uses normalized source inputs and never writes to them.
+
+Follow-up budget verification found that the prior 10-second process allowance could exceed the requested wall-clock limit. The subprocess now has the requested timeout itself, including startup. In a local 1-microsecond budget trial, it returned `TIME_LIMIT_NO_INCUMBENT`; process startup, solver construction and independent validation are all within that external budget. A deterministic fixed-assignment replay uses no solver process and does not interpret this value as a projection timeout.
