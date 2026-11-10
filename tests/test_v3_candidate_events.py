@@ -29,3 +29,16 @@ class CandidateEventsTest(unittest.TestCase):
         f=IntegrationCheckpointTest();f.setUp()
         r=search_with_events(f.s,as_of_at=START,policy=f.p,time_limit_seconds=15)
         self.assertEqual(r['status'],'PHYSICAL_AND_TANK_ONLY',r);self.assertIn('candidate_generation',r);self.assertFalse(r['operational_approval'])
+    def test_flow_boundaries_are_optional_audited_candidates(self):
+        self.s['fixed_process_flows']={'segments':[{'start_at':'2026-11-03T06:00:00+09:00','end_at':'2026-11-03T12:00:00+09:00'}]}
+        old=self.generate();r=self.generate(event_policy='V3_ETB_FLOW_EVENTS_V2')
+        self.assertNotIn('2026-11-03T06:00:00+09:00',old['candidate_etbs']['SYN-A'])
+        self.assertIn('2026-11-03T06:00:00+09:00',r['candidate_etbs']['SYN-A'])
+        row=next(a for a in r['anchors']['SYN-A'] if a['etb_at']=='2026-11-03T06:00:00+09:00')
+        self.assertIn('FIXED_PROCESS_FLOW_BOUNDARY',row['sources'])
+        self.assertFalse(r['operational_approval'])
+    def test_flow_events_do_not_move_fix(self):
+        self.s['fixed_process_flows']={'segments':[{'start_at':'2026-11-03T06:00:00+09:00','end_at':'2026-11-03T12:00:00+09:00'}]}
+        self.s['calls'][0].update(fixed_etb_is_hard=True,fix_etb_at='2026-11-03T04:00:00+09:00')
+        r=self.generate(event_policy='V3_ETB_FLOW_EVENTS_V2')
+        self.assertEqual(r['candidate_etbs']['SYN-A'],['2026-11-03T04:00:00+09:00'])

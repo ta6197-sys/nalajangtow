@@ -83,3 +83,20 @@ PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/op
  results/v3_crude_plus_carryover/continuity_v1.json \
  --output results/v3_crude_plus_carryover/replan_v1.json
 ```
+
+## Multi-day synthetic rolling trial
+
+`run_synthetic_trial(snapshot, *, as_of_at, policy, days=7, time_limit_per_day=30, candidate_event_policy=...)` uses only prior projections. At each 24-hour boundary, it marks a previously simulated job complete only after berth clearance and switching, protects begun but unreleased jobs, carries exact tank inventory and in-progress transfer definitions, and leaves not-yet-started tentative calls free for replanning. If cargo is already complete while a protected berth phase continues, the tank coordinator omits that completed transfer; it does not count the cargo again. These are synthetic assumptions about execution, not source observations, operational confirmations or DB writes. Missing completed information is not inferred as a real-world fact.
+
+A seven-day request from 2026-11-03 00:00 KST stopped on day 3. Days 1 and 2 passed the physical-and-tank-only check; on 2026-11-05, DEM-0144 and DEM-0084 entered the 72-hour window, but CP-SAT reported `INFEASIBLE` within the generated candidate domain. The overall result is `STOPPED_UNRESOLVED`, not proof that the scenario is infeasible. DEM-0060 did not reach a tested window. The state at the failed step preserved DEM-0103 and DEM-0112 as simulated completed calls and DEM-0011, DEM-0022 and DEM-0047 as protected ongoing jobs.
+
+The optional candidate policy `V3_ETB_FLOW_EVENTS_V2` adds source six-hour process-flow change timestamps as ETB *candidates* only; no physical event is forced to that grid. FIX ETBs remain exact. A second seven-day request also stopped on day 3 at a finite-candidate berth infeasibility; earlier selections differed, so this is not a controlled performance comparison. In that day-3 candidate model, greedily removing other demand calls while keeping simulated protected/completed rows retained an infeasible reduced set containing DEM-0013, DEM-0084, DEM-0097 and DEM-0144. Separate single and pair subsets were feasible under the original candidate model. Subset checks change the generated option domain, so this diagnostic is neither a minimal conflict proof nor a continuous-time infeasibility proof.
+
+The trial intentionally stops at the first unresolved day and does not fabricate future inventory or schedule records. Full weather, contracts, confirmed work, real observations and `known_at` provenance remain pending. Results: `results/v3_crude_plus_rolling/rolling_v1.json` and `results/v3_crude_plus_rolling/rolling_flow_v2.json`.
+
+```bash
+PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/opt/homebrew/lib/python3.11/site-packages \
+ .venv/bin/python -m benchmarks.v3_crude_plus_rolling \
+ results/v3_crude_plus_search_cuts_evidence/d40227f4bd9026ffd33e47df/normalized_snapshot.json \
+ --output results/v3_crude_plus_rolling/rolling_flow_v2.json --days 7 --seconds-per-day 30 --flow-anchors
+```
