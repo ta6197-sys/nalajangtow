@@ -67,3 +67,19 @@ PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/op
  results/v3_crude_plus_search_cuts_evidence/d40227f4bd9026ffd33e47df/normalized_snapshot.json \
  --output results/v3_crude_plus_carryover/continuity_v1.json
 ```
+
+## Explicit next-day synthetic replanning state
+
+The finite berth scheduler, event candidate generator and integrated search accept `completed_rows` as an optional input. Each supplied row is independently phase-replayed, must already have completed both physical clearance and switching by the boundary, and cannot simultaneously be listed as protected. These rows are omitted from new decisions; the caller must supply them explicitly rather than deriving an observation from an old tentative plan. Existing calls without `completed_rows` keep the prior behavior. Existing `commitments` must likewise be supplied explicitly and remain unchanged; this does not authorize or persist confirmation.
+
+A synthetic follow-up used the 2026-11-04 00:00 KST projected inventories and in-progress DEM-0103 from the prior continuity trial. DEM-0103's complete original berth row and exact tank transfer definition were explicitly passed as protected test inputs. The subsequent 72-hour finite candidate search returned `PHYSICAL_AND_TANK_ONLY` for seven physical rows, with all 30 initial tank inventories matching the prior boundary and DEM-0103's BERTH-01, TANK-24, hard FIX ETB and full transfer definition unchanged. The selected tank assignment was found after 14 proposals and 17 exact inventory cuts. This is a synthetic projection-to-projection test, not an independently observed inventory, operator confirmation, production state transition, or full-scenario feasibility proof. Contract settlement, external weather, objective search, complete Freeze and full rolling coverage remain pending. The later modified crude calls are not part of this second window.
+
+Reproduce with a fresh output path:
+
+```bash
+PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/opt/homebrew/lib/python3.11/site-packages \
+ .venv/bin/python -m benchmarks.v3_crude_plus_replanning \
+ results/v3_crude_plus_search_cuts_evidence/d40227f4bd9026ffd33e47df/normalized_snapshot.json \
+ results/v3_crude_plus_carryover/continuity_v1.json \
+ --output results/v3_crude_plus_carryover/replan_v1.json
+```
