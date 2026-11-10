@@ -27,6 +27,9 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
         start,end=timestamp(start_at),timestamp(end_at)
         if same_tank_policy not in (None,'ALLOW','FORBID'): raise ValueError('Unknown same-tank concurrency policy')
         if end<=start: raise ValueError('Invalid projection horizon')
+        if snapshot['fixed_process_flows'].get('extension_provenance'):
+            from ..integrated_input.flow_extension import check_extension_available
+            check_extension_available(snapshot,as_of_at=start_at,projection_end_at=end_at)
         tanks={t['tank_id']:t for t in snapshot['tanks']}; calls={c['call_id']:c for c in snapshot['calls']}; berths={b['berth_id']:b for b in snapshot['berths']}
         if any(len(d)!=len(snapshot[k]) for d,k in ((tanks,'tanks'),(calls,'calls'),(berths,'berths'))): raise ValueError('Duplicate source identity')
         flow=snapshot['fixed_process_flows']; by_tank=defaultdict(list)

@@ -81,13 +81,17 @@ def _minute_aligned(start: datetime, finish: datetime, events: list) -> bool:
 
 
 def settle_intervals_seconds(contract: dict, clock_start: datetime | str,
-                             finish: datetime | str, intervals: list) -> dict:
+                             finish: datetime | str, intervals: list, *,
+                             allowed_seconds: int | None = None) -> dict:
     """Settle an exhaustive event timeline using exact seconds and Decimal credit."""
     validate_contract(contract)
     start, finish = second_time(clock_start), second_time(finish)
     events = sorted(((second_time(a), second_time(b), code) for a,b,code in intervals),
                     key=lambda item: item[0])
-    if _minute_aligned(start, finish, events):
+    if allowed_seconds is not None and (type(allowed_seconds) is not int or allowed_seconds<0):
+        raise ValueError('Allowed laytime must resolve to nonnegative integer seconds')
+    original_allowed=Decimal(str(contract['allowed_minutes']))*60
+    if _minute_aligned(start, finish, events) and (allowed_seconds is None or Decimal(allowed_seconds)==original_allowed):
         original = settle_intervals(contract, start, finish, events)
         return dict(original, settlement_policy_version=POLICY_VERSION,
             settlement_assumption_version=ASSUMPTION_VERSION,
@@ -98,7 +102,7 @@ def settle_intervals_seconds(contract: dict, clock_start: datetime | str,
             pre_excluded_seconds=str(Decimal(str(original['pre_excluded_minutes']))*60),
             post_excluded_seconds=str(Decimal(str(original['post_excluded_minutes']))*60),
             unused_laytime_seconds=str(Decimal(str(original['unused_laytime_minutes']))*60))
-    allowed = Decimal(str(contract['allowed_minutes'])) * 60
+    allowed = original_allowed if allowed_seconds is None else Decimal(allowed_seconds)
     remaining = allowed
     used = demurrage = pre_excluded = post_excluded = Decimal(0)
     onset = start if allowed == 0 else None
@@ -172,7 +176,7 @@ def settle_intervals_seconds(contract: dict, clock_start: datetime | str,
         settlement_policy_version=POLICY_VERSION,
         settlement_assumption_version=ASSUMPTION_VERSION,
         settlement_precision='SECOND', simulation_only=True,
-        clock_start_at=start.isoformat(), allowed_minutes=int(Decimal(str(contract['allowed_minutes']))),
+        clock_start_at=start.isoformat(), allowed_minutes=(int(allowed/60) if allowed % 60 == 0 else str(allowed/60)),
         laytime_used_minutes=float(used/60), demurrage_minutes=float(demurrage/60),
         pre_excluded_minutes=float(pre_excluded/60),
         post_excluded_minutes=float(post_excluded/60),

@@ -15,7 +15,7 @@ VERSION='V3_INTEGRATION_CHECKPOINT_V1'
 
 def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=None,
                        carried_transfers=None, tank_commitments=None,
-                       same_tank_policy=None, time_limit_seconds=30, inventory_cuts=False, protected_call_ids=()):
+                       same_tank_policy=None, time_limit_seconds=30, inventory_cuts=False, protected_call_ids=(), inventory_relaxation=False):
     """Validate a supplied berth candidate and propose tank allocation.
 
     Input rows must be the existing physical scheduler's full replay format.
@@ -67,7 +67,7 @@ def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=No
                 transfer=committed
             else:transfer['eligible_tank_ids']=options
             transfer_inputs.append(transfer)
-        tank=solve_v3_allocation(snapshot,transfer_inputs,start_at=begin.isoformat(),end_at=finish.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,commitments=tank_commitments,same_tank_policy=same_tank_policy,time_limit_seconds=time_limit_seconds,inventory_cuts=inventory_cuts)
+        tank=solve_v3_allocation(snapshot,transfer_inputs,start_at=begin.isoformat(),end_at=finish.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,commitments=tank_commitments,same_tank_policy=same_tank_policy,time_limit_seconds=time_limit_seconds,inventory_cuts=inventory_cuts,inventory_relaxation=inventory_relaxation)
         if tank['status']!='VALID':
             return {'model_version':VERSION,'status':'TANK_SUBPROBLEM_NOT_VALIDATED','physical_validation':physical,'tank_result':tank,'operational_approval':False}
         return {'model_version':VERSION,'status':'PHYSICAL_AND_TANK_ONLY','source_fingerprint':digest(canonical(snapshot).encode()),'policy_fingerprint':digest(canonical(policy).encode()),'physical_validation':physical,'tank_result':tank,'pending_checks':['CONTRACT_SETTLEMENT','EXTERNAL_WEATHER','OBJECTIVE_AND_CANDIDATE_SEARCH','FULL_COMMITMENT_AND_FREEZE_VALIDATION','COMPLETE_SCENARIO_AND_ROLLING_COVERAGE'],'operational_approval':False}
