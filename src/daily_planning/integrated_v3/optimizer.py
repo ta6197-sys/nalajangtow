@@ -61,7 +61,7 @@ def _price_schedule(snapshot, rows, records, *, as_of_at, pricing_policy='EXPLIC
 def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=(), completed_rows=(),
                  initial_inventory=None, carried_transfers=None, tank_commitments=None,
                  same_tank_policy=None, previous_schedule=(), candidate_etbs=None,
-                 candidate_event_policy='V3_ETB_EVENTS_V1', time_limit_seconds=30, inventory_cuts=False, pricing_policy='EXPLICIT_EVENTS_V1', phase_release_policy='ALL_OPTIONS_V1', inventory_relaxation=False, reuse_physical_model=False):
+                 candidate_event_policy='V3_ETB_EVENTS_V1', time_limit_seconds=30, inventory_cuts=False, pricing_policy='EXPLICIT_EVENTS_V1', phase_release_policy='ALL_OPTIONS_V1', inventory_relaxation=False, reuse_physical_model=False, berth_search_heuristic='NONE'):
     """Enumerate complete physical candidates and minimize independently replayed cost.
 
     The result is only as broad as supplied/generated finite ETBs. Incomplete
@@ -78,7 +78,7 @@ def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=
             if independent['status']!='VALID':incumbent=None;status='INDEPENDENT_VALIDATION_FAILED'
         return {'model_version':VERSION,'status':status,'elapsed_seconds':time.monotonic()-started,'iterations':iterations,
                 'incumbent':incumbent,'independent_validation':independent,'unresolved_candidates':unresolved,'domain_exhausted':domain_exhausted,
-                'scope':'Finite generated ETBs and selected phase release options only; no continuous-time optimality','pricing_policy':pricing_policy,'phase_release_policy':phase_release_policy,'inventory_relaxation':inventory_relaxation,'reuse_physical_model':reuse_physical_model,
+                'scope':'Finite generated ETBs and selected phase release options only; no continuous-time optimality','pricing_policy':pricing_policy,'phase_release_policy':phase_release_policy,'inventory_relaxation':inventory_relaxation,'reuse_physical_model':reuse_physical_model,'berth_search_heuristic':berth_search_heuristic,
                 'pending_checks':['ACTUAL_WEATHER_AND_EVENTS','CONFIRMATION_AND_FREEZE_AUTHORITY','FULL_ROLLING_COVERAGE'],
                 'operational_approval':False,**extra}
     try:
@@ -95,7 +95,7 @@ def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=
             remaining=deadline-time.monotonic()
             if remaining<=0:return False
             candidate=validate_candidate(snapshot,berth['schedule'],policy=policy,as_of_at=as_of_at,initial_inventory=initial_inventory,carried_transfers=carried_transfers,tank_commitments=tank_commitments,same_tank_policy=same_tank_policy,time_limit_seconds=remaining,inventory_cuts=inventory_cuts,protected_call_ids=[x['call_id'] for x in commitments],inventory_relaxation=inventory_relaxation)
-            record={'berth_status':berth['solver_status'],'physical_tank_status':candidate['status'],'tank_status':candidate.get('tank_result',{}).get('status'),'tank_issues':candidate.get('tank_result',{}).get('issues',[])[:5]}
+            record={'berth_status':berth['solver_status'],'berth_objective_scope':berth.get('solver_objective_scope'),'physical_tank_status':candidate['status'],'tank_status':candidate.get('tank_result',{}).get('status'),'tank_issues':candidate.get('tank_result',{}).get('issues',[])[:5]}
             if candidate['status']=='PHYSICAL_AND_TANK_ONLY':
                 pricing=_price_schedule(snapshot,berth['schedule'],settlement_records,as_of_at=as_of_at,pricing_policy=pricing_policy)
                 record['settlement_status']=pricing['status'];record['demurrage_cents']=pricing['total_demurrage_cents']
@@ -110,7 +110,7 @@ def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=
         if reuse_physical_model:
             remaining=deadline-time.monotonic()
             if remaining<=0:return finish('TIME_LIMIT_NO_INCUMBENT',candidate_generation=generated)
-            berth=solve_berth_schedule(snapshot,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,commitments=commitments,completed_rows=completed_rows,time_limit_seconds=remaining,conflict_filter='SAFE_ENVELOPE_V1',phase_release_policy=phase_release_policy,candidate_visitor=process)
+            berth=solve_berth_schedule(snapshot,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,commitments=commitments,completed_rows=completed_rows,time_limit_seconds=remaining,conflict_filter='SAFE_ENVELOPE_V1',phase_release_policy=phase_release_policy,candidate_visitor=process,search_heuristic=berth_search_heuristic)
             if berth['status']=='ENUMERATION_EXHAUSTED':domain_exhausted=True
             elif berth['status'] in ('TIME_LIMIT_NO_INCUMBENT','ENUMERATION_STOPPED'):
                 return finish('TIME_LIMIT',berth_result=berth,candidate_generation=generated)
@@ -118,7 +118,7 @@ def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=
             else:return finish('SEARCH_STOPPED',berth_result=berth,candidate_generation=generated)
         else:
             while time.monotonic()<deadline:
-                berth=solve_berth_schedule(snapshot,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,commitments=commitments,completed_rows=completed_rows,time_limit_seconds=deadline-time.monotonic(),forbidden_schedules=excluded,conflict_filter='SAFE_ENVELOPE_V1',phase_release_policy=phase_release_policy)
+                berth=solve_berth_schedule(snapshot,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,commitments=commitments,completed_rows=completed_rows,time_limit_seconds=deadline-time.monotonic(),forbidden_schedules=excluded,conflict_filter='SAFE_ENVELOPE_V1',phase_release_policy=phase_release_policy,search_heuristic=berth_search_heuristic)
                 if berth['status']=='INFEASIBLE':domain_exhausted=True;break
                 if berth['status']!='BERTH_SUBSYSTEM_FEASIBLE':
                     return finish('TIME_LIMIT' if berth['status']=='TIME_LIMIT_NO_INCUMBENT' else 'SEARCH_STOPPED',berth_result=berth,candidate_generation=generated)
