@@ -12,7 +12,7 @@ from .validator import validate_result,pair_conflicts,restriction_conflicts
 MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=()):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=()):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -39,11 +39,13 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             if g['rule_type']=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP' and policy['dock_4142_version']=='DISABLED':raise ValueError('4142 policy version must be selected')
         locked=list(commitments);locked_ids={r['call_id'] for r in locked}
         if len(locked_ids)!=len(locked):raise ValueError('Duplicate commitments')
+        from .completed import completed_call_ids
+        completed=completed_call_ids(snapshot,completed_rows,policy,as_of_at=as_of_at,locked_ids=locked_ids)
         check=validate_result(snapshot,locked,policy)
         if check['status']!='VALID':return failure('INVALID_INPUT','COMMITMENT_VALIDATION_FAILED',check['issues'])
         outside=[];options=[];groups=[];rejected=[]
         for cid,call in sorted(calls.items()):
-            if cid in locked_ids:continue
+            if cid in locked_ids or cid in completed:continue
             eligible_time=timestamp(call['fix_etb_at']) if call['fixed_etb_is_hard'] else timestamp(call['eta_at'])
             if eligible_time>=end:outside.append(cid);continue
             if call['fixed_etb_is_hard'] and eligible_time<begin:return failure('INFEASIBLE','FIX_PRECHECK_FAILED','Past FIX must have an explicit carried commitment',call_id=cid)
@@ -83,7 +85,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         options=[row for row in unique.values() if not any(pair_conflicts(row,r,snapshot,policy) for r in locked)]
         groups=[]
         for cid,call in sorted(calls.items()):
-            if cid in locked_ids or cid in outside:continue
+            if cid in locked_ids or cid in completed or cid in outside:continue
             indices=[i for i,row in enumerate(options) if row['call_id']==cid]
             if not indices:return failure('INFEASIBLE','FIX_PRECHECK_FAILED' if call['fixed_etb_is_hard'] else 'NO_FEASIBLE_GENERATED_OPTION','All generated options conflict with protected work',call_id=cid)
             groups.append(indices)
@@ -134,8 +136,9 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         return {'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
             'model_version':MODEL_VERSION,'policy_id':policy.get('policy_id',policy['schema_version']),'event_definition_issues':definition_issues,
             'input_fingerprint':digest(canonical(snapshot).encode()),
-            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
+            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
             'boundaries':{'as_of_at':begin.isoformat(),'optimization_end_at':end.isoformat(),'freeze_end_at':(begin+timedelta(hours=24)).isoformat()},
+            'completed_call_ids':sorted(completed),
             'outside_horizon_call_ids':outside,
             'future_fix_call_ids':[cid for cid in outside if calls[cid]['fixed_etb_is_hard']],
             'pending_validation':['TANK_INVENTORY_AND_TRANSFER_RATES','CONTRACT_SETTLEMENT','EXTERNAL_WEATHER_BEYOND_SOURCE_RESTRICTIONS'] + (['FUTURE_FIX_ASSIGNMENTS_BEYOND_DETAILED_HORIZON'] if any(calls[cid]['fixed_etb_is_hard'] for cid in outside) else []),

@@ -8,7 +8,7 @@ from ..physical_scheduling.policy import validate_policy
 VERSION='V3_ETB_EVENTS_V1'
 
 
-def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previous_schedule=()):
+def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previous_schedule=(), completed_rows=()):
     """Return source-labelled ETB anchors inside the 72-hour start horizon.
 
     Availability is POB availability; physical constraints are rechecked by the
@@ -30,9 +30,11 @@ def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previ
     from ..physical_scheduling.validator import validate_result
     check=validate_result(snapshot,locked,policy)
     if check['status']!='VALID':raise ValueError('Commitment validation failed: '+str(check['issues']))
+    from ..physical_scheduling.completed import completed_call_ids
+    completed=completed_call_ids(snapshot,completed_rows,policy,as_of_at=as_of_at,locked_ids=locked_ids)
     result={};audit={};outside=[]
     for cid,call in sorted(calls.items()):
-        if cid in locked_ids:continue
+        if cid in locked_ids or cid in completed:continue
         eligible=timestamp(call['fix_etb_at']) if call['fixed_etb_is_hard'] else timestamp(call['eta_at'])
         if eligible>=end:outside.append(cid);continue
         anchors={}
@@ -57,6 +59,6 @@ def generate_candidate_etbs(snapshot, *, as_of_at, policy, commitments=(), previ
                     add(max(begin,timestamp(call['eta_at']),timestamp(window['start_at']))+maneuver,'PILOTAGE_WINDOW:'+bid)
         result[cid]=[at.isoformat() for at in sorted(anchors)]
         audit[cid]=[{'etb_at':at.isoformat(),'sources':sorted(anchors[at])} for at in sorted(anchors)]
-    return {'model_version':VERSION,'candidate_etbs':result,'anchors':audit,'outside_horizon_call_ids':outside,
-            'input_fingerprint':digest(canonical({'snapshot':snapshot,'as_of_at':as_of_at,'policy':policy,'commitments':locked,'previous_schedule':previous_schedule}).encode()),
+    return {'model_version':VERSION,'candidate_etbs':result,'anchors':audit,'outside_horizon_call_ids':outside,'completed_call_ids':sorted(completed),
+            'input_fingerprint':digest(canonical({'snapshot':snapshot,'as_of_at':as_of_at,'policy':policy,'commitments':locked,'previous_schedule':previous_schedule,**({'completed_rows':list(completed_rows)} if completed_rows else {})}).encode()),
             'scope':'Finite evidence-backed anchors only; not exhaustive or automatically feasible', 'operational_approval':False}
