@@ -9,19 +9,23 @@ from ..integrated_input.validator import tokens
 
 
 def solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inventory=None,
-                        same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30):
+                        same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30, inventory_cuts=False):
     """Solve in an isolated HiGHS process to avoid OR-Tools native-library collisions."""
+    if type(inventory_cuts) is not bool:return {'status':'INVALID_INPUT','issues':[{'code':'INVALID_INVENTORY_CUTS_POLICY'}],'operational_approval':False}
     if isinstance(time_limit_seconds,bool) or not isinstance(time_limit_seconds,(int,float)) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:
         return {'status':'INVALID_INPUT','issues':[{'code':'INVALID_TIME_LIMIT'}],'operational_approval':False}
     if all(x.get('tank_id') for x in transfers):
         result=validate_v3_inventory(snapshot,transfers,start_at=start_at,end_at=end_at,initial_inventory=initial_inventory,same_tank_policy=same_tank_policy,carried_transfers=carried_transfers,commitments=commitments)
         result['solver_status']='NOT_NEEDED_FIXED_ASSIGNMENTS'
+        result['inventory_cut_policy']='EXACT_TANK_MEMBERSHIP_V1' if inventory_cuts else 'DISABLED'
         return result
     try:
-        payload={'snapshot':snapshot,'transfers':transfers,'start_at':start_at,'end_at':end_at,'initial_inventory':initial_inventory,'same_tank_policy':same_tank_policy,'carried_transfers':carried_transfers,'commitments':commitments,'time_limit_seconds':time_limit_seconds}
+        payload={'snapshot':snapshot,'transfers':transfers,'start_at':start_at,'end_at':end_at,'initial_inventory':initial_inventory,'same_tank_policy':same_tank_policy,'carried_transfers':carried_transfers,'commitments':commitments,'time_limit_seconds':time_limit_seconds,'inventory_cuts':inventory_cuts}
         process=subprocess.run([sys.executable,'-m','src.daily_planning.tank.v3_optimization'],input=json.dumps(payload),capture_output=True,text=True,timeout=float(time_limit_seconds),check=False)
         if process.returncode: return {'status':'SOLVER_UNAVAILABLE','issues':[{'code':'SOLVER_PROCESS_FAILED','reason':process.stderr[-2000:]}],'operational_approval':False}
-        return json.loads(process.stdout)
+        result=json.loads(process.stdout)
+        result['inventory_cut_policy']='EXACT_TANK_MEMBERSHIP_V1' if inventory_cuts else 'DISABLED'
+        return result
     except subprocess.TimeoutExpired:
         return {'status':'TIME_LIMIT_NO_INCUMBENT','issues':[{'code':'SOLVER_PROCESS_TIMEOUT'}],'operational_approval':False}
     except (ValueError,TypeError,OSError) as exc:
@@ -29,7 +33,7 @@ def solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_invent
 
 
 def _solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inventory=None,
-                         same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30):
+                         same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30, inventory_cuts=False):
     """Find single-tank assignments within provided eligible choices, without changing times.
 
     Each input transfer may provide tank_id, otherwise eligible_tank_ids. The
@@ -55,23 +59,45 @@ def _solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inven
             pairs.extend((i,k) for k in eligible)
         model=pyo.ConcreteModel();model.P=pyo.Set(dimen=2,initialize=pairs,ordered=True);model.y=pyo.Var(model.P,domain=pyo.Binary);model.constraints=pyo.ConstraintList()
         for i in range(len(transfers)):model.constraints.add(sum(model.y[j,k] for j,k in pairs if j==i)==1)
-        model.objective=pyo.Objective(expr=0);solver=pyo.SolverFactory('appsi_highs');started=time.monotonic();last=None;attempts=0
+        model.objective=pyo.Objective(expr=0);solver=pyo.SolverFactory('appsi_highs');started=time.monotonic();last=None;pending=None;attempts=0;pending_count=0;cut_count=0
         while time.monotonic()-started<time_limit_seconds:
             solver.options['time_limit']=max(0.000001,time_limit_seconds-(time.monotonic()-started))
             answer=solver.solve(model,load_solutions=False);termination=answer.solver.termination_condition
+            if termination==TerminationCondition.infeasible and pending is not None:
+                return {'model_version':'V3_TANK_ALLOCATION_V1','status':'POLICY_UNRESOLVED','solver_status':'CHOICES_EXHAUSTED_WITH_POLICY_DEPENDENT_ASSIGNMENTS','issues':pending['issues'],'attempts':attempts,'policy_dependent_assignments':pending_count,'inventory_cut_count':cut_count,'operational_approval':False}
             if termination==TerminationCondition.infeasible:
-                return {'model_version':'V3_TANK_ALLOCATION_V1','status':'INFEASIBLE','solver_status':'INFEASIBLE_WITHIN_PROVIDED_TANK_CHOICES','issues':(last or {}).get('issues',[]),'attempts':attempts,'operational_approval':False}
+                return {'model_version':'V3_TANK_ALLOCATION_V1','status':'INFEASIBLE','solver_status':'INFEASIBLE_WITHIN_PROVIDED_TANK_CHOICES','issues':(last or {}).get('issues',[]),'attempts':attempts,'inventory_cut_count':cut_count,'operational_approval':False}
             if termination not in (TerminationCondition.optimal,TerminationCondition.feasible):break
             model.solutions.load_from(answer)
             chosen=[(i,k) for i,k in pairs if pyo.value(model.y[i,k])>0.5];assigned=[dict(x) for x in transfers]
             for i,k in chosen:assigned[i]['tank_id']=k
             result=validate_v3_inventory(snapshot,assigned,start_at=start_at,end_at=end_at,initial_inventory=initial_inventory,same_tank_policy=same_tank_policy,carried_transfers=carried_transfers,commitments=commitments);attempts+=1
             if result['status']=='VALID':
-                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts);return result
-            if result['status']=='INVALID_INPUT' or any(x['code']=='PENDING_SAME_TANK_CONCURRENCY' for x in result['issues']):
-                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts);return result
-            last=result;model.constraints.add(sum(model.y[i,k] for i,k in chosen)<=len(chosen)-1)
-        return {'model_version':'V3_TANK_ALLOCATION_V1','status':'TIME_LIMIT_NO_INCUMBENT','issues':(last or {}).get('issues',[]),'attempts':attempts,'operational_approval':False}
+                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts,inventory_cut_count=cut_count);return result
+            if result['status']=='INVALID_INPUT':
+                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts,inventory_cut_count=cut_count);return result
+            codes={issue['code'] for issue in result['issues']}
+            if not codes or codes-{'PENDING_SAME_TANK_CONCURRENCY','INVENTORY_OUT_OF_BOUNDS','TANK_CONCURRENCY_CONFLICT'}:
+                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts,inventory_cut_count=cut_count);return result
+            # A candidate with actual inventory violations is disproved regardless
+            # of policy. A candidate whose only issue is concurrency uncertainty
+            # is temporarily skipped, never counted as physically infeasible.
+            if codes and codes<={'PENDING_SAME_TANK_CONCURRENCY'}:
+                pending=result;pending_count+=1
+            last=result
+            violated={issue.get('tank_id') for issue in result['issues'] if issue['code']=='INVENTORY_OUT_OF_BOUNDS' and issue.get('tank_id') in tanks}
+            if inventory_cuts and violated:
+                selected=set(chosen)
+                for tank_id in sorted(violated):
+                    members=[(i,k) for i,k in pairs if k==tank_id]
+                    # Same assignment membership implies the same exact flow
+                    # trajectory in this tank, independently of other tanks.
+                    if not members:model.constraints.add(pyo.Constraint.Infeasible)
+                    else:model.constraints.add(sum(model.y[i,k] if (i,k) in selected else 1-model.y[i,k] for i,k in members)<=len(members)-1)
+                    cut_count+=1
+            else:
+                model.constraints.add(sum(model.y[i,k] for i,k in chosen)<=len(chosen)-1)
+        return {'model_version':'V3_TANK_ALLOCATION_V1','status':'TIME_LIMIT_NO_INCUMBENT','issues':(pending or last or {}).get('issues',[]),'attempts':attempts,'policy_dependent_assignments':pending_count,'inventory_cut_count':cut_count,'operational_approval':False}
     except ImportError as exc:return {'model_version':'V3_TANK_ALLOCATION_V1','status':'SOLVER_UNAVAILABLE','issues':[{'code':'SOLVER_UNAVAILABLE','reason':str(exc)}],'operational_approval':False}
     except (ValueError,KeyError,TypeError,RuntimeError) as exc:return {'model_version':'V3_TANK_ALLOCATION_V1','status':'INVALID_INPUT','issues':[{'code':'INVALID_INPUT','reason':str(exc)}],'operational_approval':False}
 
