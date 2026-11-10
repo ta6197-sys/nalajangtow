@@ -97,7 +97,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 if a['call_id']!=b['call_id'] and pair_conflicts(a,b,snapshot,policy):m.AddBoolOr([x[i].Not(),x[j].Not()]);conflicts+=1
         tug_intervals=[];demands=[]
         def offset(value):return int((timestamp(value)-begin).total_seconds())
-        for i,row in enumerate(options+locked):
+        for i,row in enumerate(options+locked if policy.get('tug_capacity') is not None else []):
             for phase,(a,b) in enumerate([(row['berthing_start_at'],row['etb_at']),(row['unberthing_start_at'],row['etu_at'])]):
                 a,b=offset(a),offset(b)
                 demand=row['tug_units']['berthing' if phase==0 else 'unberthing']

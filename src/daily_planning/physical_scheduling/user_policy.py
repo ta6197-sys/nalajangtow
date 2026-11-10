@@ -54,3 +54,19 @@ def build_user_policy(snapshot,daylight_path,*,start_at,end_at,night_permissions
         policy['berths'][bid]=config
     issues.extend(event_definition_issues(snapshot,policy))
     return {'status':'POLICY_PENDING' if issues else 'POLICY_INPUTS_VALID','policy':policy,'issues':issues,'operational_approval':False}
+
+
+def build_unbounded_synthetic_policy(snapshot, *, start_at, end_at):
+    """V2 synthetic defaults; absent auxiliary capacities/windows stay unspecified."""
+    from .policy import VERSION_V2
+    from ..integrated_input.validator import tokens
+    start,end=timestamp(start_at),timestamp(end_at)
+    if end<=start:raise ValueError('Invalid policy coverage')
+    dock=[]
+    for group in snapshot['workbook_tables']['groups']['rows']:
+        if group['rule_type']=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP':dock=tokens(group['berth_ids'])
+    berths={}
+    for b in snapshot['berths']:
+        if b.get('active')=='Y':
+            berths[b['berth_id']]={'berthing_seconds':3600,'hose_connection_seconds':7200,'unberthing_seconds':3600,'pilot_boarding_to_berthing_seconds':0,'pilot_boarding_to_unberthing_seconds':0,'work_windows':[{'start_at':start.isoformat(),'end_at':end.isoformat()}]}
+    return {'schema_version':VERSION_V2,'policy_id':'SYNTHETIC_UNBOUNDED_RESOURCES_V2','data_origin':'SYNTHETIC_FIXTURE','operational_approval':False,'source_reference':'User-approved synthetic defaults; unbounded unspecified auxiliary resources','tug_capacity':None,'dock_4142_version':'SYNTHETIC_HOSE_END_V1' if dock else 'DISABLED','dock_4142_berths':dock,'dock_4142_berthing_resource':'INDEPENDENT','dock_4142_shared_resources':{'4142_SHARED_HANDLING':['HOSE_CONNECT','CARGO','HOSE_DISCONNECT','SWITCHING']},'legacy_etu_after_work_seconds':7200,'event_definition_resolution':'EXPLICIT_PHASED_SYNTHETIC_RESOLUTION','berths':berths}

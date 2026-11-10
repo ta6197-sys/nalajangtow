@@ -14,7 +14,7 @@ def covered(a,b,windows):
     return any(timestamp(w['start_at'])<=a and b<=timestamp(w['end_at']) and (not w.get('latest_start_at') or a<=timestamp(w['latest_start_at'])) for w in windows)
 
 
-def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None):
+def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None,unberthing_start_at=None):
     if compatibility(call,berth):raise ValueError('Incompatible call/berth')
     config=policy['berths'][berth['berth_id']]
     by_call_tugs=config.get('tug_units_by_call')
@@ -27,9 +27,9 @@ def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None
     if pob<eta:raise ValueError('POB before ETA')
     call_windows=config.get('pilotage_windows_by_call',{}).get(call['call_id'])
     if config.get('pilotage_windows_by_call') is not None and call_windows is None:raise ValueError('Call-specific pilotage windows missing')
-    berthing_windows=call_windows['berthing'] if call_windows else config['pilotage_windows']
-    unberthing_windows=call_windows['unberthing'] if call_windows else config['pilotage_windows']
-    if not covered(pob,etb,berthing_windows):raise ValueError('Berthing outside pilotage window')
+    berthing_windows=call_windows['berthing'] if call_windows else config.get('pilotage_windows')
+    unberthing_windows=call_windows['unberthing'] if call_windows else config.get('pilotage_windows')
+    if berthing_windows is not None and not covered(pob,etb,berthing_windows):raise ValueError('Berthing outside pilotage window')
     hose_start=etb if hose_connection_start_at is None else timestamp(hose_connection_start_at)
     if hose_start<etb:raise ValueError('Hose connection cannot begin before ETB')
     ready=hose_start+timedelta(seconds=config['hose_connection_seconds'])
@@ -57,9 +57,11 @@ def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None
     if left:raise ValueError('Insufficient permitted cargo-work window coverage')
     work_start,work_end=work[0][0],work[-1][1]
     hose_end=work_end+timedelta(seconds=seconds_from_minutes(berth['hose_disconnect_min']))
-    etu=hose_end+timedelta(seconds=config['unberthing_seconds'])
-    departure_pob=hose_end-timedelta(seconds=config.get('pilot_boarding_to_unberthing_seconds',0))
-    if not covered(departure_pob,etu,unberthing_windows):raise ValueError('Unberthing outside pilotage window')
+    unberthing_start=hose_end if unberthing_start_at is None else timestamp(unberthing_start_at)
+    if unberthing_start<hose_end:raise ValueError('Unberthing before hose disconnection completion')
+    etu=unberthing_start+timedelta(seconds=config['unberthing_seconds'])
+    departure_pob=unberthing_start-timedelta(seconds=config.get('pilot_boarding_to_unberthing_seconds',0))
+    if unberthing_windows is not None and not covered(departure_pob,etu,unberthing_windows):raise ValueError('Unberthing outside pilotage window')
     switch_start=hose_end
     if berth['berth_id'] in policy.get('dock_4142_berths',[]) and policy['dock_4142_version']=='SYNTHETIC_WORK_END_V1':switch_start=work_end
     switch_end=switch_start+timedelta(seconds=seconds_from_minutes(berth['switching_min']))
@@ -67,7 +69,7 @@ def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None
         'pob_at':pob.isoformat(),'pilot_boarding_at':pob.isoformat(),'berthing_start_at':berthing_start.isoformat(),
         'etb_at':etb.isoformat(),'hose_connection_start_at':hose_start.isoformat(),
         'hose_connection_end_at':(hose_start+timedelta(seconds=config['hose_connection_seconds'])).isoformat(),
-        'departure_pob_at':departure_pob.isoformat(),'unberthing_start_at':hose_end.isoformat(),
+        'departure_pob_at':departure_pob.isoformat(),'unberthing_start_at':unberthing_start.isoformat(),
         'work_start_at':work_start.isoformat(),'work_end_at':work_end.isoformat(),'hose_disconnect_end_at':hose_end.isoformat(),
         'etu_at':etu.isoformat(),'physical_clearance_at':etu.isoformat(),'switching_start_at':switch_start.isoformat(),'switching_end_at':switch_end.isoformat(),
         'work_intervals':[[a.isoformat(),b.isoformat()] for a,b in work],
