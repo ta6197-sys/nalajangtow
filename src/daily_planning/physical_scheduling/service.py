@@ -141,7 +141,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             'pending_validation':['TANK_INVENTORY_AND_TRANSFER_RATES','CONTRACT_SETTLEMENT','EXTERNAL_WEATHER_BEYOND_SOURCE_RESTRICTIONS'] + (['FUTURE_FIX_ASSIGNMENTS_BEYOND_DETAILED_HORIZON'] if any(calls[cid]['fixed_etb_is_hard'] for cid in outside) else []),
             'option_count':len(options),'pair_conflict_count':conflicts,
             'independent_validation':independent,'seconds':time.perf_counter()-started,
-            'scope':'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization',
+            'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
     except ImportError as exc:return failure('SOLVER_UNAVAILABLE','SOLVER_UNAVAILABLE',exc)
     except (ValueError,KeyError,TypeError,OverflowError) as exc:return failure('INVALID_INPUT','MISSING_OR_INVALID_PHYSICAL_POLICY',exc)
