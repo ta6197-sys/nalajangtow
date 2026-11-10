@@ -13,7 +13,7 @@ def _secs(a, b):
 def _q(x):
     return str(x)
 
-def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inventory=None, same_tank_policy=None):
+def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inventory=None, same_tank_policy=None, carried_transfers=None):
     """Project fixed transfers; quantities and signed process rates are exact bbl/hour.
 
     A transfer has call_id, berth_id, tank_id, start_at and end_at. Rate is the
@@ -37,7 +37,9 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
         initial_at=timestamp(flow['inventory_as_of_at'])
         if initial_inventory is None and start!=initial_at: raise ValueError('Carry-in inventory required when start differs from inventory_as_of_at')
         if initial_inventory is not None and set(initial_inventory)!=set(tanks): raise ValueError('Carry-in inventory required for every tank')
-        prepared=[]; seen=set()
+        prepared=[]; seen=set(); schedules=[]
+        carried_by_id={row['call_id']:row for row in (carried_transfers or [])}
+        if len(carried_by_id)!=len(carried_transfers or []): raise ValueError('Duplicate carried transfer')
         for x in transfers:
             cid=x['call_id']; tid=x['tank_id']; bid=x['berth_id']
             if cid in seen: raise ValueError('Duplicate vessel call '+cid)
@@ -47,17 +49,35 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
             if c['direction'] not in ('LOAD','DISCHARGE') or c['direction'] not in tokens(b['allowed_operations']): raise ValueError('Unsupported cargo direction '+cid)
             if c.get('fixed_etb_is_hard') and (not x.get('etb_at') or timestamp(x['etb_at'])!=timestamp(c['fix_etb_at'])): raise ValueError('FIX ETB missing or changed '+cid)
             a,z=timestamp(x['start_at']),timestamp(x['end_at'])
-            if a<start or z>end or z<=a: raise ValueError('Transfer outside projection or invalid '+cid)
+            if z<=a or z<=start or a>=end: raise ValueError('Transfer does not intersect projection or invalid '+cid)
             ratio=number(c['physical']['bbl_per_mt']); vol=number(c['cargo_volume_bbl']); mass=number(c['cargo_quantity_mt'])
             if ratio<=0 or vol<=0 or mass*ratio!=vol: raise ValueError('Invalid source mass/volume relationship '+cid)
             rates=[number(v) for v in (c.get('transfer_rate_mt_h'),b.get('max_transfer_rate_mt_h')) if v is not None and v!='']
             if not rates or any(v<=0 for v in rates): raise ValueError('Missing or invalid vessel/berth rate '+cid)
-            rate=min(rates)*ratio
-            if rate*Fraction(_secs(a,z),3600)!=vol: raise ValueError('Cargo quantity does not exactly match fixed rate and interval '+cid)
-            prepared.append((x,a,z,rate,vol,c['direction']))
+            limit=min(rates)*ratio
+            pieces=x.get('segments')
+            if pieces is None: pieces=[{'start_at':x['start_at'],'end_at':x['end_at'],'rate_bbl_per_hour':str(limit)}]
+            if not pieces: raise ValueError('Empty transfer segments '+cid)
+            parsed=[]; last=a; total=Fraction(0); completed=Fraction(0)
+            for piece in pieces:
+                p,q=timestamp(piece['start_at']),timestamp(piece['end_at']); rate=number(piece['rate_bbl_per_hour'])
+                if p<last or p<a or q>z or q<=p or rate<=0 or rate>limit: raise ValueError('Invalid or excessive transfer segment '+cid)
+                last=q; amount=rate*Fraction(_secs(p,q),3600); total+=amount
+                if p<start: completed+=rate*Fraction(_secs(p,min(q,start)),3600)
+                parsed.append((p,q,rate))
+            if parsed[0][0]!=a or parsed[-1][1]!=z or total!=vol: raise ValueError('Cargo quantity does not exactly match transfer segments '+cid)
+            if a<start:
+                carry=carried_by_id.get(cid)
+                if not carry or carry.get('berth_id')!=bid or carry.get('tank_id')!=tid or timestamp(carry.get('at'))!=start or number(carry.get('remaining_bbl'))!=vol-completed or carry.get('transfer_fingerprint')!=digest(canonical(x).encode()):
+                    raise ValueError('Missing or inconsistent carried transfer '+cid)
+            elif cid in carried_by_id: raise ValueError('Unexpected carried transfer '+cid)
+            schedules.append((x,a,z,limit,vol,c['direction'],parsed))
+            for p,q,rate in parsed:
+                if q>start and p<end: prepared.append((x,max(p,start),min(q,end),rate,vol,c['direction']))
+        if set(carried_by_id)-seen: raise ValueError('Carried transfer absent from input')
         for i,(x,a,b,*_) in enumerate(prepared):
             for y,c,d,*_ in prepared[i+1:]:
-                if x['tank_id']==y['tank_id'] and max(a,c)<min(b,d):
+                if x['call_id']!=y['call_id'] and x['tank_id']==y['tank_id'] and max(a,c)<min(b,d):
                     if same_tank_policy not in ('ALLOW','FORBID'): issue('PENDING_SAME_TANK_CONCURRENCY','Same-tank concurrency policy is unspecified',tank_id=x['tank_id'],call_ids=[x['call_id'],y['call_id']])
                     elif same_tank_policy=='FORBID': issue('TANK_CONCURRENCY_CONFLICT','Concurrent transfers forbidden by policy',tank_id=x['tank_id'],call_ids=[x['call_id'],y['call_id']])
         series={}; totals={}; extrema={}; carried={}
@@ -72,6 +92,9 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
             current=number(initial_inventory[tid] if initial_inventory is not None else t['initial_inventory_bbl']); lo=number(t.get('min_inventory_bbl','0')); hi=number(t['capacity_bbl'])
             if lo<0 or hi<lo: raise ValueError('Invalid tank bounds '+tid)
             events={start,end}
+            report_at=start+timedelta(minutes=30)
+            while report_at<end:
+                events.add(report_at); report_at+=timedelta(minutes=30)
             if start<boundary<end: events.add(boundary)
             for a,b,_ in relevant: events.update((max(a,start),min(b,end)))
             for x,a,b,*_ in prepared:
@@ -88,6 +111,12 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
                 if not lo<=current<=hi: issue('INVENTORY_OUT_OF_BOUNDS','Tank inventory exceeds operating bounds',tank_id=tid,at=b.isoformat(),inventory_bbl=_q(current))
                 if b==boundary: carried[tid]=_q(current)
             series[tid]=points;totals[tid]=_q(external);extrema[tid]={'minimum_bbl':_q(minimum),'maximum_bbl':_q(maximum)}
-        return {'model_version':VERSION,'status':'VALID' if not issues else 'INVALID','issues':issues,'source_fingerprint':digest(canonical(snapshot).encode()),'policy_fingerprint':digest(canonical({'same_tank_policy':same_tank_policy}).encode()),'assignments':[dict(call_id=x['call_id'],berth_id=x['berth_id'],tank_id=x['tank_id'],start_at=a.isoformat(),end_at=b.isoformat(),rate_bbl_per_hour=_q(r),quantity_bbl=_q(v)) for x,a,b,r,v,d in prepared], 'inventories':series,'inventory_extrema':extrema,'external_net_flow_totals_bbl':totals,'carry_at':boundary.isoformat() if boundary<=end else None,'carried_inventory_bbl':carried,'pending_checks':['BERTH_PHASES','FIX_AND_COMMITMENT_CONSISTENCY','WEATHER','CONTRACT_SETTLEMENT'], 'operational_approval':False}
+        carry_jobs=[]
+        if boundary<=end:
+            for x,a,z,limit,vol,direction,parts in schedules:
+                if a<boundary<z:
+                    completed=sum((rate*Fraction(_secs(p,min(q,boundary)),3600) for p,q,rate in parts if p<boundary),Fraction(0))
+                    carry_jobs.append({'at':boundary.isoformat(),'call_id':x['call_id'],'berth_id':x['berth_id'],'tank_id':x['tank_id'],'remaining_bbl':_q(vol-completed),'transfer_fingerprint':digest(canonical(x).encode())})
+        return {'model_version':VERSION,'status':'VALID' if not issues else 'INVALID','issues':issues,'source_fingerprint':digest(canonical(snapshot).encode()),'policy_fingerprint':digest(canonical({'same_tank_policy':same_tank_policy}).encode()),'assignments':[dict(call_id=x['call_id'],berth_id=x['berth_id'],tank_id=x['tank_id'],start_at=a.isoformat(),end_at=b.isoformat(),rate_bbl_per_hour=_q(r),quantity_bbl=_q(v),segments=[{'start_at':p.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':_q(rate)} for p,q,rate in parts]) for x,a,b,r,v,d,parts in schedules], 'inventories':series,'inventory_extrema':extrema,'external_net_flow_totals_bbl':totals,'carry_at':boundary.isoformat() if boundary<=end else None,'carried_inventory_bbl':carried,'carried_transfers':carry_jobs,'pending_checks':['BERTH_PHASES','FIX_AND_COMMITMENT_CONSISTENCY','WEATHER','CONTRACT_SETTLEMENT'], 'operational_approval':False}
     except (ValueError,KeyError,TypeError,ZeroDivisionError,StopIteration) as exc:
         return {'model_version':VERSION,'status':'INVALID_INPUT','issues':[{'code':'INVALID_INPUT','reason':str(exc)}],'operational_approval':False}
