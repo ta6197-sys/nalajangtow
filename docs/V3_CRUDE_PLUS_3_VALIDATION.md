@@ -52,3 +52,18 @@ At the same nominal 30-second budget, one trial without cuts timed out without a
 The machine-readable trial includes the candidate berth rows, tank assignments, inventory extrema and carried state:
 `results/v3_crude_plus_search_cuts_evidence/d40227f4bd9026ffd33e47df/scenario_validation_report.json`.
 Reproduce with a new output directory using `--time-limit 30 --inventory-cuts` on `benchmarks.v3_crude_plus_validation`; runtime and time-limited outcomes may differ by machine.
+
+## 24-hour projection carryover reconciliation
+
+`reconcile_projection(snapshot, prior, *, same_tank_policy=None)` replays the same validated tank plan after its 24-hour boundary and compares each exact inventory event point. It verifies the snapshot and policy fingerprints, original full transfer definitions, tank assignment, carried remaining cargo, and inventories. Tank results now retain `transfer_definitions` and projection boundaries for a reproducible continuation; old results without those fields fail explicitly. This is read-only reconciliation of projections, not an observation, fresh optimization, schedule confirmation or transactional execution.
+
+In a synthetic-policy V3_CRUDE_PLUS_3 trial from 2026-11-03 00:00 KST, the first 24-hour boundary was 2026-11-04 00:00 KST. DEM-0103 remained in progress on BERTH-01 / TANK-24 with exactly `11367/2` = 5,683.5 bbl remaining. Replaying the rest of the same six-vessel plan through 2026-11-06 15:33:36 produced 3,885 event/report points across 30 tanks and **zero inventory differences**. The later three modified crude vessels were outside this tested initial plan. This does not validate replanning, new observations, operational commitment persistence, weather, settlement, or the entire scenario.
+
+Reproduce with a new output filename (the script refuses to overwrite an existing result):
+
+```bash
+PYTHONPATH=/private/tmp/docktimize-phase4b-venv/lib/python3.11/site-packages:/opt/homebrew/lib/python3.11/site-packages \
+ .venv/bin/python -m benchmarks.v3_crude_plus_carryover \
+ results/v3_crude_plus_search_cuts_evidence/d40227f4bd9026ffd33e47df/normalized_snapshot.json \
+ --output results/v3_crude_plus_carryover/continuity_v1.json
+```
