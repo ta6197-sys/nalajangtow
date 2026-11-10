@@ -5,7 +5,7 @@ import json
 import subprocess
 import sys
 from .v3_inventory import validate_v3_inventory
-from ..integrated_input.validator import tokens
+from ..integrated_input.validator import tokens,timestamp
 
 
 def solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inventory=None,
@@ -62,6 +62,16 @@ def _solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inven
             pairs.extend((i,k) for k in eligible)
         model=pyo.ConcreteModel();model.P=pyo.Set(dimen=2,initialize=pairs,ordered=True);model.y=pyo.Var(model.P,domain=pyo.Binary);model.constraints=pyo.ConstraintList()
         for i in range(len(transfers)):model.constraints.add(sum(model.y[j,k] for j,k in pairs if j==i)==1)
+        if same_tank_policy=='FORBID':
+            def active_intervals(row):
+                parts=row.get('segments') or [row]
+                return [(timestamp(part['start_at']),timestamp(part['end_at'])) for part in parts]
+            windows=[active_intervals(row) for row in transfers]
+            for i in range(len(transfers)):
+                for j in range(i+1,len(transfers)):
+                    if not any(max(a,c)<min(b,d) for a,b in windows[i] for c,d in windows[j]):continue
+                    common={k for h,k in pairs if h==i}&{k for h,k in pairs if h==j}
+                    for k in sorted(common):model.constraints.add(model.y[i,k]+model.y[j,k]<=1)
         model.objective=pyo.Objective(expr=0)
         heuristic_active=False;heuristic_constraints=0
         if inventory_relaxation:

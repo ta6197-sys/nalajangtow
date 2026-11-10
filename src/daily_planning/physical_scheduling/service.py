@@ -12,7 +12,7 @@ from .validator import validate_result,pair_conflicts,restriction_conflicts
 MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE'):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -20,6 +20,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
     try:
         begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
         if isinstance(time_limit_seconds,bool) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:raise ValueError('Invalid solver budget')
+        if search_heuristic not in ('NONE','CRUDE_INBOUND_FIRST_V1'):raise ValueError('Unknown search heuristic')
         if conflict_filter not in ('NONE','SAFE_ENVELOPE_V1'):raise ValueError('Unknown conflict filter')
         if phase_release_policy not in ('ALL_OPTIONS_V1','LOCKED_ONLY_V1'):raise ValueError('Unknown phase release policy')
         deadline=started+float(time_limit_seconds)
@@ -142,7 +143,18 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 interval=m.NewOptionalIntervalVar(a,b-a,b,x[i],f'tug_{i}_{phase}') if i<len(options) else m.NewIntervalVar(a,b-a,b,f'locked_tug_{i}_{phase}')
                 tug_intervals.append(interval);demands.append(demand)
         if tug_intervals:m.AddCumulative(tug_intervals,demands,policy['tug_capacity'])
-        m.Minimize(0)
+        if search_heuristic=='CRUDE_INBOUND_FIRST_V1':
+            weighted=[]
+            for i,row in enumerate(options):
+                call=calls[row['call_id']]
+                if call.get('cargo_group')!='CRUDE':continue
+                offset=int((timestamp(row['etb_at'])-begin).total_seconds())
+                if call.get('direction')=='DISCHARGE':weight=offset
+                elif call.get('direction')=='LOAD':weight=72*3600-offset
+                else:continue
+                weighted.append(weight*x[i])
+            m.Minimize(sum(weighted))
+        else:m.Minimize(0)
         solver=cp_model.CpSolver();solver.parameters.num_search_workers=1;solver.parameters.random_seed=42
         emitted=0
         while True:
@@ -163,13 +175,13 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             payload={'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
             'model_version':MODEL_VERSION,'policy_id':policy.get('policy_id',policy['schema_version']),'event_definition_issues':definition_issues,
             'input_fingerprint':digest(canonical(snapshot).encode()),
-            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
+            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {}),**({'search_heuristic':search_heuristic} if search_heuristic!='NONE' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
             'boundaries':{'as_of_at':begin.isoformat(),'optimization_end_at':end.isoformat(),'freeze_end_at':(begin+timedelta(hours=24)).isoformat()},
             'completed_call_ids':sorted(completed),
             'outside_horizon_call_ids':outside,
             'future_fix_call_ids':[cid for cid in outside if calls[cid]['fixed_etb_is_hard']],
             'pending_validation':['TANK_INVENTORY_AND_TRANSFER_RATES','CONTRACT_SETTLEMENT','EXTERNAL_WEATHER_BEYOND_SOURCE_RESTRICTIONS'] + (['FUTURE_FIX_ASSIGNMENTS_BEYOND_DETAILED_HORIZON'] if any(calls[cid]['fixed_etb_is_hard'] for cid in outside) else []),
-            'option_count':len(options),'pair_conflict_count':conflicts,'pair_checks':pair_checks,'conflict_filter':conflict_filter,'phase_release_policy':phase_release_policy,
+            'option_count':len(options),'pair_conflict_count':conflicts,'pair_checks':pair_checks,'conflict_filter':conflict_filter,'phase_release_policy':phase_release_policy,'search_heuristic':search_heuristic,'solver_objective_scope':('HEURISTIC_SEARCH_ORDER_NOT_DEMURRAGE' if search_heuristic!='NONE' else 'FEASIBILITY_ONLY'),
             'independent_validation':independent,'seconds':time.perf_counter()-started,
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}

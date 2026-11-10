@@ -50,3 +50,7 @@ class TankPolicySearchTest(unittest.TestCase):
         second=dict(first,call_id='D',berth_id='B2',eligible_tank_ids=['T','U'])
         r=solve_v3_allocation(s,[first,second],start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00',same_tank_policy='ALLOW',time_limit_seconds=15,inventory_cuts=True)
         self.assertEqual(r['status'],'VALID',r);self.assertEqual([v['tank_id'] for v in r['assignments']],['T','T'])
+    def test_forbid_permits_nonoverlap_and_external_flow(self):
+        s,x=self.fixture(False);x[1]['start_at']='2026-11-03T07:30:01+09:00';x[1]['end_at']='2026-11-03T08:30:01+09:00'
+        r=solve_v3_allocation(s,x,start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00',same_tank_policy='FORBID',inventory_relaxation=True,time_limit_seconds=15)
+        self.assertEqual(r['status'],'VALID',r);self.assertEqual([v['tank_id'] for v in r['assignments']],['T','T']);self.assertEqual(r['external_net_flow_totals_bbl']['T'],'-60')
