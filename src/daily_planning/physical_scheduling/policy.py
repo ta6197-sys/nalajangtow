@@ -49,6 +49,7 @@ def validate_policy(policy,berth_ids):
             if any(a[1]>b[0] for a,b in zip(ordered,ordered[1:])):raise ValueError('Overlapping policy windows')
     if not (policy['schema_version']==VERSION_V2 and policy.get('tug_capacity') is None):
         if type(policy.get('tug_capacity')) is not int or policy['tug_capacity']<0:raise ValueError('Explicit tug capacity required')
+    if policy.get('cargo_duration_policy','BERTH_RATE_V1') not in ('BERTH_RATE_V1','VESSEL_BERTH_RATE_V1'):raise ValueError('Invalid cargo duration policy')
     if policy.get('dock_4142_version') not in ('DISABLED','SYNTHETIC_WORK_END_V1','SYNTHETIC_HOSE_END_V1'):
         raise ValueError('Explicit 4142 switching interpretation required')
     if policy['dock_4142_version']!='DISABLED' and (not isinstance(policy.get('dock_4142_berths'),list) or len(set(policy['dock_4142_berths']))!=2 or not set(policy['dock_4142_berths'])<=set(berth_ids)):

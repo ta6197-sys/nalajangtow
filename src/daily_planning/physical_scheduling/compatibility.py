@@ -25,3 +25,13 @@ def compatibility(call,berth):
 def berth_duration_seconds(call,berth):
     duration=number(call['cargo_quantity_mt'])/number(berth['max_transfer_rate_mt_h'])*3600
     return -(-duration.numerator//duration.denominator)
+
+
+def vessel_berth_duration_seconds(call,berth):
+    """Exact MT and source rates, rounded up only to integer-second end time."""
+    rates=[number(value) for value in (call.get('transfer_rate_mt_h'),berth.get('max_transfer_rate_mt_h')) if value is not None and value!='']
+    if not rates or any(rate<=0 for rate in rates):raise ValueError('Missing or invalid vessel/berth handling rate')
+    quantity=number(call['cargo_quantity_mt'])
+    if quantity<=0:raise ValueError('Positive cargo mass required')
+    duration=quantity*3600/min(rates)
+    return -(-duration.numerator//duration.denominator)

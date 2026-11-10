@@ -1,7 +1,7 @@
 """Second-precision phase replay for one explicit ETB/berth proposal."""
 from datetime import timedelta
 from ..integrated_input.validator import timestamp,number
-from .compatibility import compatibility,berth_duration_seconds
+from .compatibility import compatibility,berth_duration_seconds,vessel_berth_duration_seconds
 
 
 def seconds_from_minutes(value):
@@ -33,7 +33,9 @@ def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None
     hose_start=etb if hose_connection_start_at is None else timestamp(hose_connection_start_at)
     if hose_start<etb:raise ValueError('Hose connection cannot begin before ETB')
     ready=hose_start+timedelta(seconds=config['hose_connection_seconds'])
-    left=berth_duration_seconds(call,berth);work=[]
+    rate_policy=policy.get('cargo_duration_policy','BERTH_RATE_V1')
+    duration=(vessel_berth_duration_seconds(call,berth) if rate_policy=='VESSEL_BERTH_RATE_V1' else berth_duration_seconds(call,berth))
+    left=duration;work=[]
     windows=[(timestamp(w['start_at']),timestamp(w['end_at'])) for w in config['work_windows']]
     for block in restrictions:
         if block['berth_id']!=berth['berth_id'] or block.get('cargo_group') not in (None,'',call['cargo_group']):continue
@@ -73,5 +75,5 @@ def replay(call,berth,etb,policy,*,restrictions=(),hose_connection_start_at=None
         'work_start_at':work_start.isoformat(),'work_end_at':work_end.isoformat(),'hose_disconnect_end_at':hose_end.isoformat(),
         'etu_at':etu.isoformat(),'physical_clearance_at':etu.isoformat(),'switching_start_at':switch_start.isoformat(),'switching_end_at':switch_end.isoformat(),
         'work_intervals':[[a.isoformat(),b.isoformat()] for a,b in work],
-        'work_seconds':berth_duration_seconds(call,berth),'duration_basis':'BERTH_RATE_LOWER_BOUND_TANK_NOT_VALIDATED',
+        'work_seconds':duration,'duration_basis':('VESSEL_BERTH_RATE_TANK_NOT_VALIDATED' if rate_policy=='VESSEL_BERTH_RATE_V1' else 'BERTH_RATE_LOWER_BOUND_TANK_NOT_VALIDATED'),
         'tug_units':{'berthing':config.get('berthing_tug_units',common_tugs),'unberthing':config.get('unberthing_tug_units',common_tugs)}}
