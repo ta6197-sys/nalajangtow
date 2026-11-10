@@ -13,7 +13,7 @@ def _secs(a, b):
 def _q(x):
     return str(x)
 
-def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inventory=None, same_tank_policy=None, carried_transfers=None):
+def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inventory=None, same_tank_policy=None, carried_transfers=None, commitments=None):
     """Project fixed transfers; quantities and signed process rates are exact bbl/hour.
 
     A transfer has call_id, berth_id, tank_id, start_at and end_at. Rate is the
@@ -37,6 +37,16 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
         initial_at=timestamp(flow['inventory_as_of_at'])
         if initial_inventory is None and start!=initial_at: raise ValueError('Carry-in inventory required when start differs from inventory_as_of_at')
         if initial_inventory is not None and set(initial_inventory)!=set(tanks): raise ValueError('Carry-in inventory required for every tank')
+        if commitments is not None:
+            if not isinstance(commitments,(list,tuple)): raise ValueError('Commitments must be a list')
+            expected={row['call_id']:row for row in commitments}
+            if len(expected)!=len(commitments): raise ValueError('Duplicate protected commitment')
+            supplied={row['call_id']:row for row in transfers}
+            for cid,row in expected.items():
+                if cid not in supplied or canonical(row)!=canonical(supplied[cid]):
+                    issue('COMMITMENT_CHANGED','Protected transfer missing or modified',call_id=cid)
+            if issues:
+                return {'model_version':VERSION,'status':'INVALID_INPUT','issues':issues,'operational_approval':False}
         prepared=[]; seen=set(); schedules=[]
         carried_by_id={row['call_id']:row for row in (carried_transfers or [])}
         if len(carried_by_id)!=len(carried_transfers or []): raise ValueError('Duplicate carried transfer')
@@ -117,6 +127,6 @@ def validate_v3_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
                 if a<boundary<z:
                     completed=sum((rate*Fraction(_secs(p,min(q,boundary)),3600) for p,q,rate in parts if p<boundary),Fraction(0))
                     carry_jobs.append({'at':boundary.isoformat(),'call_id':x['call_id'],'berth_id':x['berth_id'],'tank_id':x['tank_id'],'remaining_bbl':_q(vol-completed),'transfer_fingerprint':digest(canonical(x).encode())})
-        return {'model_version':VERSION,'status':'VALID' if not issues else 'INVALID','issues':issues,'source_fingerprint':digest(canonical(snapshot).encode()),'policy_fingerprint':digest(canonical({'same_tank_policy':same_tank_policy}).encode()),'assignments':[dict(call_id=x['call_id'],berth_id=x['berth_id'],tank_id=x['tank_id'],start_at=a.isoformat(),end_at=b.isoformat(),rate_bbl_per_hour=_q(r),quantity_bbl=_q(v),segments=[{'start_at':p.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':_q(rate)} for p,q,rate in parts]) for x,a,b,r,v,d,parts in schedules], 'inventories':series,'inventory_extrema':extrema,'external_net_flow_totals_bbl':totals,'carry_at':boundary.isoformat() if boundary<=end else None,'carried_inventory_bbl':carried,'carried_transfers':carry_jobs,'pending_checks':['BERTH_PHASES','FIX_AND_COMMITMENT_CONSISTENCY','WEATHER','CONTRACT_SETTLEMENT'], 'operational_approval':False}
+        return {'model_version':VERSION,'status':'VALID' if not issues else 'INVALID','issues':issues,'source_fingerprint':digest(canonical(snapshot).encode()),'policy_fingerprint':digest(canonical({'same_tank_policy':same_tank_policy}).encode()),'assignments':[dict(call_id=x['call_id'],berth_id=x['berth_id'],tank_id=x['tank_id'],start_at=a.isoformat(),end_at=b.isoformat(),rate_bbl_per_hour=_q(r),quantity_bbl=_q(v),segments=[{'start_at':p.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':_q(rate)} for p,q,rate in parts]) for x,a,b,r,v,d,parts in schedules], 'inventories':series,'inventory_extrema':extrema,'external_net_flow_totals_bbl':totals,'carry_at':boundary.isoformat() if boundary<=end else None,'carried_inventory_bbl':carried,'carried_transfers':carry_jobs,'commitment_validation':'NOT_PROVIDED' if commitments is None else 'MATCHED', 'pending_checks':['BERTH_PHASES','WEATHER','CONTRACT_SETTLEMENT'] + (['COMMITMENTS_NOT_PROVIDED'] if commitments is None else []), 'operational_approval':False}
     except (ValueError,KeyError,TypeError,ZeroDivisionError,StopIteration) as exc:
         return {'model_version':VERSION,'status':'INVALID_INPUT','issues':[{'code':'INVALID_INPUT','reason':str(exc)}],'operational_approval':False}

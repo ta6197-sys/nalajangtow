@@ -68,3 +68,29 @@ class V3InventoryTests(unittest.TestCase):
         self.x[0].update(start_at='2026-11-05T23:30:00+09:00',end_at='2026-11-06T00:30:00+09:00')
         r=validate_v3_inventory(self.s,self.x,start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-06T01:00:00+09:00')
         self.assertEqual(r['status'],'VALID',r);self.assertEqual(r['inventories']['T'][-1]['inventory_bbl'],'140')
+
+    def test_commitment_must_be_unchanged_and_present(self):
+        committed=copy.deepcopy(self.x)
+        kwargs=dict(start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00',commitments=committed)
+        r=validate_v3_inventory(self.s,self.x,**kwargs)
+        self.assertEqual(r['status'],'VALID',r);self.assertEqual(r['commitment_validation'],'MATCHED')
+        changed=copy.deepcopy(self.x);changed[0]['end_at']='2026-11-03T06:30:02+09:00'
+        r=validate_v3_inventory(self.s,changed,**kwargs)
+        self.assertEqual(r['issues'][0]['code'],'COMMITMENT_CHANGED')
+        r=validate_v3_inventory(self.s,[],**kwargs)
+        self.assertEqual(r['issues'][0]['code'],'COMMITMENT_CHANGED')
+
+    def test_unspecified_commitments_are_pending(self):
+        r=self.run_projection();self.assertEqual(r['commitment_validation'],'NOT_PROVIDED')
+        self.assertIn('COMMITMENTS_NOT_PROVIDED',r['pending_checks'])
+
+    def test_solver_timeout_and_invalid_budgets(self):
+        from unittest.mock import patch
+        from subprocess import TimeoutExpired
+        from src.daily_planning.tank.v3_optimization import solve_v3_allocation
+        x=dict(self.x[0]);x.pop('tank_id');x['eligible_tank_ids']=['T']
+        kw=dict(start_at='2026-11-03T00:00:00+09:00',end_at='2026-11-04T01:00:00+09:00')
+        for value in [0,-1,float('nan'),float('inf'),True]:
+            self.assertEqual(solve_v3_allocation(self.s,[x],time_limit_seconds=value,**kw)['status'],'INVALID_INPUT')
+        with patch('src.daily_planning.tank.v3_optimization.subprocess.run',side_effect=TimeoutExpired('solver',1)):
+            self.assertEqual(solve_v3_allocation(self.s,[x],time_limit_seconds=1,**kw)['status'],'TIME_LIMIT_NO_INCUMBENT')
