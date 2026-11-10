@@ -11,7 +11,7 @@ def overlap(a,b,c,d):return max(timestamp(a),timestamp(c))<min(timestamp(b),time
 def resource_intervals(row,phases):
     mapping={'BERTHING':[[row['berthing_start_at'],row['etb_at']]],'HOSE_CONNECT':[[row['hose_connection_start_at'],row['hose_connection_end_at']]],
              'CARGO':row['work_intervals'],'HOSE_DISCONNECT':[[row['work_end_at'],row['hose_disconnect_end_at']]],
-             'SWITCHING':[[row['switching_start_at'],row['switching_end_at']]],'UNBERTHING':[[row['hose_disconnect_end_at'],row['etu_at']]]}
+             'SWITCHING':[[row['switching_start_at'],row['switching_end_at']]],'UNBERTHING':[[row['unberthing_start_at'],row['etu_at']]]}
     return [interval for phase in phases for interval in mapping[phase]]
 
 def pair_conflicts(a,b,snapshot,policy):
@@ -50,6 +50,7 @@ def restriction_conflicts(row,snapshot):
 
 
 def tug_conflicts(rows,policy):
+    if policy.get('tug_capacity') is None:return []
     events={}
     for row in rows:
         for phase,(a,b) in enumerate([(row['berthing_start_at'],row['etb_at']),(row['unberthing_start_at'],row['etu_at'])]):
@@ -73,7 +74,7 @@ def validate_result(snapshot,rows,policy):
         try:
             if cid in seen:raise ValueError('Duplicate call assignment')
             seen.add(cid)
-            expected=replay(calls[cid],berths[row['berth_id']],row['etb_at'],policy,restrictions=snapshot['workbook_tables']['restrictions']['rows'],hose_connection_start_at=row['hose_connection_start_at'])
+            expected=replay(calls[cid],berths[row['berth_id']],row['etb_at'],policy,restrictions=snapshot['workbook_tables']['restrictions']['rows'],hose_connection_start_at=row['hose_connection_start_at'],unberthing_start_at=row['unberthing_start_at'])
             if row!=expected:raise ValueError('Phase timestamps differ from independent replay')
             if row['berth_id'] in policy.get('dock_4142_berths',[]):
                 for resource,phases in policy.get('dock_4142_shared_resources',{}).items():

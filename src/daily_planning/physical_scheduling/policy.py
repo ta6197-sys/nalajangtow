@@ -2,10 +2,11 @@
 from ..integrated_input.validator import timestamp
 
 VERSION='V3_SYNTHETIC_PHASE_POLICY_V1'
+VERSION_V2='V3_SYNTHETIC_PHASE_POLICY_V2'
 
 
 def validate_policy(policy,berth_ids):
-    if not isinstance(policy,dict) or policy.get('schema_version')!=VERSION:
+    if not isinstance(policy,dict) or policy.get('schema_version') not in (VERSION,VERSION_V2):
         raise ValueError('Explicit versioned phase policy is required')
     if policy.get('data_origin')!='SYNTHETIC_FIXTURE' or policy.get('operational_approval') is not False:
         raise ValueError('This policy version is synthetic and never operationally approved')
@@ -15,7 +16,9 @@ def validate_policy(policy,berth_ids):
         if row is None:raise ValueError('Missing phase policy for '+bid)
         for key in ('berthing_seconds','hose_connection_seconds','unberthing_seconds'):
             if type(row.get(key)) is not int or row[key]<0:raise ValueError('Invalid phase parameter: '+bid+'.'+key)
-        if row.get('tug_units_by_call') is not None:
+        if policy['schema_version']==VERSION_V2 and policy.get('tug_capacity') is None:
+            pass  # Unspecified resource capacity is unbounded.
+        elif row.get('tug_units_by_call') is not None:
             mapping=row['tug_units_by_call']
             if not isinstance(mapping,dict) or not mapping or any(type(value) is not int or value<0 for value in mapping.values()):raise ValueError('Invalid call-specific tug demand')
         else:
@@ -24,9 +27,11 @@ def validate_policy(policy,berth_ids):
                 if type(value) is not int or value<0:raise ValueError('Explicit tug demand required: '+bid+'.'+key)
         for key in ('pilot_boarding_to_berthing_seconds','pilot_boarding_to_unberthing_seconds'):
             if type(row.get(key,0)) is not int or row.get(key,0)<0:raise ValueError('Invalid pilot boarding transit')
+        if policy['schema_version']==VERSION_V2 and any(row.get(key,0)!=0 for key in ('pilot_boarding_to_berthing_seconds','pilot_boarding_to_unberthing_seconds')):raise ValueError('V2 pilot boarding must not add travel duration')
         window_groups={'work_windows':row.get('work_windows')}
         by_call=row.get('pilotage_windows_by_call')
-        if by_call is None:window_groups['pilotage_windows']=row.get('pilotage_windows')
+        if by_call is None:
+            if policy['schema_version']==VERSION or row.get('pilotage_windows') is not None:window_groups['pilotage_windows']=row.get('pilotage_windows')
         elif not isinstance(by_call,dict) or not by_call:raise ValueError('Missing call-specific pilotage map')
         else:
             for cid,parts in by_call.items():
@@ -42,7 +47,8 @@ def validate_policy(policy,berth_ids):
                 parsed.append((a,b))
             ordered=sorted(parsed)
             if any(a[1]>b[0] for a,b in zip(ordered,ordered[1:])):raise ValueError('Overlapping policy windows')
-    if type(policy.get('tug_capacity')) is not int or policy['tug_capacity']<0:raise ValueError('Explicit tug capacity required')
+    if not (policy['schema_version']==VERSION_V2 and policy.get('tug_capacity') is None):
+        if type(policy.get('tug_capacity')) is not int or policy['tug_capacity']<0:raise ValueError('Explicit tug capacity required')
     if policy.get('dock_4142_version') not in ('DISABLED','SYNTHETIC_WORK_END_V1','SYNTHETIC_HOSE_END_V1'):
         raise ValueError('Explicit 4142 switching interpretation required')
     if policy['dock_4142_version']!='DISABLED' and (not isinstance(policy.get('dock_4142_berths'),list) or len(set(policy['dock_4142_berths']))!=2 or not set(policy['dock_4142_berths'])<=set(berth_ids)):
