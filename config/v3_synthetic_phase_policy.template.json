@@ -1,0 +1,151 @@
+{
+  "schema_version": "V3_SYNTHETIC_PHASE_POLICY_V1",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "operational_approval": false,
+  "source_reference": "USER_SYNTHETIC_60_120_60_AND_GRT_TUG_POLICY_NOT_OFFICIAL_SK",
+  "dock_4142_version": "SYNTHETIC_HOSE_END_V1",
+  "dock_4142_berths": [
+    "BERTH-07",
+    "BERTH-08"
+  ],
+  "tug_capacity": 4,
+  "berths": {
+    "BERTH-01": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-02": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-03": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-04": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-05": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-06": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-07": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-08": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-09": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-10": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    },
+    "BERTH-11": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 3600,
+      "pilotage_windows": [],
+      "work_windows": [],
+      "berthing_tug_units": null,
+      "unberthing_tug_units": null,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0
+    }
+  },
+  "dock_4142_shared_resources": {
+    "4142_SHARED_HANDLING": [
+      "HOSE_CONNECT",
+      "CARGO",
+      "HOSE_DISCONNECT",
+      "SWITCHING"
+    ]
+  },
+  "legacy_etu_after_work_seconds": 7200,
+  "event_definition_resolution": "UNRESOLVED",
+  "default_phase_seconds": {
+    "berthing_seconds": 3600,
+    "hose_connection_seconds": 7200,
+    "unberthing_seconds": 3600
+  },
+  "dock_4142_berthing_resource": "INDEPENDENT"
+}
