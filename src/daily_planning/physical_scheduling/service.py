@@ -12,7 +12,7 @@ from .validator import validate_result,pair_conflicts,restriction_conflicts
 MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=()):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -90,6 +90,22 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         from ortools.sat.python import cp_model
         m=cp_model.CpModel();x=[m.NewBoolVar('choice_'+str(i)) for i in range(len(options))]
         for indices in groups:m.AddExactlyOne(x[i] for i in indices)
+        # Exact no-goods only: forbid a demonstrated complete selection, not
+        # a berth/time choice shared by other potentially feasible schedules.
+        option_index={canonical(row):i for i,row in enumerate(options)}
+        locked_keys={canonical(row) for row in locked}
+        for schedule in forbidden_schedules:
+            if not isinstance(schedule,(list,tuple)):raise ValueError('Invalid forbidden schedule')
+            keys=[canonical(row) for row in schedule]
+            if len(keys)!=len(set(keys)):raise ValueError('Duplicate forbidden assignment')
+            keyset=set(keys)
+            if not locked_keys<=keyset or len(keys)!=len(groups)+len(locked):continue
+            selected=keyset-locked_keys
+            if any(key not in option_index for key in selected):continue
+            if not selected:return failure('INFEASIBLE','EXCLUDED_COMPLETE_ASSIGNMENT','Protected complete assignment has been excluded')
+            indices=[option_index[key] for key in selected]
+            if any(sum(index in group for index in indices)!=1 for group in groups):continue
+            m.Add(sum(x[index] for index in indices)<=len(indices)-1)
         conflicts=0
         for i,a in enumerate(options):
             for j in range(i+1,len(options)):
@@ -118,7 +134,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         return {'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
             'model_version':MODEL_VERSION,'policy_id':policy.get('policy_id',policy['schema_version']),'event_definition_issues':definition_issues,
             'input_fingerprint':digest(canonical(snapshot).encode()),
-            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
+            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
             'boundaries':{'as_of_at':begin.isoformat(),'optimization_end_at':end.isoformat(),'freeze_end_at':(begin+timedelta(hours=24)).isoformat()},
             'outside_horizon_call_ids':outside,
             'future_fix_call_ids':[cid for cid in outside if calls[cid]['fixed_etb_is_hard']],
