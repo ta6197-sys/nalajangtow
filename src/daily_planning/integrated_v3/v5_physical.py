@@ -55,7 +55,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 candidate_generation_mode='MANUAL_CANDIDATES',max_expansion_rounds=3,
                 max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=(),max_inventory_reoptimizations=3,
                 initial_forbidden_schedules=(),frozen_candidate_domain=None,objective_mode='FEASIBILITY',
-                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=()):
+                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE'):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
     started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
     result={'scenario_id':'V5_3TANK','model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
@@ -80,7 +80,9 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
     try:
         if not valid_budget:return finish('INVALID_INPUT','INVALID_TIME_BUDGET','Positive finite time budget required')
         if objective_mode not in ('FEASIBILITY','MIN_TOTAL_DEMURRAGE'):return finish('INVALID_INPUT','INVALID_OBJECTIVE_MODE','Unknown objective mode')
+        if inventory_constraint_mode not in ('NONE','EXACT_EVENT_BALANCE_V1') or (inventory_constraint_mode!='NONE' and objective_mode!='MIN_TOTAL_DEMURRAGE'):return finish('INVALID_INPUT','INVALID_INVENTORY_MODE','Exact inventory mode requires MIN_TOTAL_DEMURRAGE')
         result['objective_mode']=objective_mode
+        result['inventory_constraint_mode']=inventory_constraint_mode
         if objective_mode=='MIN_TOTAL_DEMURRAGE':result.update(pricing_policy=pricing_policy,clock_policy=clock_policy)
         if type(max_inventory_reoptimizations) is not int or max_inventory_reoptimizations<0:return finish('INVALID_INPUT','INVALID_REOPTIMIZATION_LIMIT','Nonnegative integer reoptimization limit required')
         if candidate_generation_mode not in ('MANUAL_CANDIDATES','AUTO_ADAPTIVE_CANDIDATES'):return finish('INVALID_INPUT','INVALID_CANDIDATE_MODE','Unknown candidate generation mode')
@@ -95,7 +97,19 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 priced=price_v5_schedule(work,[row],as_of_at=as_of_at,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy)
                 option_cache[key]=priced['vessel_demurrage_breakdown'].get(row['call_id'],{'status':'SETTLEMENT_UNRESOLVED','issues':priced['issues']})
             return option_cache[key]
-        objective_args={'objective_mode':objective_mode,'option_pricer':price_option if objective_mode=='MIN_TOTAL_DEMURRAGE' else None}
+        def inventory_builder(model,variables,options,locked):
+            from .v5_inventory_events import prepare_inventory_events
+            from .v5_inventory_constraints import add_inventory_constraints
+            from ..integrated_input.validator import number
+            begin=timestamp(as_of_at);end=timestamp(projection_end_at) if projection_end_at else max([begin+timedelta(hours=72)]+[timestamp(row['work_end_at']) for row in options+locked])
+            inventory=initial_inventory if initial_inventory is not None else {t['tank_id']:t['initial_inventory_bbl'] for t in work['tanks']}
+            if initial_inventory is None and begin!=timestamp(work['fixed_process_flows']['inventory_as_of_at']):raise ValueError('Carry-in inventory required')
+            if set(inventory)!={t['tank_id'] for t in work['tanks']}:raise ValueError('Carry-in inventory required for all tanks')
+            for t in work['tanks']:
+                if not number(t['min_inventory_bbl'])<=number(inventory[t['tank_id']])<=number(t['capacity_bbl']):raise ValueError('Invalid carry-in inventory: '+t['tank_id'])
+            prepared=prepare_inventory_events(work,options+locked,start_at=as_of_at,end_at=end.isoformat(),carried_transfers=carried_transfers or (),commitments=tank_commitments or (),physical_commitments=locked)
+            return add_inventory_constraints(model,variables,prepared,work['tanks'],initial_inventory=inventory,option_count=len(options))
+        objective_args={'objective_mode':objective_mode,'option_pricer':price_option if objective_mode=='MIN_TOTAL_DEMURRAGE' else None,'inventory_builder':inventory_builder if inventory_constraint_mode!='NONE' else None}
         if time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during input validation')
         calls={c['call_id']:c for c in work['calls']}
         if not call_ids or len(set(call_ids))!=len(call_ids) or not set(call_ids)<=set(calls):return finish('INVALID_INPUT','INVALID_V5_INPUT','Invalid selected call IDs')
@@ -215,6 +229,15 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             return solve_berth_schedule(work,**kwargs)
         if objective_mode=='MIN_TOTAL_DEMURRAGE':
             evaluation=evaluate(physical['schedule'])
+            if inventory_constraint_mode!='NONE' and evaluation['status']!='PHYSICAL_AND_INVENTORY_VALID':
+                result.update(physical_validation=evaluation['physical_validation'],inventory_validation=evaluation['inventory_validation'],issues=evaluation['issues'],selected_schedule=physical['schedule'],optimality_scope='NOT_VALIDATED')
+                return finish('INVENTORY_MODEL_VALIDATION_MISMATCH')
+            if inventory_constraint_mode!='NONE':
+                from .v5_settlement import price_v5_schedule
+                check_price=price_v5_schedule(work,physical['schedule'],as_of_at=as_of_at,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy)
+                if check_price['status']!='SETTLED' or check_price['total_demurrage_cents']!=physical['total_projected_demurrage_cents']:
+                    result.update(issues=check_price['issues'] or [{'code':'SETTLEMENT_MODEL_MISMATCH','reason':'Selected schedule cost differs from modeled objective'}],optimality_scope='NOT_VALIDATED')
+                    return finish('INTEGRATION_VALIDATION_FAILED')
             result.update(optimization_status=physical['solver_status'],selected_schedule=physical['schedule'],
                 total_projected_demurrage_cents=physical['total_projected_demurrage_cents'],
                 option_cost_breakdown=physical['option_cost_breakdown'],best_objective_bound_cents=physical['best_objective_bound_cents'],
@@ -225,6 +248,10 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 selected_berths=evaluation['selected_berths'],selected_etbs=evaluation['selected_etbs'],issues=evaluation['issues'],
                 scheduled_calls=sorted(evaluation['selected_berths']),unscheduled_calls=sorted(set(call_ids)-set(evaluation['selected_berths'])),
                 combined_validation='PHYSICAL_AND_INVENTORY_VALID' if evaluation['status']=='PHYSICAL_AND_INVENTORY_VALID' else 'NOT_VALIDATED')
+            if inventory_constraint_mode!='NONE':
+                result.update({key:physical[key] for key in ('inventory_event_count','inventory_constraints_count','throughput_constraints_count')})
+                result['optimality_scope']='INTEGRATED_FINITE_DOMAIN_OPTIMAL' if physical['solver_status']=='OPTIMAL' else 'INTEGRATED_FINITE_DOMAIN_INCUMBENT'
+                result['settlement_validation']='SETTLED'
             return finish(evaluation['status'])
         search_result=search(physical,evaluate=evaluate,solve_alternative=solve_alternative,deadline=deadline,max_reoptimizations=max_inventory_reoptimizations,initial_forbidden_schedules=initial_forbidden_schedules)
         result['inventory_reoptimization_solver_calls']=search_result['solver_calls']-1;result['solver_attempt_count']=(len(result['generation_rounds']) if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' else 1)+result['inventory_reoptimization_solver_calls']
