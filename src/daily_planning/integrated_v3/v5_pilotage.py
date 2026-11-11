@@ -9,7 +9,7 @@ from ..integrated_input.provenance import digest
 from ..physical_scheduling.pilotage import derive_windows
 
 
-def prepare_pilotage_policy(snapshot,call_ids,eligible,policy,context,as_of_at,candidate_etbs):
+def prepare_pilotage_policy(snapshot,call_ids,eligible,policy,context,as_of_at,candidate_etbs,history_start_at=None):
     """Return a policy or unresolved issue; departure windows are separate inputs."""
     def pending(reason,**details):return None,{'code':'UNSUPPORTED_OPERATIONAL_POLICY','reason':reason,**details}
     if not isinstance(context,dict):return pending('Actual daylight data, berth night permissions and separate departure windows are required')
@@ -18,7 +18,8 @@ def prepare_pilotage_policy(snapshot,call_ids,eligible,policy,context,as_of_at,c
         raw=Path(context['daylight_path']).read_bytes();daylight=list(csv.DictReader(io.StringIO(raw.decode('utf-8-sig'))))
         if not daylight:return pending('Daylight data is empty')
         begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
-        needed={(begin+timedelta(days=i)).date().isoformat() for i in range(4)}
+        first=min(begin,timestamp(history_start_at)) if history_start_at is not None else begin
+        needed={(first+timedelta(days=i)).date().isoformat() for i in range((end.date()-first.date()).days+1)}
         days=[d for d in daylight if d.get('date_kst') in needed]
         if {d.get('date_kst') for d in days}!=needed:return pending('Daily sunrise and sunset coverage missing',dates=sorted(needed-{d.get('date_kst') for d in days}))
         calls={c['call_id']:c for c in snapshot['calls']};new=copy.deepcopy(policy)

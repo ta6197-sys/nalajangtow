@@ -102,7 +102,8 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             blocked_calls={x['call_id'] for x in blocked}
             if any(not eligible[cid] and cid in blocked_calls for cid in call_ids):return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','No supported berth remains; 4-1/4-2 policy is unresolved')
         if not isinstance(policy,dict) or policy.get('cargo_duration_policy')!='VESSEL_BERTH_RATE_V1':return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','Explicit VESSEL_BERTH_RATE_V1 and complete operating policy required')
-        policy,pilot_issue=prepare_pilotage_policy(work,call_ids,eligible,policy,pilotage_context,as_of_at,candidate_etbs)
+        history_start=min((r['pob_at'] for r in physical_commitments),key=timestamp,default=None)
+        policy,pilot_issue=prepare_pilotage_policy(work,call_ids,eligible,policy,pilotage_context,as_of_at,candidate_etbs,history_start)
         if time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during policy preparation')
         if pilot_issue:
             result['issues'].append(pilot_issue);return finish('UNSUPPORTED_OPERATIONAL_POLICY')
@@ -181,14 +182,15 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             end=timestamp(projection_end_at) if projection_end_at else max([timestamp(as_of_at)+timedelta(hours=72)]+[timestamp(r['work_end_at']) for r in rows])
             if end<max(timestamp(r['work_end_at']) for r in rows):
                 evaluation.update(status='INTEGRATION_VALIDATION_FAILED',issues=[{'code':'INVALID_FLOW_COVERAGE','reason':'Projection must cover all vessel transfers'}]);return evaluation
-            inv=validate_v5_candidate(work,rows,as_of_at=as_of_at,projection_end_at=end.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,tank_commitments=tank_commitments,same_tank_policy='ALLOW')
+            inv=validate_v5_candidate(work,rows,as_of_at=as_of_at,projection_end_at=end.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,tank_commitments=tank_commitments,same_tank_policy='ALLOW',physical_commitments=physical_commitments)
             evaluation['inventory_result']=inv;evaluation['inventory_validation']=inv['status']
             if inv['status']!='INVENTORY_VALID':
                 evaluation.update(status='INVENTORY_VALIDATION_FAILED',issues=inv.get('issues',[]));return evaluation
             assignments={x['call_id']:x for x in inv['tank_result']['assignments']};definitions={x['call_id']:x for x in inv['tank_result']['transfer_definitions']}
-            if set(assignments)!={r['call_id'] for r in rows} or set(definitions)!={r['call_id'] for r in rows}:
+            active_rows=[r for r in rows if timestamp(r['work_end_at'])>timestamp(as_of_at)]
+            if set(assignments)!={r['call_id'] for r in active_rows} or set(definitions)!={r['call_id'] for r in active_rows}:
                 evaluation.update(status='INTEGRATION_VALIDATION_FAILED',issues=[{'code':'INTEGRATION_VALIDATION_FAILED','reason':'Physical and inventory call sets differ'}]);return evaluation
-            for row in rows:
+            for row in active_rows:
                 x=definitions[row['call_id']]
                 if x['berth_id']!=row['berth_id'] or timestamp(x['etb_at'])!=timestamp(row['etb_at']) or timestamp(x['start_at'])!=timestamp(row['work_intervals'][0][0]) or timestamp(x['end_at'])!=timestamp(row['work_intervals'][-1][1]):
                     evaluation.update(status='INTEGRATION_VALIDATION_FAILED',issues=[{'code':'INTEGRATION_VALIDATION_FAILED','reason':'Physical and inventory transfer definitions differ','call_id':row['call_id']}]);return evaluation
