@@ -30,9 +30,9 @@ def _violations(evaluation):
     return issues
 
 
-def search(initial_physical, *, evaluate, solve_alternative, deadline, max_reoptimizations):
+def search(initial_physical, *, evaluate, solve_alternative, deadline, max_reoptimizations,initial_forbidden_schedules=()):
     """Re-solve the same finite domain, excluding only exact rejected schedules."""
-    started=time.perf_counter();attempts=[];forbidden=[];seen=set();physical=initial_physical;last_eval=None;last_search=None;solver_calls=1
+    started=time.perf_counter();attempts=[];forbidden=deepcopy(list(initial_forbidden_schedules));seen={digest(canonical(sorted(rows,key=lambda r:r['call_id'])).encode()) for rows in forbidden};physical=initial_physical;last_eval=None;last_search=None;solver_calls=1
     def result(status,reason):
         return {'status':status,'stopping_reason':reason,'attempts':attempts,'forbidden_schedules':forbidden,'physical':physical,'evaluation':last_eval,'last_search_result':last_search,'solver_calls':solver_calls}
     while True:
