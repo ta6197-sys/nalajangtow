@@ -10,9 +10,10 @@ from .compatibility import compatibility
 from .validator import validate_result,pair_conflicts,restriction_conflicts
 
 MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
+_V5_VALIDATED_CONTEXT=object()
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE'):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,_v5_context=None):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -26,10 +27,17 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         deadline=started+float(time_limit_seconds)
         def check_deadline():
             if time.perf_counter()>=deadline:raise TimeoutError('Berth candidate generation or model construction exceeded budget')
-        if snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V3':raise ValueError('Normalized V3 snapshot required')
+        schema=snapshot.get('schema_version')
+        if schema not in ('DOCKTIMIZE_NORMALIZED_INPUT_V3','DOCKTIMIZE_NORMALIZED_INPUT_V5'):raise ValueError('Normalized V3 or V5 snapshot required')
+        if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5' and _v5_context is not _V5_VALIDATED_CONTEXT:raise ValueError('V5 requires the verified V5 integration path')
+        if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5' and ('source_input' not in snapshot or not {'groups','restrictions'}<=set(snapshot.get('workbook_tables',{}))):raise ValueError('V5 requires validated source and physical restriction tables')
         if 'source_input' in snapshot:
             from ..integrated_input.validator import validate
-            if snapshot['fixed_process_flows'].get('extension_provenance'):
+            if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5':
+                from ..integrated_input.v5 import validate_v5
+                preflight=validate_v5(snapshot)
+                if not preflight['data_preflight_pass']:return failure('INVALID_INPUT','INVALID_V5_INPUT',preflight['errors'])
+            elif snapshot['fixed_process_flows'].get('extension_provenance'):
                 from ..integrated_input.flow_extension import validate_extended_snapshot,check_extension_available
                 check_extension_available(snapshot,as_of_at=as_of_at,projection_end_at=end.isoformat())
                 preflight=validate_extended_snapshot(snapshot)
@@ -37,6 +45,15 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             if not preflight['data_preflight_pass']:return failure('INVALID_INPUT','V3_DATA_PREFLIGHT_FAILED',preflight['issues'])
         calls={c['call_id']:c for c in snapshot['calls']};berths={b['berth_id']:b for b in snapshot['berths']}
         if len(calls)!=len(snapshot['calls']) or len(berths)!=len(snapshot['berths']):raise ValueError('Duplicate source identity')
+        if selected_call_ids is not None:
+            selected=set(selected_call_ids)
+            if not selected or len(selected)!=len(selected_call_ids) or not selected<=set(calls):raise ValueError('Invalid selected call IDs')
+            calls={cid:c for cid,c in calls.items() if cid in selected}
+        if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5':
+            from ..integrated_input.v5 import eligible_berth_ids
+            verified={cid:eligible_berth_ids(call,snapshot['berths'],snapshot['tanks']) for cid,call in calls.items()}
+            if allowed_berths_by_call is None:allowed_berths_by_call=verified
+            else:allowed_berths_by_call={cid:[bid for bid in verified[cid] if bid in allowed_berths_by_call.get(cid,())] for cid in calls}
         active=[b for b in berths.values() if b.get('active')=='Y']
         validate_policy(policy,[b['berth_id'] for b in active])
         definition_issues=event_definition_issues(snapshot,policy)
@@ -64,6 +81,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             times=sorted({timestamp(value) for value in times})
             selected=[]
             for berth in active:
+                if allowed_berths_by_call is not None and berth['berth_id'] not in allowed_berths_by_call.get(cid,()):continue
                 if compatibility(call,berth):continue
                 for at in times:
                     check_deadline()
@@ -172,7 +190,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             payload={'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
             'model_version':MODEL_VERSION,'policy_id':policy.get('policy_id',policy['schema_version']),'event_definition_issues':definition_issues,
             'input_fingerprint':digest(canonical(snapshot).encode()),
-            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {}),**({'search_heuristic':search_heuristic} if search_heuristic!='NONE' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
+            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'selected_call_ids':sorted(selected_call_ids)} if selected_call_ids is not None else {}),**({'allowed_berths_by_call':allowed_berths_by_call} if allowed_berths_by_call is not None else {}),**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {}),**({'search_heuristic':search_heuristic} if search_heuristic!='NONE' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
             'boundaries':{'as_of_at':begin.isoformat(),'optimization_end_at':end.isoformat(),'freeze_end_at':(begin+timedelta(hours=24)).isoformat()},
             'completed_call_ids':sorted(completed),
             'outside_horizon_call_ids':outside,
