@@ -13,7 +13,7 @@ MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 _V5_VALIDATED_CONTEXT=object()
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,_v5_context=None):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,_v5_context=None):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -83,7 +83,11 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             for berth in active:
                 if allowed_berths_by_call is not None and berth['berth_id'] not in allowed_berths_by_call.get(cid,()):continue
                 if compatibility(call,berth):continue
-                for at in times:
+                if pair_candidate_etbs is None:berth_times=times
+                else:
+                    pair_times=sorted({timestamp(value) for value in pair_candidate_etbs.get(cid,{}).get(berth['berth_id'],[])})
+                    berth_times=[at for at in pair_times if at in times] if call['fixed_etb_is_hard'] else pair_times
+                for at in berth_times:
                     check_deadline()
                     if not begin<=at<end:continue
                     try:
@@ -179,7 +183,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             if result not in (cp_model.FEASIBLE,cp_model.OPTIMAL):
                 if candidate_visitor is not None and result==cp_model.INFEASIBLE:
                     return {'status':'ENUMERATION_EXHAUSTED','emitted':emitted,'operational_approval':False}
-                return failure('INFEASIBLE' if result==cp_model.INFEASIBLE else 'TIME_LIMIT_NO_INCUMBENT','NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only')
+                return failure('INFEASIBLE' if result==cp_model.INFEASIBLE else 'TIME_LIMIT_NO_INCUMBENT','NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only',**({'solver_status':solver.StatusName(result),'cp_sat_seconds':solver.WallTime()} if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5' else {}))
             selected=[i for i in range(len(options)) if solver.Value(x[i])]
             rows=locked+[options[i] for i in selected]
             rows.sort(key=lambda row:(timestamp(row['etb_at']),row['call_id']))
@@ -190,7 +194,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             payload={'status':'BERTH_SUBSYSTEM_FEASIBLE','solver_status':solver.StatusName(result),'schedule':rows,
             'model_version':MODEL_VERSION,'policy_id':policy.get('policy_id',policy['schema_version']),'event_definition_issues':definition_issues,
             'input_fingerprint':digest(canonical(snapshot).encode()),
-            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'selected_call_ids':sorted(selected_call_ids)} if selected_call_ids is not None else {}),**({'allowed_berths_by_call':allowed_berths_by_call} if allowed_berths_by_call is not None else {}),**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {}),**({'search_heuristic':search_heuristic} if search_heuristic!='NONE' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
+            'candidate_domain_fingerprint':digest(canonical({'as_of_at':as_of_at,'candidate_etbs':candidate_etbs,'commitments':locked,**({'pair_candidate_etbs':pair_candidate_etbs} if pair_candidate_etbs is not None else {}),**({'selected_call_ids':sorted(selected_call_ids)} if selected_call_ids is not None else {}),**({'allowed_berths_by_call':allowed_berths_by_call} if allowed_berths_by_call is not None else {}),**({'forbidden_schedules':list(forbidden_schedules)} if forbidden_schedules else {}),**({'completed_rows':list(completed_rows)} if completed_rows else {}),**({'phase_release_policy':phase_release_policy} if phase_release_policy!='ALL_OPTIONS_V1' else {}),**({'search_heuristic':search_heuristic} if search_heuristic!='NONE' else {})}).encode()),'policy_fingerprint':digest(canonical(policy).encode()),
             'boundaries':{'as_of_at':begin.isoformat(),'optimization_end_at':end.isoformat(),'freeze_end_at':(begin+timedelta(hours=24)).isoformat()},
             'completed_call_ids':sorted(completed),
             'outside_horizon_call_ids':outside,
@@ -200,6 +204,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             'independent_validation':independent,'seconds':time.perf_counter()-started,
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
+            if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5':payload['cp_sat_seconds']=solver.WallTime()
 
             if candidate_visitor is None:return payload
             emitted+=1

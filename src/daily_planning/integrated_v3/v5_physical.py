@@ -6,6 +6,7 @@ Only explicitly selected calls are optimized; source calls are never deleted.
 from copy import deepcopy
 from datetime import timedelta
 import io
+import math
 from pathlib import Path
 import time
 from ..integrated_input.loader import load_inputs
@@ -48,31 +49,57 @@ def _verified_snapshot(snapshot,data_dir):
     return result
 
 
-def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs, policy,
+def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, policy,
                 time_limit_seconds=30, projection_end_at=None, initial_inventory=None,
-                carried_transfers=None, tank_commitments=None, pilotage_context=None):
+                carried_transfers=None, tank_commitments=None, pilotage_context=None,
+                candidate_generation_mode='MANUAL_CANDIDATES',max_expansion_rounds=3,
+                max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=()):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
-    started=time.perf_counter();domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
+    started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
     result={'scenario_id':'V5_3TANK','model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
             'policy_fingerprint':digest(canonical(policy).encode()),'candidate_domain_fingerprint':digest(canonical(domain).encode()),
             'solver_status':'NOT_RUN','physical_validation':'NOT_EVALUATED','inventory_validation':'NOT_EVALUATED',
             'combined_validation':'NOT_VALIDATED','scheduled_calls':[],'unscheduled_calls':[],
             'selected_berths':{},'selected_etbs':{},'inventory_result':None,'issues':[],
             'operational_approval':False,'scope':'Selected calls and supplied finite ETB candidates only; full scheduling and settlement not evaluated'}
+    result.update(candidate_generation_mode=candidate_generation_mode,initial_candidate_count=0,final_candidate_count=0,candidates_by_call_and_berth={},generation_rounds=[],generation_reasons={},rejection_reasons=[],expansion_events=[],stopping_reason=None)
+    pool=None
     def finish(status,code=None,reason=None,**details):
         result['status']=status
         if code:result['issues'].append({'code':code,'reason':str(reason),**details})
+        if pool is not None:
+            result['final_candidate_count']=pool.count();result['candidates_by_call_and_berth']=pool.domain();result['generation_reasons']=pool.reasons();result['rejection_reasons'].extend(pool.rejected);result['expansion_events']=pool.expansion_events
+            result['candidate_domain_fingerprint']=digest(canonical({'as_of_at':as_of_at,'call_ids':sorted(call_ids),'pair_candidate_etbs':pool.domain(),'physical_commitments':list(physical_commitments)}).encode())
+        if result['stopping_reason'] is None:result['stopping_reason']=status
         result['runtime_seconds']=time.perf_counter()-started
         return result
     try:
+        if not valid_budget:return finish('INVALID_INPUT','INVALID_TIME_BUDGET','Positive finite time budget required')
+        if candidate_generation_mode not in ('MANUAL_CANDIDATES','AUTO_ADAPTIVE_CANDIDATES'):return finish('INVALID_INPUT','INVALID_CANDIDATE_MODE','Unknown candidate generation mode')
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and (any(type(x) is not int or x<1 for x in (max_candidates_per_pair,max_total_candidates)) or type(max_expansion_rounds) is not int or max_expansion_rounds<0):return finish('INVALID_INPUT','INVALID_CANDIDATE_LIMIT','Invalid candidate limits')
         if snapshot.get('scenario_id')!='V5_3TANK' or snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V5':return finish('INVALID_INPUT','INVALID_V5_INPUT','Expected normalized V5 input')
         work=_verified_snapshot(snapshot,data_dir)
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during input validation')
         calls={c['call_id']:c for c in work['calls']}
         if not call_ids or len(set(call_ids))!=len(call_ids) or not set(call_ids)<=set(calls):return finish('INVALID_INPUT','INVALID_V5_INPUT','Invalid selected call IDs')
         result['unscheduled_calls']=sorted(calls)
         eligible={cid:eligible_berth_ids(calls[cid],work['berths'],work['tanks']) for cid in call_ids}
+        blocked=[]
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES':
+            for g in work['workbook_tables']['groups']['rows']:
+                if g.get('rule_type')=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP':
+                    members=set(tokens(g.get('berth_ids')))
+                    for cid in call_ids:
+                        for bid in sorted(members.intersection(eligible[cid])):blocked.append({'call_id':cid,'berth_id':bid,'code':'POLICY_UNRESOLVED','reason':'4-1/4-2 event and GRT exception policy unresolved'})
+                        eligible[cid]=[bid for bid in eligible[cid] if bid not in members]
+            result['rejection_reasons'].extend(blocked)
+            blocked_berths={x['berth_id'] for x in blocked}
+            if any(row.get('berth_id') in blocked_berths for row in physical_commitments):return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','Protected commitment uses a berth with unresolved 4-1/4-2 policy')
+            blocked_calls={x['call_id'] for x in blocked}
+            if any(not eligible[cid] and cid in blocked_calls for cid in call_ids):return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','No supported berth remains; 4-1/4-2 policy is unresolved')
         if not isinstance(policy,dict) or policy.get('cargo_duration_policy')!='VESSEL_BERTH_RATE_V1':return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','Explicit VESSEL_BERTH_RATE_V1 and complete operating policy required')
         policy,pilot_issue=prepare_pilotage_policy(work,call_ids,eligible,policy,pilotage_context,as_of_at,candidate_etbs)
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during policy preparation')
         if pilot_issue:
             result['issues'].append(pilot_issue);return finish('UNSUPPORTED_OPERATIONAL_POLICY')
         result['policy_fingerprint']=digest(canonical(policy).encode())
@@ -87,7 +114,33 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs, polic
                 continue
             retained.append(group)
         work['workbook_tables']['groups']['rows']=retained
-        physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,time_limit_seconds=time_limit_seconds,selected_call_ids=call_ids,allowed_berths_by_call=eligible,_v5_context=_V5_VALIDATED_CONTEXT)
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES':
+            from .v5_candidates import CandidatePool
+            if not {r.get('call_id') for r in physical_commitments}<=set(call_ids):return finish('INVALID_INPUT','INVALID_COMMITMENT','Protected physical calls must be included in call_ids')
+            protected_check=validate_result(work,physical_commitments,policy)
+            if protected_check['status']!='VALID':return finish('INVALID_INPUT','INVALID_COMMITMENT',protected_check['issues'])
+            pool=CandidatePool(work,{cid:calls[cid] for cid in call_ids},eligible,policy,as_of_at,commitments=physical_commitments,pair_limit=max_candidates_per_pair,total_limit=max_total_candidates,deadline=deadline)
+            pool.initial();result['initial_candidate_count']=pool.count()
+            for round_no in range(max_expansion_rounds+1):
+                remaining=deadline-time.perf_counter()
+                if remaining<=0:raise TimeoutError('Overall execution time budget exhausted')
+                round_start=time.perf_counter()
+                physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs={},pair_candidate_etbs=pool.domain(),policy=policy,time_limit_seconds=remaining,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,conflict_filter='SAFE_ENVELOPE_V1',_v5_context=_V5_VALIDATED_CONTEXT)
+                result['generation_rounds'].append({'round':round_no,'candidate_count':pool.count(),'solver_outcome':physical['status'],'cp_sat_seconds':physical.get('cp_sat_seconds'),'elapsed_seconds':time.perf_counter()-started,'round_seconds':time.perf_counter()-round_start,'expansion_reason':'INITIAL' if round_no==0 else 'CANDIDATE_SHORTAGE_OR_FINITE_CONFLICT'})
+                if physical['status'] not in ('INFEASIBLE',):break
+                if round_no==max_expansion_rounds:result['stopping_reason']='EXPANSION_ROUND_LIMIT';break
+                if pool.count()>=max_total_candidates:result['stopping_reason']='TOTAL_CANDIDATE_LIMIT';break
+                affected=pool.affected_calls()
+                if pool.expand(round_no+1,affected)==0:result['stopping_reason']='CANDIDATE_DOMAIN_EXHAUSTED';break
+            if physical['status']=='INFEASIBLE' and (blocked or any(x['code']=='POLICY_UNRESOLVED' for x in pool.rejected)):
+                result['solver_status']=physical['status'];result['physical_solver_result']=physical
+                return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','Some potentially relevant candidates have unresolved policy')
+        else:
+            manual_domain={cid:{bid:sorted({timestamp(v).isoformat() for v in ([calls[cid]['fix_etb_at']] if calls[cid]['fixed_etb_is_hard'] else candidate_etbs.get(cid,[]))}) for bid in sorted(eligible[cid])} for cid in sorted(call_ids)}
+            result['candidates_by_call_and_berth']=manual_domain
+            result['generation_reasons']={cid:{bid:[{'etb_at':t,'reasons':['HARD_FIX_ETB' if calls[cid]['fixed_etb_is_hard'] else 'MANUAL_SUPPLIED'],'round':0} for t in times] for bid,times in pairs.items()} for cid,pairs in manual_domain.items()}
+            result['initial_candidate_count']=result['final_candidate_count']=sum(len(times) for pairs in manual_domain.values() for times in pairs.values())
+            physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,time_limit_seconds=time_limit_seconds,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,_v5_context=_V5_VALIDATED_CONTEXT)
         result['solver_status']=physical.get('solver_status',physical['status']);result['candidate_domain_fingerprint']=physical.get('candidate_domain_fingerprint',result['candidate_domain_fingerprint']);result['physical_solver_result']=physical
         if physical['status']!='BERTH_SUBSYSTEM_FEASIBLE':
             result['issues']=physical.get('issues',[])
@@ -96,6 +149,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs, polic
                 return finish('INFEASIBLE','FIX_PRECHECK_FAILED','Fixed calls conflict within the supplied candidate domain',call_ids=sorted(call_ids))
             return finish(physical['status'])
         rows=physical['schedule'];independent=validate_result(work,rows,policy);result['physical_validation']=independent
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during physical validation')
         if independent.get('status')!='VALID':
             result['issues']=independent.get('issues',[]);return finish('PHYSICAL_VALIDATION_FAILED')
         for row in rows:
@@ -106,6 +160,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs, polic
         end=timestamp(projection_end_at) if projection_end_at else max([timestamp(as_of_at)+timedelta(hours=72)]+[timestamp(r['work_end_at']) for r in rows])
         if end<max(timestamp(r['work_end_at']) for r in rows):return finish('INTEGRATION_VALIDATION_FAILED','INVALID_FLOW_COVERAGE','Projection must cover all vessel transfers')
         inv=validate_v5_candidate(work,rows,as_of_at=as_of_at,projection_end_at=end.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,tank_commitments=tank_commitments,same_tank_policy='ALLOW')
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during inventory validation')
         result['inventory_result']=inv;result['inventory_validation']=inv['status']
         if inv['status']!='INVENTORY_VALID':result['issues']=inv.get('issues',[]);return finish('INVENTORY_VALIDATION_FAILED')
         assignments={x['call_id']:x for x in inv['tank_result']['assignments']}
@@ -116,4 +171,5 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs, polic
             if (x['berth_id']!=row['berth_id'] or timestamp(x['etb_at'])!=timestamp(row['etb_at']) or timestamp(x['start_at'])!=timestamp(row['work_intervals'][0][0]) or timestamp(x['end_at'])!=timestamp(row['work_intervals'][-1][1])):
                 return finish('INTEGRATION_VALIDATION_FAILED','INTEGRATION_VALIDATION_FAILED','Physical and inventory transfer definitions differ',call_id=row['call_id'])
         result['combined_validation']='PHYSICAL_AND_INVENTORY_VALID';return finish('PHYSICAL_AND_INVENTORY_VALID')
+    except TimeoutError as exc:return finish('TIME_LIMIT_NO_INCUMBENT','TIME_BUDGET_EXHAUSTED',exc)
     except (OSError,ValueError,TypeError,KeyError,ImportError) as exc:return finish('INVALID_INPUT','INVALID_V5_INPUT',exc)
