@@ -53,7 +53,8 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 time_limit_seconds=30, projection_end_at=None, initial_inventory=None,
                 carried_transfers=None, tank_commitments=None, pilotage_context=None,
                 candidate_generation_mode='MANUAL_CANDIDATES',max_expansion_rounds=3,
-                max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=(),max_inventory_reoptimizations=3):
+                max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=(),max_inventory_reoptimizations=3,
+                initial_forbidden_schedules=(),frozen_candidate_domain=None):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
     started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
     result={'scenario_id':'V5_3TANK','model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
@@ -64,13 +65,14 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             'operational_approval':False,'scope':'Selected calls and supplied finite ETB candidates only; full scheduling and settlement not evaluated'}
     result.update(candidate_generation_mode=candidate_generation_mode,initial_candidate_count=0,final_candidate_count=0,candidates_by_call_and_berth={},generation_rounds=[],generation_reasons={},rejection_reasons=[],expansion_events=[],stopping_reason=None)
     result.update(reoptimization_attempts=[],inventory_violations=[],forbidden_schedule_count=0,inventory_constraints_added=[],physical_solver_status='NOT_RUN',inventory_validation_status='NOT_EVALUATED',final_inventory_result=None,solver_attempt_count=0,inventory_reoptimization_solver_calls=0)
-    pool=None
+    pool=None;manual_domain_fingerprint=None
     def finish(status,code=None,reason=None,**details):
         result['status']=status
         if code:result['issues'].append({'code':code,'reason':str(reason),**details})
         if pool is not None:
             result['final_candidate_count']=pool.count();result['candidates_by_call_and_berth']=pool.domain();result['generation_reasons']=pool.reasons();result['rejection_reasons'].extend(pool.rejected);result['expansion_events']=pool.expansion_events
             result['candidate_domain_fingerprint']=digest(canonical({'as_of_at':as_of_at,'call_ids':sorted(call_ids),'pair_candidate_etbs':pool.domain(),'physical_commitments':list(physical_commitments)}).encode())
+        elif manual_domain_fingerprint is not None:result['candidate_domain_fingerprint']=manual_domain_fingerprint
         if result['stopping_reason'] is None:result['stopping_reason']=status
         result['runtime_seconds']=time.perf_counter()-started
         return result
@@ -122,15 +124,23 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             protected_check=validate_result(work,physical_commitments,policy)
             if protected_check['status']!='VALID':return finish('INVALID_INPUT','INVALID_COMMITMENT',protected_check['issues'])
             pool=CandidatePool(work,{cid:calls[cid] for cid in call_ids},eligible,policy,as_of_at,commitments=physical_commitments,pair_limit=max_candidates_per_pair,total_limit=max_total_candidates,deadline=deadline)
-            pool.initial();result['initial_candidate_count']=pool.count()
+            if frozen_candidate_domain is None:pool.initial()
+            else:
+                for cid in sorted(frozen_candidate_domain):
+                    for bid in sorted(frozen_candidate_domain[cid]):
+                        if cid not in calls or bid not in eligible.get(cid,[]):return finish('INVALID_INPUT','INVALID_CANDIDATE_DOMAIN','Frozen candidate pair is not eligible')
+                        for at in frozen_candidate_domain[cid][bid]:pool.add(cid,bid,at,'FROZEN_VALIDATED_CANDIDATE',0)
+                if pool.domain()!=frozen_candidate_domain:return finish('INVALID_INPUT','INVALID_CANDIDATE_DOMAIN','Frozen domain differs after physical validation')
+            result['initial_candidate_count']=pool.count()
             for round_no in range(max_expansion_rounds+1):
                 remaining=deadline-time.perf_counter()
                 if remaining<=0:raise TimeoutError('Overall execution time budget exhausted')
                 round_start=time.perf_counter()
-                physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs={},pair_candidate_etbs=pool.domain(),policy=policy,time_limit_seconds=remaining,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,conflict_filter='SAFE_ENVELOPE_V1',_v5_context=_V5_VALIDATED_CONTEXT)
+                physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs={},pair_candidate_etbs=pool.domain(),policy=policy,time_limit_seconds=remaining,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,forbidden_schedules=initial_forbidden_schedules,conflict_filter='SAFE_ENVELOPE_V1',_v5_context=_V5_VALIDATED_CONTEXT)
                 result['generation_rounds'].append({'round':round_no,'candidate_count':pool.count(),'solver_outcome':physical['status'],'cp_sat_seconds':physical.get('cp_sat_seconds'),'elapsed_seconds':time.perf_counter()-started,'round_seconds':time.perf_counter()-round_start,'expansion_reason':'INITIAL' if round_no==0 else 'CANDIDATE_SHORTAGE_OR_FINITE_CONFLICT'})
                 result['solver_attempt_count']=len(result['generation_rounds'])
                 if physical['status'] not in ('INFEASIBLE',):break
+                if frozen_candidate_domain is not None:result['stopping_reason']='CANDIDATE_DOMAIN_EXHAUSTED';break
                 if round_no==max_expansion_rounds:result['stopping_reason']='EXPANSION_ROUND_LIMIT';break
                 if pool.count()>=max_total_candidates:result['stopping_reason']='TOTAL_CANDIDATE_LIMIT';break
                 affected=pool.affected_calls()
@@ -140,12 +150,13 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','Some potentially relevant candidates have unresolved policy')
         else:
             manual_domain={cid:{bid:sorted({timestamp(v).isoformat() for v in ([calls[cid]['fix_etb_at']] if calls[cid]['fixed_etb_is_hard'] else candidate_etbs.get(cid,[]))}) for bid in sorted(eligible[cid])} for cid in sorted(call_ids)}
+            manual_domain_fingerprint=digest(canonical({'as_of_at':as_of_at,'call_ids':sorted(call_ids),'pair_candidate_etbs':manual_domain,'physical_commitments':list(physical_commitments)}).encode())
             result['candidates_by_call_and_berth']=manual_domain
             result['generation_reasons']={cid:{bid:[{'etb_at':t,'reasons':['HARD_FIX_ETB' if calls[cid]['fixed_etb_is_hard'] else 'MANUAL_SUPPLIED'],'round':0} for t in times] for bid,times in pairs.items()} for cid,pairs in manual_domain.items()}
             result['initial_candidate_count']=result['final_candidate_count']=sum(len(times) for pairs in manual_domain.values() for times in pairs.values())
             remaining=deadline-time.perf_counter()
             if remaining<=0:raise TimeoutError('Overall execution time budget exhausted')
-            physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,time_limit_seconds=remaining,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,_v5_context=_V5_VALIDATED_CONTEXT)
+            physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs=candidate_etbs,policy=policy,time_limit_seconds=remaining,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,forbidden_schedules=initial_forbidden_schedules,_v5_context=_V5_VALIDATED_CONTEXT)
             result['solver_attempt_count']=1
         result['solver_status']=physical.get('solver_status',physical['status']);result['candidate_domain_fingerprint']=physical.get('candidate_domain_fingerprint',result['candidate_domain_fingerprint']);result['physical_solver_result']=physical
         result['physical_solver_status']=result['solver_status']
@@ -187,7 +198,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES':kwargs.update(candidate_etbs={},pair_candidate_etbs=pool.domain(),conflict_filter='SAFE_ENVELOPE_V1')
             else:kwargs['candidate_etbs']=candidate_etbs
             return solve_berth_schedule(work,**kwargs)
-        search_result=search(physical,evaluate=evaluate,solve_alternative=solve_alternative,deadline=deadline,max_reoptimizations=max_inventory_reoptimizations)
+        search_result=search(physical,evaluate=evaluate,solve_alternative=solve_alternative,deadline=deadline,max_reoptimizations=max_inventory_reoptimizations,initial_forbidden_schedules=initial_forbidden_schedules)
         result['inventory_reoptimization_solver_calls']=search_result['solver_calls']-1;result['solver_attempt_count']=(len(result['generation_rounds']) if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' else 1)+result['inventory_reoptimization_solver_calls']
         result['reoptimization_attempts']=search_result['attempts'];result['forbidden_schedule_count']=len(search_result['forbidden_schedules']);result['inventory_violations']=[{'attempt':a['attempt'],**issue} for a in search_result['attempts'] for issue in a['inventory_violations']]
         result['stopping_reason']=search_result['stopping_reason'];result['physical_solver_result']=search_result['physical'];result['last_reoptimization_solver_result']=search_result['last_search_result']
