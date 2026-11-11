@@ -82,15 +82,12 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         # ETB and hose connection are independent decisions. Add only explicit
         # resource-release anchors derived from immutable candidate replays.
         base_options=list(options)
-        dock=set(policy.get('dock_4142_berths',[]))
+        from .release_index import ReleaseEventIndex
+        releases=ReleaseEventIndex(base_options,locked,policy,phase_release_policy)
         for base in base_options:
             check_deadline()
-            release_sources=(base_options+locked) if phase_release_policy=='ALL_OPTIONS_V1' else locked
-            release_times=sorted({row['switching_end_at'] for row in release_sources
-                                  if row['call_id']!=base['call_id'] and (row['berth_id']==base['berth_id'] or {row['berth_id'],base['berth_id']}<=dock)},key=timestamp)
-            for release in release_times:
+            for release in releases.later_releases(base):
                 check_deadline()
-                if timestamp(release)<=timestamp(base['etb_at']):continue
                 try:
                     row=replay(calls[base['call_id']],berths[base['berth_id']],base['etb_at'],policy,
                                restrictions=snapshot['workbook_tables']['restrictions']['rows'],hose_connection_start_at=release)
