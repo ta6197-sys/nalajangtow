@@ -40,7 +40,7 @@ class ResumableRollingTests(unittest.TestCase):
             "initial_inventory": {}, "previous_schedule": [],
         }
 
-    def run(self, **kwargs):
+    def run_trial(self, **kwargs):
         return run_resumable_rolling(
             self.snapshot, policy=self.policy, as_of_at=self.start,
             output_dir=self.folder, days=2, seconds_per_strategy=1,
@@ -64,7 +64,7 @@ class ResumableRollingTests(unittest.TestCase):
 
     def test_two_days_checkpoint_and_summary(self):
         with self.patches():
-            result = self.run()
+            result = self.run_trial()
         self.assertEqual(result["status"], "REQUESTED_WINDOWS_VALIDATED")
         self.assertEqual(result["validated_days"], 2)
         self.assertEqual(len(self.optimize_calls), 2)
@@ -74,8 +74,8 @@ class ResumableRollingTests(unittest.TestCase):
 
     def test_resume_replays_checkpoint_without_reoptimizing_day_one(self):
         with self.patches():
-            first = self.run(max_new_days=1)
-            second = self.run(resume=True)
+            first = self.run_trial(max_new_days=1)
+            second = self.run_trial(resume=True)
         self.assertEqual(first["status"], "PAUSED")
         self.assertEqual(first["validated_days"], 1)
         self.assertEqual(self.optimize_calls, [
@@ -85,7 +85,7 @@ class ResumableRollingTests(unittest.TestCase):
 
     def test_resume_refuses_snapshot_change(self):
         with self.patches():
-            self.run(max_new_days=1)
+            self.run_trial(max_new_days=1)
             modified = copy.deepcopy(self.snapshot)
             modified["calls"].append({"call_id": "B"})
             with self.assertRaisesRegex(ValueError, "fingerprint"):
@@ -98,19 +98,19 @@ class ResumableRollingTests(unittest.TestCase):
 
     def test_resume_refuses_tampered_checkpoint(self):
         with self.patches():
-            self.run(max_new_days=1)
+            self.run_trial(max_new_days=1)
             path = self.folder / "day_001.json"
             saved = json.loads(path.read_text())
             saved["state_fingerprint"] = "TAMPERED"
             path.write_text(json.dumps(saved), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "carry state mismatch"):
-                self.run(resume=True)
+                self.run_trial(resume=True)
 
     def test_no_incumbent_blocks_and_never_advances(self):
         with self.patches(), patch(
                 "src.daily_planning.integrated_v3.resumable_rolling._validate_window",
                 return_value={"status": "INCOMPLETE"}):
-            result = self.run()
+            result = self.run_trial()
         self.assertEqual(result["status"], "STOPPED_UNRESOLVED")
         self.assertEqual(result["next_day"], 1)
         self.assertEqual(len(self.optimize_calls), 1)
