@@ -15,7 +15,8 @@ def compatibility(call,berth):
         if not number(berth['min_loa_m'])<=number(p['loa_m'])<=number(berth['max_loa_m']):fail('loa_m','LOA outside range')
         if call['direction'] in tokens(berth.get('draft_check_operation')) or berth.get('draft_check_operation')=='BOTH':
             if number(p['draft_m'])>number(berth['max_draft_m']):fail('draft_m','Draft exceeds limit')
-        minimum=(berth.get('workbook_supplement') or {}).get('min_pbl_m')
+        minimum=berth.get('min_pbl_m')
+        if minimum is None:minimum=(berth.get('workbook_supplement') or {}).get('min_pbl_m')
         if minimum is not None and number(p['pbl_m'])<number(minimum):fail('pbl_m','Parallel body below limit')
     except (ValueError,KeyError,TypeError):
         errors.append({'code':'MISSING_PHYSICAL_DATA','call_id':call.get('call_id'),'berth_id':berth.get('berth_id'),'reason':'Missing or invalid physical dimension'})
