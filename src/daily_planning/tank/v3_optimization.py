@@ -9,10 +9,11 @@ from ..integrated_input.validator import tokens,timestamp
 
 
 def solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inventory=None,
-                        same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30, inventory_cuts=False, inventory_relaxation=False):
+                        same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30, inventory_cuts=False, inventory_relaxation=False, capacity_bound_policy='DISABLED'):
     """Solve in an isolated HiGHS process to avoid OR-Tools native-library collisions."""
     if type(inventory_relaxation) is not bool:return {'status':'INVALID_INPUT','issues':[{'code':'INVALID_INVENTORY_RELAXATION_POLICY'}],'operational_approval':False}
     if type(inventory_cuts) is not bool:return {'status':'INVALID_INPUT','issues':[{'code':'INVALID_INVENTORY_CUTS_POLICY'}],'operational_approval':False}
+    if capacity_bound_policy not in ('DISABLED','V3_SINGLE_TANK_CAPACITY_BOUND_V1'):return {'status':'INVALID_INPUT','issues':[{'code':'INVALID_CAPACITY_BOUND_POLICY'}],'operational_approval':False}
     if isinstance(time_limit_seconds,bool) or not isinstance(time_limit_seconds,(int,float)) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:
         return {'status':'INVALID_INPUT','issues':[{'code':'INVALID_TIME_LIMIT'}],'operational_approval':False}
     if all(x.get('tank_id') for x in transfers):
@@ -22,7 +23,7 @@ def solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_invent
         result['inventory_relaxation_policy']='V3_INVENTORY_RELAXATION_V1' if inventory_relaxation else 'DISABLED'
         return result
     try:
-        payload={'snapshot':snapshot,'transfers':transfers,'start_at':start_at,'end_at':end_at,'initial_inventory':initial_inventory,'same_tank_policy':same_tank_policy,'carried_transfers':carried_transfers,'commitments':commitments,'time_limit_seconds':time_limit_seconds,'inventory_cuts':inventory_cuts,'inventory_relaxation':inventory_relaxation}
+        payload={'snapshot':snapshot,'transfers':transfers,'start_at':start_at,'end_at':end_at,'initial_inventory':initial_inventory,'same_tank_policy':same_tank_policy,'carried_transfers':carried_transfers,'commitments':commitments,'time_limit_seconds':time_limit_seconds,'inventory_cuts':inventory_cuts,'inventory_relaxation':inventory_relaxation,'capacity_bound_policy':capacity_bound_policy}
         process=subprocess.run([sys.executable,'-m','src.daily_planning.tank.v3_optimization'],input=json.dumps(payload),capture_output=True,text=True,timeout=float(time_limit_seconds),check=False)
         if process.returncode: return {'status':'SOLVER_UNAVAILABLE','issues':[{'code':'SOLVER_PROCESS_FAILED','reason':process.stderr[-2000:]}],'operational_approval':False}
         result=json.loads(process.stdout)
@@ -36,7 +37,7 @@ def solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_invent
 
 
 def _solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inventory=None,
-                         same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30, inventory_cuts=False, inventory_relaxation=False):
+                         same_tank_policy=None, carried_transfers=None, commitments=None, time_limit_seconds=30, inventory_cuts=False, inventory_relaxation=False, capacity_bound_policy='DISABLED'):
     """Find single-tank assignments within provided eligible choices, without changing times.
 
     Each input transfer may provide tank_id, otherwise eligible_tank_ids. The
@@ -60,6 +61,15 @@ def _solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inven
             eligible=[k for k in choices if k in tanks and k in tokens(b['connected_tank_ids']) and x['berth_id'] in tokens(tanks[k]['connected_berth_ids']) and tanks[k]['cargo_group']==c['cargo_group']]
             if not eligible:raise ValueError('No eligible connected tank for '+x['call_id'])
             pairs.extend((i,k) for k in eligible)
+        bound_removed=0
+        if capacity_bound_policy=='V3_SINGLE_TANK_CAPACITY_BOUND_V1':
+            from .v3_capacity_bound import filter_tank_pairs
+            reduced,bound_removed=filter_tank_pairs(snapshot,transfers,pairs,carried_transfers=carried_transfers,commitments=commitments)
+            # Keep original options if a whole call would otherwise be removed:
+            # the existing validator remains responsible for invalid inputs.
+            if any(not any(j==i for j,k in reduced) for i in range(len(transfers))):
+                reduced=pairs;bound_removed=0
+            pairs=reduced
         model=pyo.ConcreteModel();model.P=pyo.Set(dimen=2,initialize=pairs,ordered=True);model.y=pyo.Var(model.P,domain=pyo.Binary);model.constraints=pyo.ConstraintList()
         for i in range(len(transfers)):model.constraints.add(sum(model.y[j,k] for j,k in pairs if j==i)==1)
         if same_tank_policy=='FORBID':
@@ -97,7 +107,7 @@ def _solve_v3_allocation(snapshot, transfers, *, start_at, end_at, initial_inven
             for i,k in chosen:assigned[i]['tank_id']=k
             result=validate_v3_inventory(snapshot,assigned,start_at=start_at,end_at=end_at,initial_inventory=initial_inventory,same_tank_policy=same_tank_policy,carried_transfers=carried_transfers,commitments=commitments);attempts+=1
             if result['status']=='VALID':
-                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts,inventory_cut_count=cut_count,heuristic_constraint_count=heuristic_constraints);return result
+                result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts,inventory_cut_count=cut_count,heuristic_constraint_count=heuristic_constraints,capacity_bound_policy=capacity_bound_policy,capacity_bound_removed_pairs=bound_removed);return result
             if result['status']=='INVALID_INPUT':
                 result.update(solver_status=str(termination),allocation_model_version='V3_TANK_ALLOCATION_V1',attempts=attempts,inventory_cut_count=cut_count,heuristic_constraint_count=heuristic_constraints);return result
             codes={issue['code'] for issue in result['issues']}

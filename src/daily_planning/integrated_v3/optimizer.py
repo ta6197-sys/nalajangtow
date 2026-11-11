@@ -61,7 +61,7 @@ def _price_schedule(snapshot, rows, records, *, as_of_at, pricing_policy='EXPLIC
 def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=(), completed_rows=(),
                  initial_inventory=None, carried_transfers=None, tank_commitments=None,
                  same_tank_policy=None, previous_schedule=(), candidate_etbs=None,
-                 candidate_event_policy='V3_ETB_EVENTS_V1', time_limit_seconds=30, inventory_cuts=False, pricing_policy='EXPLICIT_EVENTS_V1', phase_release_policy='ALL_OPTIONS_V1', inventory_relaxation=False, reuse_physical_model=False, berth_search_heuristic='NONE'):
+                 candidate_event_policy='V3_ETB_EVENTS_V1', time_limit_seconds=30, inventory_cuts=False, pricing_policy='EXPLICIT_EVENTS_V1', phase_release_policy='ALL_OPTIONS_V1', inventory_relaxation=False, reuse_physical_model=False, berth_search_heuristic='NONE', capacity_bound_policy='DISABLED'):
     """Enumerate complete physical candidates and minimize independently replayed cost.
 
     The result is only as broad as supplied/generated finite ETBs. Incomplete
@@ -80,11 +80,12 @@ def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=
                 'incumbent':incumbent,'independent_validation':independent,'unresolved_candidates':unresolved,'domain_exhausted':domain_exhausted,
                 'scope':'Finite generated ETBs and selected phase release options only; no continuous-time optimality','pricing_policy':pricing_policy,'phase_release_policy':phase_release_policy,'inventory_relaxation':inventory_relaxation,'reuse_physical_model':reuse_physical_model,'berth_search_heuristic':berth_search_heuristic,
                 'pending_checks':['ACTUAL_WEATHER_AND_EVENTS','CONFIRMATION_AND_FREEZE_AUTHORITY','FULL_ROLLING_COVERAGE'],
-                'operational_approval':False,**extra}
+                'operational_approval':False,**({'capacity_bound_policy':capacity_bound_policy} if capacity_bound_policy!='DISABLED' else {}),**extra}
     try:
         if isinstance(time_limit_seconds,bool) or not isinstance(time_limit_seconds,(int,float)) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:raise ValueError('Invalid time budget')
         if not isinstance(settlement_records,(list,tuple)):raise ValueError('Explicit settlement records required')
         if type(reuse_physical_model) is not bool:raise ValueError('Invalid model reuse policy')
+        if capacity_bound_policy not in ('DISABLED','V3_SINGLE_TANK_CAPACITY_BOUND_V1'):raise ValueError('Unknown tank capacity bound policy')
         asof=timestamp(as_of_at);deadline=started+time_limit_seconds
         if candidate_etbs is None:
             generated=generate_candidate_etbs(snapshot,as_of_at=as_of_at,policy=policy,commitments=commitments,previous_schedule=previous_schedule,completed_rows=completed_rows,event_policy=candidate_event_policy,deadline=deadline)
@@ -94,7 +95,7 @@ def optimize_72h(snapshot, *, as_of_at, policy, settlement_records, commitments=
             nonlocal incumbent
             remaining=deadline-time.monotonic()
             if remaining<=0:return False
-            candidate=validate_candidate(snapshot,berth['schedule'],policy=policy,as_of_at=as_of_at,initial_inventory=initial_inventory,carried_transfers=carried_transfers,tank_commitments=tank_commitments,same_tank_policy=same_tank_policy,time_limit_seconds=remaining,inventory_cuts=inventory_cuts,protected_call_ids=[x['call_id'] for x in commitments],inventory_relaxation=inventory_relaxation)
+            candidate=validate_candidate(snapshot,berth['schedule'],policy=policy,as_of_at=as_of_at,initial_inventory=initial_inventory,carried_transfers=carried_transfers,tank_commitments=tank_commitments,same_tank_policy=same_tank_policy,time_limit_seconds=remaining,inventory_cuts=inventory_cuts,protected_call_ids=[x['call_id'] for x in commitments],inventory_relaxation=inventory_relaxation,**({'capacity_bound_policy':capacity_bound_policy} if capacity_bound_policy!='DISABLED' else {}))
             record={'berth_status':berth['solver_status'],'berth_objective_scope':berth.get('solver_objective_scope'),'physical_tank_status':candidate['status'],'tank_status':candidate.get('tank_result',{}).get('status'),'tank_issues':candidate.get('tank_result',{}).get('issues',[])[:5]}
             if candidate['status']=='PHYSICAL_AND_TANK_ONLY':
                 pricing=_price_schedule(snapshot,berth['schedule'],settlement_records,as_of_at=as_of_at,pricing_policy=pricing_policy)
