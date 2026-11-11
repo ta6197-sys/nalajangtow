@@ -106,7 +106,8 @@ def run_resumable_rolling(snapshot, *, policy, as_of_at, output_dir, days=58,
                           same_tank_policy=None, inventory_cuts=True,
                           inventory_relaxation=True, reuse_physical_model=True,
                           phase_release_policy="ALL_OPTIONS_V1", resume=False,
-                          max_new_days=None, require_all_calls=True):
+                          max_new_days=None, require_all_calls=True,
+                          capacity_bound_policy='DISABLED'):
     """Run until completed, blocked or paused, committing each validated day.
 
     This is a synthetic clear-weather experiment and never approves operations.
@@ -120,6 +121,8 @@ def run_resumable_rolling(snapshot, *, policy, as_of_at, output_dir, days=58,
         raise ValueError("Unknown same-tank policy")
     if phase_release_policy not in ("ALL_OPTIONS_V1", "LOCKED_ONLY_V1"):
         raise ValueError("Unknown phase release policy")
+    if capacity_bound_policy not in ('DISABLED','V3_SINGLE_TANK_CAPACITY_BOUND_V1'):
+        raise ValueError('Unknown tank capacity bound policy')
     if not isinstance(strategies, (list, tuple)) or not strategies:
         raise ValueError("Nonempty strategy list required")
     if max_new_days is not None and (type(max_new_days) is not int or max_new_days < 1):
@@ -143,6 +146,7 @@ def run_resumable_rolling(snapshot, *, policy, as_of_at, output_dir, days=58,
                   phase_release_policy=phase_release_policy,
                   require_all_calls=require_all_calls,
                   pricing_policy=CLEAR_BASELINE)
+    if capacity_bound_policy!='DISABLED':config['capacity_bound_policy']=capacity_bound_policy
     manifest = dict(run_fingerprint=_fingerprint(config), config=config,
                     operational_approval=False)
     manifest_path = folder / "manifest.json"
@@ -215,7 +219,8 @@ def run_resumable_rolling(snapshot, *, policy, as_of_at, output_dir, days=58,
                     reuse_physical_model=reuse_physical_model,
                     phase_release_policy=phase_release_policy,
                     candidate_event_policy=strategy["event_policy"],
-                    berth_search_heuristic=strategy["berth_heuristic"], **prior)
+                    berth_search_heuristic=strategy["berth_heuristic"],
+                    **({'capacity_bound_policy':capacity_bound_policy} if capacity_bound_policy!='DISABLED' else {}), **prior)
                 audit = _validate_window(snapshot, result, policy=policy, at=at,
                                          state=state, same_tank_policy=same_tank_policy)
                 attempt = dict(strategy=strategy, solver_status=result.get("status"),

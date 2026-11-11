@@ -26,6 +26,7 @@ def main(argv=None):
                         default="ALL_OPTIONS_V1")
     parser.add_argument("--no-inventory-relaxation", action="store_true")
     parser.add_argument("--no-reuse-physical-model", action="store_true")
+    parser.add_argument("--capacity-bound", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--max-new-days", type=int)
     parser.add_argument("--policy-json", type=Path)
@@ -49,6 +50,7 @@ def main(argv=None):
         inventory_relaxation=not args.no_inventory_relaxation,
         reuse_physical_model=not args.no_reuse_physical_model,
         phase_release_policy=args.phase_release_policy,
+        capacity_bound_policy='V3_SINGLE_TANK_CAPACITY_BOUND_V1' if args.capacity_bound else 'DISABLED',
         require_all_calls=not args.allow_partial_call_coverage)
     print(json.dumps({k: result.get(k) for k in (
         "status", "validated_days", "requested_days", "covered_call_count",
