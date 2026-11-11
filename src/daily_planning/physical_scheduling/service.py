@@ -13,7 +13,7 @@ MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 _V5_VALIDATED_CONTEXT=object()
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,_v5_context=None):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,objective_mode='FEASIBILITY',option_pricer=None,_v5_context=None):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -22,6 +22,8 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         begin=timestamp(as_of_at);end=begin+timedelta(hours=72)
         if isinstance(time_limit_seconds,bool) or not math.isfinite(time_limit_seconds) or time_limit_seconds<=0:raise ValueError('Invalid solver budget')
         if search_heuristic not in ('NONE','CRUDE_INBOUND_FIRST_V1'):raise ValueError('Unknown search heuristic')
+        if objective_mode not in ('FEASIBILITY','MIN_TOTAL_DEMURRAGE'):raise ValueError('Unknown objective mode')
+        if objective_mode=='MIN_TOTAL_DEMURRAGE' and (option_pricer is None or search_heuristic!='NONE' or candidate_visitor is not None):raise ValueError('Cost objective requires a pricer and no heuristic or visitor')
         if conflict_filter not in ('NONE','SAFE_ENVELOPE_V1'):raise ValueError('Unknown conflict filter')
         if phase_release_policy not in ('ALL_OPTIONS_V1','LOCKED_ONLY_V1'):raise ValueError('Unknown phase release policy')
         deadline=started+float(time_limit_seconds)
@@ -162,7 +164,18 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 interval=m.NewOptionalIntervalVar(a,b-a,b,x[i],f'tug_{i}_{phase}') if i<len(options) else m.NewIntervalVar(a,b-a,b,f'locked_tug_{i}_{phase}')
                 tug_intervals.append(interval);demands.append(demand)
         if tug_intervals:m.AddCumulative(tug_intervals,demands,policy['tug_capacity'])
-        if search_heuristic=='CRUDE_INBOUND_FIRST_V1':
+        option_costs=[];locked_costs=[]
+        if objective_mode=='MIN_TOTAL_DEMURRAGE':
+            for row in options+locked:
+                check_deadline()
+                priced=option_pricer(row)
+                if priced.get('status')!='SETTLED' or type(priced.get('demurrage_cents')) is not int or priced['demurrage_cents']<0:
+                    return failure('SETTLEMENT_UNRESOLVED','OPTION_PRICING_UNRESOLVED','Every selectable and committed option requires valid settlement',call_id=row['call_id'],berth_id=row['berth_id'],etb_at=row['etb_at'],pricing_result=priced)
+                (option_costs if len(option_costs)<len(options) else locked_costs).append(priced)
+            maximum=sum(p['demurrage_cents'] for p in option_costs+locked_costs)
+            if maximum>=2**63-1:return failure('INVALID_INPUT','OBJECTIVE_OVERFLOW','Objective exceeds CP-SAT integer range')
+            m.Minimize(sum(p['demurrage_cents']*x[i] for i,p in enumerate(option_costs))+sum(p['demurrage_cents'] for p in locked_costs))
+        elif search_heuristic=='CRUDE_INBOUND_FIRST_V1':
             weighted=[]
             for i,row in enumerate(options):
                 call=calls[row['call_id']]
@@ -183,7 +196,8 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             if result not in (cp_model.FEASIBLE,cp_model.OPTIMAL):
                 if candidate_visitor is not None and result==cp_model.INFEASIBLE:
                     return {'status':'ENUMERATION_EXHAUSTED','emitted':emitted,'operational_approval':False}
-                return failure('INFEASIBLE' if result==cp_model.INFEASIBLE else 'TIME_LIMIT_NO_INCUMBENT','NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only',**({'solver_status':solver.StatusName(result),'cp_sat_seconds':solver.WallTime()} if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5' else {}))
+                status='INFEASIBLE' if result==cp_model.INFEASIBLE else 'MODEL_INVALID' if result==cp_model.MODEL_INVALID else 'TIME_LIMIT_NO_INCUMBENT'
+                return failure(status,'NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only',**({'solver_status':solver.StatusName(result),'cp_sat_seconds':solver.WallTime()} if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5' else {}))
             selected=[i for i in range(len(options)) if solver.Value(x[i])]
             rows=locked+[options[i] for i in selected]
             rows.sort(key=lambda row:(timestamp(row['etb_at']),row['call_id']))
@@ -205,6 +219,18 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
             if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5':payload['cp_sat_seconds']=solver.WallTime()
+
+            if objective_mode=='MIN_TOTAL_DEMURRAGE':
+                selected_costs=[option_costs[i] for i in selected]+locked_costs
+                exact_total=sum(p['demurrage_cents'] for p in selected_costs)
+                bound=exact_total if result==cp_model.OPTIMAL else solver.BestObjectiveBound()
+                payload.update(objective_mode=objective_mode,total_projected_demurrage_cents=exact_total,
+                    best_objective_bound_cents=bound,optimality_gap=(max(0.0,exact_total-bound)/exact_total if exact_total else 0.0),
+                    option_cost_breakdown=[{'option':row,'pricing':priced} for row,priced in zip(options,option_costs)],
+                    committed_cost_breakdown=[{'option':row,'pricing':priced} for row,priced in zip(locked,locked_costs)],
+                    pending_validation=[item for item in payload['pending_validation'] if item!='CONTRACT_SETTLEMENT'],
+                    scope='Cost optimization over the generated finite physical options; inventory is not part of the model',
+                    solver_objective_scope='PHYSICAL_CANDIDATE_COST_OPTIMAL_ONLY' if result==cp_model.OPTIMAL else 'PHYSICAL_CANDIDATE_COST_INCUMBENT_ONLY')
 
             if candidate_visitor is None:return payload
             emitted+=1
