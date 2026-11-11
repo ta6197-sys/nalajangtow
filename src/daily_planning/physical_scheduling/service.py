@@ -13,7 +13,7 @@ MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 _V5_VALIDATED_CONTEXT=object()
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,objective_mode='FEASIBILITY',option_pricer=None,_v5_context=None):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,objective_mode='FEASIBILITY',option_pricer=None,inventory_builder=None,_v5_context=None):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -128,6 +128,9 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         from ortools.sat.python import cp_model
         m=cp_model.CpModel();x=[m.NewBoolVar('choice_'+str(i)) for i in range(len(options))]
         for indices in groups:m.AddExactlyOne(x[i] for i in indices)
+        try:inventory_stats=inventory_builder(m,x,options,locked) if inventory_builder is not None else None
+        except (ValueError,KeyError,TypeError,OverflowError,ZeroDivisionError) as exc:
+            return failure('INVALID_INPUT','INVALID_INVENTORY_MODEL',exc)
         # Exact no-goods only: forbid a demonstrated complete selection, not
         # a berth/time choice shared by other potentially feasible schedules.
         option_index={canonical(row):i for i,row in enumerate(options)}
@@ -219,6 +222,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
             if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5':payload['cp_sat_seconds']=solver.WallTime()
+            if inventory_stats is not None:payload.update(inventory_stats)
 
             if objective_mode=='MIN_TOTAL_DEMURRAGE':
                 selected_costs=[option_costs[i] for i in selected]+locked_costs
