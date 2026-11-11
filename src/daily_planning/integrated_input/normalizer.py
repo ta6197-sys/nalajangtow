@@ -6,6 +6,9 @@ from .validator import timestamp
 
 
 def normalize(bundle):
+    if bundle.get('scenario_id')=='V5_3TANK':
+        from .v5 import normalize_v5
+        return normalize_v5(bundle)
     source=bundle['source']; tables=bundle['tables']
     profiles={};contracts={}
     for row in tables['profiles']['rows']: profiles.setdefault(row.get('case_id'),[]).append(row)

@@ -13,6 +13,8 @@ from .provenance import canonical,digest,VERSION,KST
 
 
 def run(data_dir,output_dir,dry_run=False,*,scenario='V3_ORIGINAL'):
+    if scenario=='V5_3TANK':
+        return run_v5(data_dir,output_dir,dry_run)
     try:
         bundle=load_inputs(data_dir,scenario=scenario);snapshot=normalize(bundle);report=validate(snapshot)
     except (InputError,ValueError,KeyError,TypeError) as exc:
@@ -49,10 +51,32 @@ def run(data_dir,output_dir,dry_run=False,*,scenario='V3_ORIGINAL'):
     return report,manifest
 
 
+def run_v5(data_dir,output_dir,dry_run=False):
+    from .v5 import validate_v5
+    try:
+        bundle=load_inputs(data_dir,scenario='V5_3TANK')
+        snapshot=normalize(bundle);report=validate_v5(snapshot)
+    except (InputError,ValueError,KeyError,TypeError) as exc:
+        return {'status':'INPUT_INVALID','data_preflight_pass':False,'errors':[{'message':str(exc)}]},None
+    manifest={'scenario_id':'V5_3TANK','source_fingerprints':report['source_fingerprints'],
+              'normalized_snapshot_sha256':digest(canonical(snapshot).encode())}
+    run_id=digest(canonical(manifest).encode())[:24];manifest['run_id']=run_id
+    if not dry_run:
+        folder=Path(output_dir)/run_id
+        folder.mkdir(parents=True,exist_ok=True)
+        for name,value in [('normalized_snapshot.json',snapshot),('validation_report.json',report),('manifest.json',manifest)]:
+            path=folder/name
+            if path.exists():
+                if json.loads(path.read_text(encoding='utf-8'))!=value:raise ValueError('Existing immutable output differs: '+str(path))
+            else:
+                with path.open('x',encoding='utf-8') as stream:stream.write(json.dumps(value,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
+    return report,manifest
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--data-dir',required=True,type=Path)
     parser.add_argument('--output-dir',type=Path,default=Path('results/v3_preflight'));parser.add_argument('--dry-run',action='store_true')
-    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3'),default='V3_ORIGINAL')
+    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3','V5_3TANK'),default='V3_ORIGINAL')
     args=parser.parse_args()
     try:report,manifest=run(args.data_dir,args.output_dir,args.dry_run,scenario=args.scenario)
     except (ValueError,OSError) as exc:

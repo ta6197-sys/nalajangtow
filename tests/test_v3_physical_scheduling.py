@@ -30,6 +30,13 @@ class V3CompatibilityTest(unittest.TestCase):
     def test_missing_dimensions_are_not_invented(self):
         c,b=fixture();del c['physical']['loa_m']
         self.assertIn('MISSING_PHYSICAL_DATA',{x['code'] for x in compatibility(c,b)})
+    def test_json_minimum_pbl_is_enforced(self):
+        c,b=fixture();b['min_pbl_m']=str(float(c['physical']['pbl_m'])+1)
+        self.assertIn('pbl_m',{x.get('field') for x in compatibility(c,b)})
+    def test_workbook_minimum_pbl_remains_supported(self):
+        c,b=fixture();b.pop('min_pbl_m',None)
+        b['workbook_supplement']['min_pbl_m']=str(float(c['physical']['pbl_m'])+1)
+        self.assertIn('pbl_m',{x.get('field') for x in compatibility(c,b)})
     def test_compatibility_does_not_change_inputs(self):
         c,b=fixture();old=copy.deepcopy((c,b));compatibility(c,b);berth_duration_seconds(c,b)
         self.assertEqual((c,b),old)
