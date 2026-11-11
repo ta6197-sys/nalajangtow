@@ -15,12 +15,16 @@ VERSION='V3_INTEGRATION_CHECKPOINT_V1'
 
 def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=None,
                        carried_transfers=None, tank_commitments=None,
-                       same_tank_policy=None, time_limit_seconds=30, inventory_cuts=False, protected_call_ids=(), inventory_relaxation=False, capacity_bound_policy='DISABLED'):
+                       same_tank_policy=None, time_limit_seconds=30, inventory_cuts=False, protected_call_ids=(), inventory_relaxation=False, capacity_bound_policy='DISABLED', projection_end_at=None):
     """Validate a supplied berth candidate and propose tank allocation.
 
     Input rows must be the existing physical scheduler's full replay format.
     This interface does not optimize ETB, price demurrage, or approve operation.
     """
+    if snapshot.get('scenario_id')=='V5_3TANK':
+        return validate_v5_candidate(snapshot,rows,as_of_at=as_of_at,projection_end_at=projection_end_at,
+            initial_inventory=initial_inventory,carried_transfers=carried_transfers,
+            tank_commitments=tank_commitments,protected_call_ids=protected_call_ids,same_tank_policy='ALLOW' if same_tank_policy is None else same_tank_policy)
     def failure(status,code,reason):
         return {'model_version':VERSION,'status':status,'issues':[{'code':code,'reason':str(reason)}], 'operational_approval':False}
     try:
@@ -73,3 +77,43 @@ def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=No
         return {'model_version':VERSION,'status':'PHYSICAL_AND_TANK_ONLY','source_fingerprint':digest(canonical(snapshot).encode()),'policy_fingerprint':digest(canonical(policy).encode()),'physical_validation':physical,'tank_result':tank,'pending_checks':['CONTRACT_SETTLEMENT','EXTERNAL_WEATHER','OBJECTIVE_AND_CANDIDATE_SEARCH','FULL_COMMITMENT_AND_FREEZE_VALIDATION','COMPLETE_SCENARIO_AND_ROLLING_COVERAGE'],'operational_approval':False}
     except (ValueError,KeyError,TypeError,ZeroDivisionError,OverflowError) as exc:
         return failure('INVALID_INPUT','INTEGRATION_INPUT_INVALID',exc)
+
+
+def validate_v5_candidate(snapshot, rows, *, as_of_at, projection_end_at=None,
+                          initial_inventory=None, carried_transfers=None,
+                          tank_commitments=None, protected_call_ids=(), same_tank_policy='ALLOW'):
+    """Convert candidate work intervals to exact transfer segments; no berth approval."""
+    from ..tank.v5_inventory import validate_v5_inventory
+    try:
+        begin=timestamp(as_of_at)
+        end=timestamp(projection_end_at) if projection_end_at else begin+timedelta(hours=72)
+        calls={c['call_id']:c for c in snapshot['calls']};berths={b['berth_id']:b for b in snapshot['berths']}
+        protected=set(protected_call_ids); supplied={r.get('call_id') for r in rows}
+        committed={r.get('call_id') for r in (tank_commitments or [])}
+        if not protected<=supplied or not protected<=committed:
+            return {'model_version':'V5_INVENTORY_CHECKPOINT_V1','status':'TANK_SUBPROBLEM_NOT_VALIDATED','issues':[{'code':'INVALID_CARRYOVER_STATE','reason':'Protected calls require candidate rows and unchanged tank commitments','call_ids':sorted(protected-(supplied&committed))}],'physical_validation':'NOT_EVALUATED','scheduling_feasibility':'NOT_EVALUATED','operational_approval':False}
+        transfers=[]
+        for row in rows:
+            c=calls[row['call_id']];b=berths[row['berth_id']]
+            ratio=number(c['physical']['bbl_per_mt']);remaining=number(c['cargo_volume_bbl'])
+            rates=[number(v) for v in (c.get('transfer_rate_mt_h'),b.get('max_transfer_rate_mt_h')) if v not in (None,'')]
+            if not rates or min(rates)<=0 or ratio<=0:raise ValueError('Invalid transfer rate: '+row['call_id'])
+            rate=min(rates)*ratio;pieces=[]
+            for first,last in row['work_intervals']:
+                a,z=timestamp(first),timestamp(last);seconds=int((z-a).total_seconds())
+                if seconds<=0:raise ValueError('Invalid work interval: '+row['call_id'])
+                full=min(seconds,int(remaining*3600//rate))
+                if full:
+                    q=a+timedelta(seconds=full);pieces.append({'start_at':a.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':str(rate)});remaining-=rate*Fraction(full,3600);a=q;seconds-=full
+                if remaining and seconds:
+                    partial=remaining*3600
+                    if partial>rate:raise ValueError('Insufficient transfer time: '+row['call_id'])
+                    q=a+timedelta(seconds=1);pieces.append({'start_at':a.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':str(partial)});remaining=Fraction(0);a=q;seconds-=1
+                if not remaining and seconds:raise ValueError('Excess transfer time: '+row['call_id'])
+            if remaining or not pieces:raise ValueError('Incomplete transfer: '+row['call_id'])
+            transfer={'call_id':row['call_id'],'berth_id':row['berth_id'],'start_at':pieces[0]['start_at'],'end_at':pieces[-1]['end_at'],'segments':pieces,'etb_at':row.get('etb_at')}
+            transfers.append(transfer)
+        tank=validate_v5_inventory(snapshot,transfers,start_at=begin.isoformat(),end_at=end.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,commitments=tank_commitments,same_tank_policy=same_tank_policy)
+        return {'model_version':'V5_INVENTORY_CHECKPOINT_V1','status':'INVENTORY_VALID' if tank['status']=='VALID' else 'TANK_SUBPROBLEM_NOT_VALIDATED','tank_result':tank,'issues':tank['issues'],'physical_validation':'NOT_EVALUATED','scheduling_feasibility':'NOT_EVALUATED','operational_approval':False}
+    except (KeyError,ValueError,TypeError,ZeroDivisionError,OverflowError) as exc:
+        return {'model_version':'V5_INVENTORY_CHECKPOINT_V1','status':'TANK_SUBPROBLEM_NOT_VALIDATED','issues':[{'code':'INVALID_TRANSFER_QUANTITY','reason':str(exc)}],'physical_validation':'NOT_EVALUATED','scheduling_feasibility':'NOT_EVALUATED','operational_approval':False}
