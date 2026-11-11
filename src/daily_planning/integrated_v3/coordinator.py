@@ -79,6 +79,29 @@ def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=No
         return failure('INVALID_INPUT','INTEGRATION_INPUT_INVALID',exc)
 
 
+
+def build_v5_transfer(row, calls, berths):
+    """Build the exact transfer used by V5 replay from physical work intervals."""
+    c=calls[row['call_id']];b=berths[row['berth_id']]
+    ratio=number(c['physical']['bbl_per_mt']);remaining=number(c['cargo_volume_bbl'])
+    rates=[number(v) for v in (c.get('transfer_rate_mt_h'),b.get('max_transfer_rate_mt_h')) if v not in (None,'')]
+    if not rates or min(rates)<=0 or ratio<=0:raise ValueError('Invalid transfer rate: '+row['call_id'])
+    rate=min(rates)*ratio;pieces=[]
+    for first,last in row['work_intervals']:
+        a,z=timestamp(first),timestamp(last);seconds=int((z-a).total_seconds())
+        if seconds<=0:raise ValueError('Invalid work interval: '+row['call_id'])
+        full=min(seconds,int(remaining*3600//rate))
+        if full:
+            q=a+timedelta(seconds=full);pieces.append({'start_at':a.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':str(rate)});remaining-=rate*Fraction(full,3600);a=q;seconds-=full
+        if remaining and seconds:
+            partial=remaining*3600
+            if partial>rate:raise ValueError('Insufficient transfer time: '+row['call_id'])
+            q=a+timedelta(seconds=1);pieces.append({'start_at':a.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':str(partial)});remaining=Fraction(0);a=q;seconds-=1
+        if not remaining and seconds:raise ValueError('Excess transfer time: '+row['call_id'])
+    if remaining or not pieces:raise ValueError('Incomplete transfer: '+row['call_id'])
+    transfer={'call_id':row['call_id'],'berth_id':row['berth_id'],'start_at':pieces[0]['start_at'],'end_at':pieces[-1]['end_at'],'segments':pieces,'etb_at':row.get('etb_at')}
+    return transfer
+
 def validate_v5_candidate(snapshot, rows, *, as_of_at, projection_end_at=None,
                           initial_inventory=None, carried_transfers=None,
                           tank_commitments=None, protected_call_ids=(), same_tank_policy='ALLOW',physical_commitments=()):
@@ -101,24 +124,7 @@ def validate_v5_candidate(snapshot, rows, *, as_of_at, projection_end_at=None,
             if timestamp(work_end)<=begin:
                 if row['call_id'] not in {r.get('call_id') for r in (physical_commitments or [])}:raise ValueError('Completed cargo requires a protected physical commitment: '+row['call_id'])
                 continue
-            c=calls[row['call_id']];b=berths[row['berth_id']]
-            ratio=number(c['physical']['bbl_per_mt']);remaining=number(c['cargo_volume_bbl'])
-            rates=[number(v) for v in (c.get('transfer_rate_mt_h'),b.get('max_transfer_rate_mt_h')) if v not in (None,'')]
-            if not rates or min(rates)<=0 or ratio<=0:raise ValueError('Invalid transfer rate: '+row['call_id'])
-            rate=min(rates)*ratio;pieces=[]
-            for first,last in row['work_intervals']:
-                a,z=timestamp(first),timestamp(last);seconds=int((z-a).total_seconds())
-                if seconds<=0:raise ValueError('Invalid work interval: '+row['call_id'])
-                full=min(seconds,int(remaining*3600//rate))
-                if full:
-                    q=a+timedelta(seconds=full);pieces.append({'start_at':a.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':str(rate)});remaining-=rate*Fraction(full,3600);a=q;seconds-=full
-                if remaining and seconds:
-                    partial=remaining*3600
-                    if partial>rate:raise ValueError('Insufficient transfer time: '+row['call_id'])
-                    q=a+timedelta(seconds=1);pieces.append({'start_at':a.isoformat(),'end_at':q.isoformat(),'rate_bbl_per_hour':str(partial)});remaining=Fraction(0);a=q;seconds-=1
-                if not remaining and seconds:raise ValueError('Excess transfer time: '+row['call_id'])
-            if remaining or not pieces:raise ValueError('Incomplete transfer: '+row['call_id'])
-            transfer={'call_id':row['call_id'],'berth_id':row['berth_id'],'start_at':pieces[0]['start_at'],'end_at':pieces[-1]['end_at'],'segments':pieces,'etb_at':row.get('etb_at')}
+            transfer=build_v5_transfer(row,calls,berths)
             transfers.append(transfer)
         tank=validate_v5_inventory(snapshot,transfers,start_at=begin.isoformat(),end_at=end.isoformat(),initial_inventory=initial_inventory,carried_transfers=carried_transfers,commitments=tank_commitments,same_tank_policy=same_tank_policy)
         return {'model_version':'V5_INVENTORY_CHECKPOINT_V1','status':'INVENTORY_VALID' if tank['status']=='VALID' else 'TANK_SUBPROBLEM_NOT_VALIDATED','tank_result':tank,'issues':tank['issues'],'physical_validation':'NOT_EVALUATED','scheduling_feasibility':'NOT_EVALUATED','operational_approval':False}
