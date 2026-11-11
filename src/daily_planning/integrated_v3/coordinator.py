@@ -81,7 +81,7 @@ def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=No
 
 def validate_v5_candidate(snapshot, rows, *, as_of_at, projection_end_at=None,
                           initial_inventory=None, carried_transfers=None,
-                          tank_commitments=None, protected_call_ids=(), same_tank_policy='ALLOW'):
+                          tank_commitments=None, protected_call_ids=(), same_tank_policy='ALLOW',physical_commitments=()):
     """Convert candidate work intervals to exact transfer segments; no berth approval."""
     from ..tank.v5_inventory import validate_v5_inventory
     try:
@@ -94,6 +94,13 @@ def validate_v5_candidate(snapshot, rows, *, as_of_at, projection_end_at=None,
             return {'model_version':'V5_INVENTORY_CHECKPOINT_V1','status':'TANK_SUBPROBLEM_NOT_VALIDATED','issues':[{'code':'INVALID_CARRYOVER_STATE','reason':'Protected calls require candidate rows and unchanged tank commitments','call_ids':sorted(protected-(supplied&committed))}],'physical_validation':'NOT_EVALUATED','scheduling_feasibility':'NOT_EVALUATED','operational_approval':False}
         transfers=[]
         for row in rows:
+            # A protected physical phase can outlive cargo work. Its transfer is
+            # already reflected in the carry-in inventory and must not replay.
+            if not row.get('work_intervals'):raise ValueError('Missing work intervals: '+str(row.get('call_id')))
+            work_end=row.get('work_end_at') or row['work_intervals'][-1][1]
+            if timestamp(work_end)<=begin:
+                if row['call_id'] not in {r.get('call_id') for r in (physical_commitments or [])}:raise ValueError('Completed cargo requires a protected physical commitment: '+row['call_id'])
+                continue
             c=calls[row['call_id']];b=berths[row['berth_id']]
             ratio=number(c['physical']['bbl_per_mt']);remaining=number(c['cargo_volume_bbl'])
             rates=[number(v) for v in (c.get('transfer_rate_mt_h'),b.get('max_transfer_rate_mt_h')) if v not in (None,'')]
