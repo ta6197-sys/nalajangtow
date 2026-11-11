@@ -113,6 +113,25 @@ class CandidatePool:
                     if at>=earliest:self.add(cid,bid,at,why,round_no)
         self.expansion_events.append({'round':round_no,'reason':'CANDIDATE_SHORTAGE_OR_FINITE_CONFLICT','affected_call_ids':sorted(targets or self.calls),'added':self.count()-before})
         return self.count()-before
+    def expand_cost(self,round_no,schedule,priced):
+        """Add validated local and release anchors; retain every accepted candidate."""
+        before=self.count();by_id={r['call_id']:r for r in schedule}
+        locked={r['call_id'] for r in self.commitments}
+        order=sorted(self.calls,key=lambda cid:(-priced.get(cid,0),cid))
+        for cid in order:
+            if cid in locked or self.calls[cid].get('fixed_etb_is_hard'):continue
+            selected=by_id.get(cid)
+            for bid in sorted(self.eligible[cid]):
+                cfg=self.policy['berths'][bid];maneuver=timedelta(seconds=cfg['berthing_seconds']+cfg.get('pilot_boarding_to_berthing_seconds',0))
+                anchors=[]
+                if selected:
+                    for offset in (-30,30):anchors.append((timestamp(selected['etb_at'])+timedelta(minutes=offset),f'INCUMBENT_OFFSET_{offset:+d}M'))
+                for other in schedule:
+                    if other['call_id']!=cid and other['berth_id']==bid:
+                        anchors.append((timestamp(other['physical_clearance_at'])+maneuver,'INCUMBENT_BERTH_RELEASE:'+other['call_id']))
+                for at,reason in sorted(anchors,key=lambda x:(x[0],x[1])):self.add(cid,bid,at,reason,round_no)
+        self.expansion_events.append({'round':round_no,'reason':'COST_AWARE_INCUMBENT_AND_RELEASE','affected_call_ids':order,'added':self.count()-before})
+        return self.count()-before
     def domain(self):
         return {cid:{bid:[a.isoformat() for a in sorted(self.accepted[(cid,bid)])] for bid in sorted(self.eligible[cid])} for cid in sorted(self.calls)}
     def reasons(self):

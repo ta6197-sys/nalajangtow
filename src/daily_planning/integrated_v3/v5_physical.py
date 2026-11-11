@@ -55,7 +55,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 candidate_generation_mode='MANUAL_CANDIDATES',max_expansion_rounds=3,
                 max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=(),max_inventory_reoptimizations=3,
                 initial_forbidden_schedules=(),frozen_candidate_domain=None,objective_mode='FEASIBILITY',
-                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE'):
+                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE',candidate_improvement_mode='NONE',max_improvement_rounds=2):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
     started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
     result={'scenario_id':'V5_3TANK','model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
@@ -79,6 +79,10 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
         return result
     try:
         if not valid_budget:return finish('INVALID_INPUT','INVALID_TIME_BUDGET','Positive finite time budget required')
+        result['candidate_improvement_mode']=candidate_improvement_mode
+        if candidate_improvement_mode not in ('NONE','COST_AWARE_V1'):return finish('INVALID_INPUT','INVALID_IMPROVEMENT_MODE','Unknown candidate improvement mode')
+        if candidate_improvement_mode=='COST_AWARE_V1' and (candidate_generation_mode!='AUTO_ADAPTIVE_CANDIDATES' or objective_mode!='MIN_TOTAL_DEMURRAGE' or inventory_constraint_mode!='EXACT_EVENT_BALANCE_V1' or frozen_candidate_domain is not None or type(max_improvement_rounds) is not int or not 0<=max_improvement_rounds<=2):return finish('INVALID_INPUT','INVALID_IMPROVEMENT_MODE','Cost-aware expansion requires automatic candidates, integrated cost mode, an unfrozen domain, and at most two rounds')
+        if candidate_improvement_mode=='COST_AWARE_V1' and (type(max_candidates_per_pair) is not int or not 1<=max_candidates_per_pair<=24):return finish('INVALID_INPUT','INVALID_CANDIDATE_LIMIT','Cost-aware per-pair limit must be between 1 and 24')
         if objective_mode not in ('FEASIBILITY','MIN_TOTAL_DEMURRAGE'):return finish('INVALID_INPUT','INVALID_OBJECTIVE_MODE','Unknown objective mode')
         if inventory_constraint_mode not in ('NONE','EXACT_EVENT_BALANCE_V1') or (inventory_constraint_mode!='NONE' and objective_mode!='MIN_TOTAL_DEMURRAGE'):return finish('INVALID_INPUT','INVALID_INVENTORY_MODE','Exact inventory mode requires MIN_TOTAL_DEMURRAGE')
         result['objective_mode']=objective_mode
@@ -164,7 +168,8 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 remaining=deadline-time.perf_counter()
                 if remaining<=0:raise TimeoutError('Overall execution time budget exhausted')
                 round_start=time.perf_counter()
-                physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs={},pair_candidate_etbs=pool.domain(),policy=policy,time_limit_seconds=remaining,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,forbidden_schedules=initial_forbidden_schedules,conflict_filter='SAFE_ENVELOPE_V1',_v5_context=_V5_VALIDATED_CONTEXT,**objective_args)
+                solve_budget=remaining/(max_improvement_rounds+1) if candidate_improvement_mode=='COST_AWARE_V1' else remaining
+                physical=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs={},pair_candidate_etbs=pool.domain(),policy=policy,time_limit_seconds=solve_budget,selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,forbidden_schedules=initial_forbidden_schedules,conflict_filter='SAFE_ENVELOPE_V1',_v5_context=_V5_VALIDATED_CONTEXT,**objective_args)
                 result['generation_rounds'].append({'round':round_no,'candidate_count':pool.count(),'solver_outcome':physical['status'],'cp_sat_seconds':physical.get('cp_sat_seconds'),'elapsed_seconds':time.perf_counter()-started,'round_seconds':time.perf_counter()-round_start,'expansion_reason':'INITIAL' if round_no==0 else 'CANDIDATE_SHORTAGE_OR_FINITE_CONFLICT'})
                 result['solver_attempt_count']=len(result['generation_rounds'])
                 if physical['status'] not in ('INFEASIBLE',):break
@@ -228,6 +233,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             else:kwargs['candidate_etbs']=candidate_etbs
             return solve_berth_schedule(work,**kwargs)
         if objective_mode=='MIN_TOTAL_DEMURRAGE':
+            if candidate_improvement_mode=='COST_AWARE_V1' and time.perf_counter()>=deadline:return finish('TIME_LIMIT_NO_INCUMBENT','TIME_BUDGET_EXHAUSTED','Budget exhausted before baseline validation')
             evaluation=evaluate(physical['schedule'])
             if inventory_constraint_mode!='NONE' and evaluation['status']!='PHYSICAL_AND_INVENTORY_VALID':
                 result.update(physical_validation=evaluation['physical_validation'],inventory_validation=evaluation['inventory_validation'],issues=evaluation['issues'],selected_schedule=physical['schedule'],optimality_scope='NOT_VALIDATED')
@@ -238,6 +244,40 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 if check_price['status']!='SETTLED' or check_price['total_demurrage_cents']!=physical['total_projected_demurrage_cents']:
                     result.update(issues=check_price['issues'] or [{'code':'SETTLEMENT_MODEL_MISMATCH','reason':'Selected schedule cost differs from modeled objective'}],optimality_scope='NOT_VALIDATED')
                     return finish('INTEGRATION_VALIDATION_FAILED')
+            if candidate_improvement_mode=='COST_AWARE_V1' and time.perf_counter()>=deadline:return finish('TIME_LIMIT_NO_INCUMBENT','TIME_BUDGET_EXHAUSTED','Budget exhausted during baseline validation')
+            if candidate_improvement_mode=='COST_AWARE_V1':
+                def domain_hash():return digest(canonical({'as_of_at':as_of_at,'call_ids':sorted(call_ids),'pair_candidate_etbs':pool.domain(),'physical_commitments':list(physical_commitments)}).encode())
+                best=physical;best_eval=evaluation;best_price=check_price;best_round=0;best_domain=domain_hash();initial_cost=physical['total_projected_demurrage_cents'];final_domain=best_domain
+                history=[{'round':0,'candidate_count':pool.count(),'physical_option_count':physical['option_count'],'solver_status':physical['solver_status'],'validated_cost_cents':initial_cost,'candidate_domain_fingerprint':best_domain,'elapsed_seconds':time.perf_counter()-started}]
+                stop='IMPROVEMENT_ROUND_LIMIT';last_status=physical['solver_status'];final_proven=last_status=='OPTIMAL';final_solver_result=physical
+                for round_no in range(1,max_improvement_rounds+1):
+                    try:
+                        costs={cid:v['demurrage_cents'] for cid,v in best_price['vessel_demurrage_breakdown'].items()}
+                        added=pool.expand_cost(round_no,best['schedule'],costs)
+                        if not added:stop='NO_NEW_CANDIDATES';break
+                        final_domain=domain_hash();final_proven=False;last_status='NOT_SOLVED';remaining=deadline-time.perf_counter()
+                        if remaining<=0:stop='TIME_BUDGET_EXHAUSTED';break
+                        candidate=solve_berth_schedule(work,as_of_at=as_of_at,candidate_etbs={},pair_candidate_etbs=pool.domain(),policy=policy,time_limit_seconds=remaining/(max_improvement_rounds-round_no+1),selected_call_ids=call_ids,allowed_berths_by_call=eligible,commitments=physical_commitments,forbidden_schedules=initial_forbidden_schedules,conflict_filter='SAFE_ENVELOPE_V1',_v5_context=_V5_VALIDATED_CONTEXT,**objective_args)
+                        result['solver_attempt_count']+=1;last_status=candidate.get('solver_status',candidate['status']);final_solver_result=candidate
+                        entry={'round':round_no,'candidate_count':pool.count(),'physical_option_count':candidate.get('option_count'),'solver_status':last_status,'validated_cost_cents':None,'candidate_domain_fingerprint':final_domain,'elapsed_seconds':time.perf_counter()-started,'new_candidate_reasons':pool.reasons()}
+                        history.append(entry)
+                        if candidate['status']!='BERTH_SUBSYSTEM_FEASIBLE':stop=candidate['status'];break
+                        if time.perf_counter()>=deadline:stop='TIME_BUDGET_EXHAUSTED';break
+                        checked=evaluate(candidate['schedule']);priced=price_v5_schedule(work,candidate['schedule'],as_of_at=as_of_at,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy)
+                        if time.perf_counter()>=deadline:stop='TIME_BUDGET_EXHAUSTED';break
+                        if checked['status']!='PHYSICAL_AND_INVENTORY_VALID' or priced['status']!='SETTLED' or priced['total_demurrage_cents']!=candidate['total_projected_demurrage_cents']:stop='INDEPENDENT_VALIDATION_FAILED';break
+                        entry['validated_cost_cents']=priced['total_demurrage_cents'];final_proven=last_status=='OPTIMAL'
+                        if priced['total_demurrage_cents']<best['total_projected_demurrage_cents']:
+                            best,best_eval,best_price,best_round,best_domain=candidate,checked,priced,round_no,final_domain
+                    except TimeoutError:
+                        if domain_hash()!=final_domain or final_domain!=best_domain:final_proven=False
+                        stop='TIME_BUDGET_EXHAUSTED';break
+                    except Exception as exc:
+                        if domain_hash()!=best_domain:final_proven=False
+                        stop='IMPROVEMENT_ERROR';history.append({'round':round_no,'error':type(exc).__name__+': '+str(exc),'elapsed_seconds':time.perf_counter()-started});break
+                physical,evaluation,check_price=best,best_eval,best_price
+                result.update(initial_total_demurrage_cents=initial_cost,best_total_demurrage_cents=physical['total_projected_demurrage_cents'],best_incumbent_round=best_round,best_incumbent_domain_fingerprint=best_domain,candidate_expansion_rounds=len(history)-1,cost_improvement_history=history,final_solver_status=last_status,final_solver_result=final_solver_result,final_domain_optimality_proven=final_proven,stopping_reason=stop)
+                result['physical_solver_result']=physical;result['solver_status']=physical['solver_status']
             result.update(optimization_status=physical['solver_status'],selected_schedule=physical['schedule'],
                 total_projected_demurrage_cents=physical['total_projected_demurrage_cents'],
                 option_cost_breakdown=physical['option_cost_breakdown'],best_objective_bound_cents=physical['best_objective_bound_cents'],
@@ -251,6 +291,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             if inventory_constraint_mode!='NONE':
                 result.update({key:physical[key] for key in ('inventory_event_count','inventory_constraints_count','throughput_constraints_count')})
                 result['optimality_scope']='INTEGRATED_FINITE_DOMAIN_OPTIMAL' if physical['solver_status']=='OPTIMAL' else 'INTEGRATED_FINITE_DOMAIN_INCUMBENT'
+                if candidate_improvement_mode=='COST_AWARE_V1' and not result['final_domain_optimality_proven']:result['optimality_scope']='BEST_VALIDATED_INCUMBENT_EXPANDED_DOMAIN_UNPROVEN'
                 result['settlement_validation']='SETTLED'
             return finish(evaluation['status'])
         search_result=search(physical,evaluate=evaluate,solve_alternative=solve_alternative,deadline=deadline,max_reoptimizations=max_inventory_reoptimizations,initial_forbidden_schedules=initial_forbidden_schedules)
