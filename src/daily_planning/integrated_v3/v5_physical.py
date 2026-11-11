@@ -293,6 +293,24 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 result['optimality_scope']='INTEGRATED_FINITE_DOMAIN_OPTIMAL' if physical['solver_status']=='OPTIMAL' else 'INTEGRATED_FINITE_DOMAIN_INCUMBENT'
                 if candidate_improvement_mode=='COST_AWARE_V1' and not result['final_domain_optimality_proven']:result['optimality_scope']='BEST_VALIDATED_INCUMBENT_EXPANDED_DOMAIN_UNPROVEN'
                 result['settlement_validation']='SETTLED'
+            if candidate_improvement_mode=='COST_AWARE_V1':
+                actual_domain=domain_hash()
+                last=next((h for h in reversed(history) if h.get('candidate_domain_fingerprint')==actual_domain),None)
+                trusted=bool(last and last.get('validated_cost_cents') is not None and final_solver_result.get('status')=='BERTH_SUBSYSTEM_FEASIBLE')
+                final_status=last['solver_status'] if last else 'NOT_SOLVED'
+                bound=final_solver_result.get('best_objective_bound_cents') if trusted else None
+                if bound is not None and (not math.isfinite(bound) or bound>physical['total_projected_demurrage_cents']):bound=None
+                cost=physical['total_projected_demurrage_cents']
+                gap=(max(0.0,cost-bound)/cost if cost else 0.0) if bound is not None else None
+                proven=bool(trusted and final_status=='OPTIMAL' and final_proven and last['validated_cost_cents']==cost)
+                result.update(solver_status=final_status if trusted else ('NOT_SOLVED' if last is None else 'UNVALIDATED'),
+                    optimization_status='OPTIMAL' if proven else 'FEASIBLE',best_objective_bound_cents=bound,optimality_gap=gap,
+                    final_solver_status=final_status,final_domain_optimality_proven=proven,
+                    optimality_scope='INTEGRATED_FINITE_DOMAIN_OPTIMAL' if proven else 'BEST_VALIDATED_INCUMBENT_EXPANDED_DOMAIN_UNPROVEN')
+                result['physical_solver_status']=result['solver_status']
+                if last is None:result['final_solver_result']=None
+                result['best_validated_incumbent']={'selected_schedule':physical['schedule'],'total_demurrage_cents':cost,'round':best_round,'candidate_domain_fingerprint':best_domain,'solver_status':physical['solver_status'],'physical_validation':evaluation['physical_validation'],'inventory_validation':evaluation['inventory_validation'],'settlement_validation':check_price['status']}
+                result['final_candidate_domain']={'candidate_domain_fingerprint':actual_domain,'candidate_count':pool.count(),'physical_option_count':final_solver_result.get('option_count') if last else None,'solver_status':final_status,'optimality_proven':proven,'best_objective_bound_cents':bound,'optimality_gap':gap,'stopping_reason':stop}
             return finish(evaluation['status'])
         search_result=search(physical,evaluate=evaluate,solve_alternative=solve_alternative,deadline=deadline,max_reoptimizations=max_inventory_reoptimizations,initial_forbidden_schedules=initial_forbidden_schedules)
         result['inventory_reoptimization_solver_calls']=search_result['solver_calls']-1;result['solver_attempt_count']=(len(result['generation_rounds']) if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' else 1)+result['inventory_reoptimization_solver_calls']
