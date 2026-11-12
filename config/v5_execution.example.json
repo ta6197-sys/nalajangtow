@@ -1,0 +1,10 @@
+{
+  "version": "V5_STAGED_EXECUTION_V1",
+  "data_dir": "/app/input/v5",
+  "policy_file": "/app/input/v5_physical_policy.json",
+  "pilotage_context_file": "/app/input/v5_pilotage_context.json",
+  "as_of_at": "2026-11-03T00:00:00+09:00",
+  "pricing_policy": "CLEAR_WEATHER_BASELINE_V1",
+  "clock_policy": "BLOCK_UNVERIFIED_CLOCK",
+  "settlement_records": []
+}

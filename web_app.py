@@ -732,7 +732,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        # DOCKTIMIZE_V5_PREVIEW_INTEGRATION_V1: isolated read-only V5 endpoints.
+        if path.startswith('/api/v5-preview/'):
+            from src.daily_planning.integrated_v3.v5_preview_api import dispatch_get
+            code, payload = dispatch_get(path, parsed.query)
+            return self.respond(code, payload)
         static_files = {
+            '/v5-preview': ('v5-preview.html', 'text/html; charset=utf-8'),
+            '/v5-preview/': ('v5-preview.html', 'text/html; charset=utf-8'),
+            '/assets/v5-preview.css': ('v5-preview.css', 'text/css; charset=utf-8'),
+            '/assets/v5-preview.js': ('v5-preview.js', 'text/javascript; charset=utf-8'),
+            '/assets/v5-preview-model.js': ('v5-preview-model.js', 'text/javascript; charset=utf-8'),
             '/assets/app.css': ('app.css', 'text/css; charset=utf-8'),
             '/assets/risk.css': ('risk.css', 'text/css; charset=utf-8'),
             '/assets/risk_explorer.css': ('risk_explorer.css', 'text/css; charset=utf-8'),
@@ -826,6 +836,23 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(404, {'error': 'Not found'})
 
     def do_POST(self):
+        # DOCKTIMIZE_V5_PREVIEW_INTEGRATION_V1: small, allowlisted local simulation.
+        if urlparse(self.path).path == '/api/v5-preview/start':
+            from src.daily_planning.integrated_v3.v5_preview_api import dispatch_start
+            origin = self.headers.get('Origin')
+            if origin:
+                check = urlparse(origin)
+                if check.scheme not in ('http', 'https') or check.hostname not in ('localhost', '127.0.0.1'):
+                    return self.respond(403, {'error': 'Cross-origin preview execution is disabled'})
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if not 0 < length <= 4096:
+                    return self.respond(400, {'error': 'Invalid preview request size'})
+                body = json.loads(self.rfile.read(length))
+                code, payload = dispatch_start(body)
+                return self.respond(code, payload)
+            except (ValueError, KeyError, TypeError):
+                return self.respond(400, {'error': 'Invalid V5 preview request'})
         actions = {'/api/contract': add_contract, '/api/call': add_call,
                    '/api/upload': upload_workbook, '/api/upload/preview': workbook_preview,
                    '/api/upload/apply': apply_workbook, '/api/plan': plan_next,

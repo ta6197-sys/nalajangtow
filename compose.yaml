@@ -26,11 +26,14 @@ services:
       POSTGRES_USER: ulsan_clx
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env before starting PostgreSQL}
       WEB_EXPERIMENT_KEY: source-daywork-v2
+      DOCKTIMIZE_V5_PREVIEW_ROOT: /app/results/v5_preview_runs
+      DOCKTIMIZE_V5_PREVIEW_CONFIG: /app/input/v5_preview_scenarios.json
     ports:
-      - "0.0.0.0:8765:8765"
+      - "127.0.0.1:8765:8765"
     volumes:
       - ./input:/app/input:ro
       - ./results/source-daywork-v2:/app/results/daily
+      - ./results/v5_preview_runs:/app/results/v5_preview_runs
 
 volumes:
   web_postgres_data:
