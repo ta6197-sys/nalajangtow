@@ -15,6 +15,7 @@ from ..physical_scheduling.v5_user_rules import VERSION as USER_V5_VERSION
 from .v5_cost_search import optimize_v5
 from .v5_settlement import price_v5_schedule
 from .v5_locks import apply_overrides,resolve_locks
+from .v5_failure_evidence import build_failure_evidence,write_failure_evidence_new
 from .resumable_rolling import _read,_write,_fingerprint
 
 VERSION='V5_DYNAMIC_LOCK_ROLLING_V1'
@@ -211,7 +212,17 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
             if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':
                 from .v5_rolling_optimizer import optimize_integrated_window
                 candidate=optimize_integrated_window(snapshot,work,data_dir=data_dir,call_ids=selected,as_of_at=at,policy=policy,pilotage_context=pilotage_context,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy,time_limit_seconds=time_limit_seconds,max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates,**({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}),initial_inventory=previous['inventory'],carried_transfers=previous['carried_transfers'],tank_commitments=previous['tank_commitments'],physical_commitments=protected)
-                if candidate['status']!='VALIDATED':return report('STOPPED_UNRESOLVED',{'code':'WINDOW_NOT_VALIDATED','reason':candidate.get('reason'),'issues':candidate.get('issues',[])})
+                if candidate['status']!='VALIDATED':
+                    details={'code':'WINDOW_NOT_VALIDATED','reason':candidate.get('reason'),'issues':candidate.get('issues',[])}
+                    try:
+                        failure=build_failure_evidence(window_id=i,as_of_at=at,selected_call_ids=selected,
+                            candidate=candidate,source_fingerprint=config['source_fingerprint'],
+                            policy_fingerprint=config['policy_fingerprint'],scenario_id=snapshot.get('scenario_id'))
+                        write_failure_evidence_new(folder/('window_%03d_failure.json'%i),failure)
+                        details['failure_evidence_path']='window_%03d_failure.json'%i
+                    except (OSError,ValueError,TypeError,OverflowError) as exc:
+                        details['failure_evidence_error']=type(exc).__name__+': '+str(exc)
+                    return report('STOPPED_UNRESOLVED',details)
                 result=candidate['optimizer_result'];rows=candidate['selected_schedule'];tank=candidate['tank_result'];pricing=candidate['vessel_demurrage_breakdown'];cost=candidate['total_demurrage_cents']
             else:
                 result=optimize_v5(snapshot,data_dir=data_dir,call_ids=selected,as_of_at=at,policy=policy,pilotage_context=pilotage_context,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy,time_limit_seconds=time_limit_seconds,max_cost_candidates=max_cost_candidates,initial_inventory=previous['inventory'],carried_transfers=previous['carried_transfers'],tank_commitments=previous['tank_commitments'],physical_commitments=protected)
