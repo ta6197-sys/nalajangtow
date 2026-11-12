@@ -13,7 +13,7 @@ MODEL_VERSION='V3_FINITE_BERTH_PHASES_V1'
 _V5_VALIDATED_CONTEXT=object()
 
 
-def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,objective_mode='FEASIBILITY',option_pricer=None,inventory_builder=None,_v5_context=None):
+def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(),time_limit_seconds=30,forbidden_schedules=(),completed_rows=(),conflict_filter='NONE',phase_release_policy='ALL_OPTIONS_V1',candidate_visitor=None,search_heuristic='NONE',selected_call_ids=None,allowed_berths_by_call=None,pair_candidate_etbs=None,objective_mode='FEASIBILITY',option_pricer=None,inventory_builder=None,_v5_context=None,tie_break_mode='NONE'):
     started=time.perf_counter()
     def failure(status,code,reason,**details):
         return {'status':status,'issues':[dict(code=code,reason=str(reason),**details)],
@@ -25,6 +25,9 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
         if objective_mode not in ('FEASIBILITY','MIN_TOTAL_DEMURRAGE'):raise ValueError('Unknown objective mode')
         if objective_mode=='MIN_TOTAL_DEMURRAGE' and (option_pricer is None or search_heuristic!='NONE' or candidate_visitor is not None):raise ValueError('Cost objective requires a pricer and no heuristic or visitor')
         if conflict_filter not in ('NONE','SAFE_ENVELOPE_V1'):raise ValueError('Unknown conflict filter')
+        if tie_break_mode not in ('NONE','CANONICAL_ETB_BERTH_V1'):raise ValueError('Unknown stable tie-break mode')
+        if tie_break_mode!='NONE' and (objective_mode!='MIN_TOTAL_DEMURRAGE' or candidate_visitor is not None or snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V5' or policy.get('schema_version')!='V5_USER_ETU_SWITCHING_20261112_V1'):
+            raise ValueError('Stable tie-break requires confirmed V5 policy and integer-cent cost optimization')
         if phase_release_policy not in ('ALL_OPTIONS_V1','LOCKED_ONLY_V1'):raise ValueError('Unknown phase release policy')
         deadline=started+float(time_limit_seconds)
         def check_deadline():
@@ -177,7 +180,8 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 (option_costs if len(option_costs)<len(options) else locked_costs).append(priced)
             maximum=sum(p['demurrage_cents'] for p in option_costs+locked_costs)
             if maximum>=2**63-1:return failure('INVALID_INPUT','OBJECTIVE_OVERFLOW','Objective exceeds CP-SAT integer range')
-            m.Minimize(sum(p['demurrage_cents']*x[i] for i,p in enumerate(option_costs))+sum(p['demurrage_cents'] for p in locked_costs))
+            primary_cost_expression=sum(p['demurrage_cents']*x[i] for i,p in enumerate(option_costs))+sum(p['demurrage_cents'] for p in locked_costs)
+            m.Minimize(primary_cost_expression)
         elif search_heuristic=='CRUDE_INBOUND_FIRST_V1':
             weighted=[]
             for i,row in enumerate(options):
@@ -202,6 +206,11 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
                 status='INFEASIBLE' if result==cp_model.INFEASIBLE else 'MODEL_INVALID' if result==cp_model.MODEL_INVALID else 'TIME_LIMIT_NO_INCUMBENT'
                 return failure(status,'NO_VALIDATED_CANDIDATE',solver.StatusName(result),scope='Generated options only',**({'solver_status':solver.StatusName(result),'cp_sat_seconds':solver.WallTime()} if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5' else {}))
             selected=[i for i in range(len(options)) if solver.Value(x[i])]
+            tie_meta=None
+            if tie_break_mode!='NONE':
+                from .v5_stable_choice import stabilize_proven_cost
+                primary_cost=sum(option_costs[i]['demurrage_cents'] for i in selected)+sum(p['demurrage_cents'] for p in locked_costs)
+                selected,tie_meta=stabilize_proven_cost(m,x,options,groups,primary_cost_expression,selected,result,primary_cost,deadline,cp_model)
             rows=locked+[options[i] for i in selected]
             rows.sort(key=lambda row:(timestamp(row['etb_at']),row['call_id']))
             independent=validate_result(snapshot,rows,policy)
@@ -222,6 +231,7 @@ def solve_berth_schedule(snapshot,*,as_of_at,candidate_etbs,policy,commitments=(
             'scope':('Feasibility over supplied ETBs and source vessel/berth-rate durations; not integrated tank feasibility or demurrage optimization' if policy.get('cargo_duration_policy')=='VESSEL_BERTH_RATE_V1' else 'Feasibility over supplied ETBs and berth-rate lower-bound cargo durations; not integrated tank feasibility or demurrage optimization'),
             'operational_approval':False}
             if schema=='DOCKTIMIZE_NORMALIZED_INPUT_V5':payload['cp_sat_seconds']=solver.WallTime()
+            if tie_meta is not None:payload['schedule_tiebreak']=tie_meta
             if inventory_stats is not None:payload.update(inventory_stats)
 
             if objective_mode=='MIN_TOTAL_DEMURRAGE':

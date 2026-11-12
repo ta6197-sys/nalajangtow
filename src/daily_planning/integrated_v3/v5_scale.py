@@ -192,13 +192,16 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
                   candidates_per_pair: int = 6, total_candidates: int = 240,
                   improvement_rounds: int = 2, call_ids: list[str] | None = None,
                   run_id: str | None = None, runner: Callable | None = None,
-                  snapshot: dict | None = None, preflight: dict | None = None) -> dict:
+                  snapshot: dict | None = None, preflight: dict | None = None,
+                   tie_break_mode: str = 'NONE') -> dict:
     """Run original Stage-4 code without replacing any decision logic.
 
     The optional runner/snapshot injection is for unit tests only. A real CLI
     invocation must always execute full source preflight and the real optimizer.
     """
     start = monotonic()
+    if tie_break_mode not in ('NONE','CANONICAL_ETB_BERTH_V1'):
+        raise ScaleInputError('Invalid stable tie-break mode')
     bounded_parameters(count=call_count, windows=windows, time_limit_seconds=time_limit_seconds,
                        candidates_per_pair=candidates_per_pair, total_candidates=total_candidates,
                        improvement_rounds=improvement_rounds)
@@ -228,6 +231,7 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
               'pricing_policy': config['pricing_policy'], 'simulation_only': True,
               'operational_approval': False, 'requested_windows': windows,
               'time_budget_seconds_per_window': time_limit_seconds}
+    if tie_break_mode!='NONE':report['tie_break_mode']=tie_break_mode
     try:
         # Source-derived read-only metadata for preview. Never expose contracts or
         # raw source files to browsers; exact numeric fields remain strings.
@@ -243,7 +247,8 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
                         rolling_optimizer_mode='INTEGRATED_COST_AWARE_V1',
                         max_improvement_rounds=improvement_rounds,
                         max_candidates_per_pair=candidates_per_pair,
-                        max_total_candidates=total_candidates)
+                        max_total_candidates=total_candidates,
+                         **({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}))
         atomic_json(directory / 'tanks_public.json', [
             {key: t.get(key) for key in ('tank_id', 'cargo_group',
               'min_inventory_bbl', 'initial_inventory_bbl', 'capacity_bbl',

@@ -103,7 +103,7 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
                    pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',
                    settlement_records=(),approved_commitments=(),override_events=None,manual_overrides=None,
                    resume=False,max_new_windows=None,rolling_optimizer_mode='LEGACY_ENUMERATION',
-                   max_improvement_rounds=2,max_candidates_per_pair=12,max_total_candidates=2000):
+                   max_improvement_rounds=2,max_candidates_per_pair=12,max_total_candidates=2000,tie_break_mode='NONE'):
     """Advance only verified 24h transitions; all produced state is synthetic."""
     started=monotonic();start=timestamp(as_of_at);folder=Path(output_dir)
     source_root=Path(data_dir).resolve();output_root=folder.resolve()
@@ -111,6 +111,8 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
     if type(windows) is not int or windows<1:raise ValueError('Positive window count required')
     if max_new_windows is not None and (type(max_new_windows) is not int or max_new_windows<1):raise ValueError('Invalid max_new_windows')
     if rolling_optimizer_mode not in ('LEGACY_ENUMERATION','INTEGRATED_COST_AWARE_V1'):raise ValueError('Invalid rolling optimizer mode')
+    if tie_break_mode not in ('NONE','CANONICAL_ETB_BERTH_V1'):raise ValueError('Invalid stable tie-break mode')
+    if tie_break_mode!='NONE' and rolling_optimizer_mode!='INTEGRATED_COST_AWARE_V1':raise ValueError('Tie-break requires integrated V5 mode')
     if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1' and (type(max_improvement_rounds) is not int or not 1<=max_improvement_rounds<=2 or type(max_candidates_per_pair) is not int or not 1<=max_candidates_per_pair<=24 or type(max_total_candidates) is not int or max_total_candidates<1):raise ValueError('Invalid integrated candidate limits')
     calls={c['call_id']:c for c in snapshot['calls']};scope=list(call_ids) if call_ids is not None else sorted(calls)
     if not scope or len(scope)!=len(set(scope)) or not set(scope)<=set(calls):raise ValueError('Invalid call scope')
@@ -119,6 +121,7 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
     daylight_path=Path(pilotage_context['daylight_path']);daylight_sha=digest(daylight_path.read_bytes())
     config={'version':VERSION,'source_fingerprint':_fingerprint(snapshot),'policy_fingerprint':_fingerprint({'policy':policy,'pilotage_context':pilotage_context,'daylight_sha256':daylight_sha,'pricing_policy':pricing_policy,'clock_policy':clock_policy,'settlement_records':settlement_records}),'start_at':start.isoformat(),'scope':sorted(scope),'windows':windows,'time_limit_seconds':time_limit_seconds,'max_cost_candidates':max_cost_candidates,'pricing_policy':pricing_policy,'clock_policy':clock_policy,'approved_commitments':list(approved_commitments),'override_events':override_events or {},'planning_hours':72,'step_hours':24,'dynamic_lock_hours':5}
     if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':config.update(rolling_optimizer_mode=rolling_optimizer_mode,objective_mode='MIN_TOTAL_DEMURRAGE',inventory_constraint_mode='EXACT_EVENT_BALANCE_V1',candidate_generation_mode='AUTO_ADAPTIVE_CANDIDATES',candidate_improvement_mode='COST_AWARE_V1',max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates)
+    if tie_break_mode!='NONE':config['tie_break_mode']=tie_break_mode
     manifest={'run_fingerprint':_fingerprint(config),'config':config,'operational_approval':False};manifest_path=folder/'manifest.json'
     if resume:
         if not manifest_path.is_file() or _read(manifest_path)!=manifest:raise ValueError('Resume source, policy or configuration fingerprint mismatch')
@@ -200,7 +203,7 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
         if selected:
             if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':
                 from .v5_rolling_optimizer import optimize_integrated_window
-                candidate=optimize_integrated_window(snapshot,work,data_dir=data_dir,call_ids=selected,as_of_at=at,policy=policy,pilotage_context=pilotage_context,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy,time_limit_seconds=time_limit_seconds,max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates,initial_inventory=previous['inventory'],carried_transfers=previous['carried_transfers'],tank_commitments=previous['tank_commitments'],physical_commitments=protected)
+                candidate=optimize_integrated_window(snapshot,work,data_dir=data_dir,call_ids=selected,as_of_at=at,policy=policy,pilotage_context=pilotage_context,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy,time_limit_seconds=time_limit_seconds,max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates,**({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}),initial_inventory=previous['inventory'],carried_transfers=previous['carried_transfers'],tank_commitments=previous['tank_commitments'],physical_commitments=protected)
                 if candidate['status']!='VALIDATED':return report('STOPPED_UNRESOLVED',{'code':'WINDOW_NOT_VALIDATED','reason':candidate.get('reason'),'issues':candidate.get('issues',[])})
                 result=candidate['optimizer_result'];rows=candidate['selected_schedule'];tank=candidate['tank_result'];pricing=candidate['vessel_demurrage_breakdown'];cost=candidate['total_demurrage_cents']
             else:
