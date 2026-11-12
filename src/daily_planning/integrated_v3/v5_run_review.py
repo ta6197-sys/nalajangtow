@@ -170,7 +170,8 @@ def window_view(root: Path, run_id: str, number: int) -> dict:
              'unberthing_start_at', 'etu_at', 'physical_clearance_at',
              'switching_start_at', 'switching_end_at', 'work_intervals',
              'hose_connection_end_at', 'hose_disconnect_end_at',
-             'departure_pob_at', 'pilot_boarding_at')
+             'departure_pob_at', 'pilot_boarding_at',
+             'phase_policy_version', 'direction_seconds', 'switching_rule_seconds')
     rows = [{k: r[k] for k in phase if k in r} for r in raw_rows]
     return {'run_id': run_id, 'window_id': number, 'as_of_at': data['as_of_at'],
             'planning_horizon_end': data['planning_horizon_end'],

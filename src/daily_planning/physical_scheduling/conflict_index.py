@@ -1,6 +1,8 @@
 """Conservative and indexed candidate-pair filter; never replaces replay."""
 from collections import defaultdict
 from heapq import heappop, heappush
+from datetime import timedelta
+from .v5_user_rules import enabled as user_v5
 from ..integrated_input.validator import timestamp, tokens
 
 VERSION = 'SAFE_ENVELOPE_V1'
@@ -20,7 +22,13 @@ def _interacting_berths(snapshot, policy, rows):
     return neighbors
 
 
-def _envelopes(rows):
+def _envelopes(rows,policy):
+    if user_v5(policy):
+        # Extending each *search envelope* by the conditional switching rule
+        # is required to avoid dropping conflicting pairs before replay.
+        return [(timestamp(row['berthing_start_at']),
+                 timestamp(row['etu_at']) + timedelta(seconds=policy['berths'][row['berth_id']]['switching_seconds']))
+                for row in rows]
     return [(timestamp(row['berthing_start_at']),
              max(timestamp(row['etu_at']), timestamp(row['switching_end_at'])))
             for row in rows]
@@ -29,7 +37,7 @@ def _envelopes(rows):
 def build_conflict_index(snapshot, policy, rows):
     """Return a necessary (not sufficient) condition for pair conflicts."""
     neighbors = _interacting_berths(snapshot, policy, rows)
-    envelopes = _envelopes(rows)
+    envelopes = _envelopes(rows, policy)
 
     def potentially_conflicting(i, j):
         a, b = rows[i], rows[j]
@@ -50,7 +58,7 @@ def iter_potential_pairs(snapshot, policy, rows, *, check_deadline=lambda: None)
     pair_conflicts and final physical replay still enforce actual constraints.
     """
     neighbors = _interacting_berths(snapshot, policy, rows)
-    envelopes = _envelopes(rows)
+    envelopes = _envelopes(rows, policy)
     order = sorted(range(len(rows)), key=lambda i: (envelopes[i][0], i))
     active_by_berth = defaultdict(set)
     expiry = []

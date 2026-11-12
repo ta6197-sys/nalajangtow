@@ -7,10 +7,13 @@ from pathlib import Path
 from ..integrated_input.validator import number,timestamp
 from ..integrated_input.provenance import digest
 from ..physical_scheduling.pilotage import derive_windows
+from ..physical_scheduling.v5_user_rules import enabled as user_v5, prepare_user_pilotage
 
 
 def prepare_pilotage_policy(snapshot,call_ids,eligible,policy,context,as_of_at,candidate_etbs,history_start_at=None):
     """Return a policy or unresolved issue; departure windows are separate inputs."""
+    if user_v5(policy):
+        return prepare_user_pilotage(snapshot,call_ids,eligible,policy,context,as_of_at,history_start_at)
     def pending(reason,**details):return None,{'code':'UNSUPPORTED_OPERATIONAL_POLICY','reason':reason,**details}
     if not isinstance(context,dict):return pending('Actual daylight data, berth night permissions and separate departure windows are required')
     if not context.get('daylight_source'):return pending('Daylight source provenance is required')

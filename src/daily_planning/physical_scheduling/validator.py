@@ -2,6 +2,7 @@
 from datetime import timedelta
 from ..integrated_input.validator import timestamp,tokens
 from .phases import replay
+from .v5_user_rules import enabled as user_v5, pair_errors as v5_pair_errors
 
 
 def overlap(a,b,c,d):return max(timestamp(a),timestamp(c))<min(timestamp(b),timestamp(d))
@@ -16,6 +17,16 @@ def resource_intervals(row,phases):
 
 def pair_conflicts(a,b,snapshot,policy):
     errors=[];aid,bid=a['berth_id'],b['berth_id']
+    if user_v5(policy):
+        errors.extend(v5_pair_errors(a,b,snapshot,policy))
+        for group in snapshot['workbook_tables']['groups']['rows']:
+            members=tokens(group['berth_ids'])
+            if group.get('rule_type')=='SAME_CARGO_NOT_CONCURRENT' and aid in members and bid in members and a['cargo_group']==b['cargo_group']:
+                if {aid,bid}=={'BERTH-07','BERTH-08'}:
+                    if any(overlap(*x,*y) for x in a['work_intervals'] for y in b['work_intervals']):errors.append('CARGO_GROUP_CONCURRENT_WORK')
+                elif overlap(a['etb_at'],a['etu_at'],b['etb_at'],b['etu_at']):errors.append('CARGO_GROUP_OCCUPANCY')
+        return sorted(set(errors))
+
     if aid==bid:
         if overlap(a['berthing_start_at'],a['etu_at'],b['berthing_start_at'],b['etu_at']):errors.append('SAME_BERTH_OCCUPANCY')
         first,second=sorted((a,b),key=lambda r:timestamp(r['etb_at']))

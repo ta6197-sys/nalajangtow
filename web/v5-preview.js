@@ -61,6 +61,7 @@
   function renderGantt(w) {
     const start = w.as_of_at, end = w.planning_horizon_end;
     const byBerth = new Map();
+    const transitions=M.switchingEdges(w.selected_schedule,w.call_metadata);
     for (const row of w.selected_schedule) {
       if (!byBerth.has(row.berth_id)) byBerth.set(row.berth_id, []);
       byBerth.get(row.berth_id).push(row);
@@ -76,7 +77,16 @@
         for (const s of parts) {
           html += `<div class="segment ${safe(s.kind)}" style="left:${s.leftPercent.toFixed(5)}%;width:${s.widthPercent.toFixed(5)}%"></div>`;
         }
+        if (r.phase_policy_version==='V5_USER_ETU_SWITCHING_20261112_V1') {
+          const at=M.pointPercent(r.etu_at,start,end);
+          if (at!==null) html += `<div class="etu-marker" title="${safe(r.call_id)} ETU: ${safe(M.local(r.etu_at))}" style="left:${at.toFixed(5)}%"></div>`;
+        }
         if (base) html += `<button class="vessel-label" data-call="${safe(r.call_id)}" style="left:${Math.min(92,base.leftPercent).toFixed(4)}%">${safe(r.call_id)}</button>`;
+      }
+      for (const edge of transitions.filter(e=>e.berth_id===berth)) {
+        const at=M.pointPercent(edge.start_at,start,end), finish=M.pointPercent(edge.end_at,start,end);
+        if (at!==null && finish!==null && finish>at)
+          html += `<div class="segment transition" style="left:${at.toFixed(5)}%;width:${(finish-at).toFixed(5)}%" title="${safe(edge.from)} → ${safe(edge.to)} Switching constraint"></div>`;
       }
       html += '</div></div>';
     }
@@ -92,7 +102,7 @@
           ['화물', [call.cargo_group, call.direction].filter(Boolean).join(' / ')],
           ['ETA', M.local(call.eta_at)], ['ETB', M.local(r.etb_at)],
           ['작업 시작', M.local(r.work_start_at)], ['작업 종료', M.local(r.work_end_at)],
-          ['ETU', M.local(r.etu_at)], ['선석 해제', M.local(r.physical_clearance_at)],
+          ['ETU (호스 분리 완료)', M.local(r.etu_at)], ['선석 해제', M.local(r.physical_clearance_at)],
           ['예상 체선료', money(price.demurrage_cents)]
         ];
         $('selected-detail').innerHTML = '<strong>선박 상세</strong><table><tbody>' + fields.map(([k,v]) =>

@@ -17,6 +17,7 @@ from ..integrated_input.v5 import validate_v5,eligible_berth_ids
 from ..physical_scheduling.service import solve_berth_schedule,_V5_VALIDATED_CONTEXT
 from ..physical_scheduling.validator import validate_result
 from ..physical_scheduling.policy import validate_policy
+from ..physical_scheduling.v5_user_rules import enabled as user_v5, DOCK_PAIR
 from .coordinator import validate_v5_candidate
 from .v5_pilotage import prepare_pilotage_policy
 
@@ -120,7 +121,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
         result['unscheduled_calls']=sorted(calls)
         eligible={cid:eligible_berth_ids(calls[cid],work['berths'],work['tanks']) for cid in call_ids}
         blocked=[]
-        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES':
+        if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and not user_v5(policy):
             for g in work['workbook_tables']['groups']['rows']:
                 if g.get('rule_type')=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP':
                     members=set(tokens(g.get('berth_ids')))
@@ -145,11 +146,15 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
         groups=work['workbook_tables']['groups']['rows'];retained=[]
         for group in groups:
             members=set(tokens(group.get('berth_ids')))
-            if group.get('rule_type')=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP':
+            if group.get('rule_type')=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP' and not user_v5(policy):
                 if members & used:return finish('UNSUPPORTED_OPERATIONAL_POLICY','UNSUPPORTED_OPERATIONAL_POLICY','Source 4-1/4-2 event and GRT exception definitions remain unresolved',berth_ids=sorted(members & used))
                 continue
             retained.append(group)
         work['workbook_tables']['groups']['rows']=retained
+        if user_v5(policy):
+            source_docks=[set(tokens(g.get('berth_ids'))) for g in retained if g.get('rule_type')=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP']
+            if source_docks and any(x!=DOCK_PAIR for x in source_docks):
+                return finish('UNSUPPORTED_OPERATIONAL_POLICY','DOCK_MAPPING_MISMATCH','Source dock group must map only to BERTH-07/08')
         if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES':
             from .v5_candidates import CandidatePool
             if not {r.get('call_id') for r in physical_commitments}<=set(call_ids):return finish('INVALID_INPUT','INVALID_COMMITMENT','Protected physical calls must be included in call_ids')

@@ -3,3 +3,10 @@
 @media(max-width:850px){.kpis{grid-template-columns:repeat(2,1fr)}.twocol{grid-template-columns:1fr}.controlgrid,.secondary-controls{grid-template-columns:1fr 1fr}.topbar{padding:14px 20px}.topbar a{font-size:12px}}
 
 .segment.berthing{background:#5e8cdb;top:6px;height:9px}.segment.disconnect{background:#ce858d;top:24px;height:7px}.segment.switching{background:#bc8e39;top:32px;height:5px}
+
+/* V5 user ETU marker and *conditional between-vessel* switching only. */
+.etu-marker{position:absolute;top:0;bottom:0;border-left:2px solid #8055ae;z-index:4;pointer-events:none}
+.segment.transition{top:32px;height:5px;background:#bc8e39;z-index:3}
+.legend span:nth-child(4):before{background:#ce858d}
+.legend span:nth-child(5):before{background:#8055ae}
+.legend span:nth-child(6):before{background:#bc8e39}
