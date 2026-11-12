@@ -3,10 +3,11 @@ from ..integrated_input.validator import timestamp
 
 VERSION='V3_SYNTHETIC_PHASE_POLICY_V1'
 VERSION_V2='V3_SYNTHETIC_PHASE_POLICY_V2'
+from .v5_user_rules import VERSION as VERSION_USER_V5, DOCK_VERSION as USER_DOCK_VERSION, enabled as user_v5, verify_v5_policy
 
 
 def validate_policy(policy,berth_ids):
-    if not isinstance(policy,dict) or policy.get('schema_version') not in (VERSION,VERSION_V2):
+    if not isinstance(policy,dict) or policy.get('schema_version') not in (VERSION,VERSION_V2,VERSION_USER_V5):
         raise ValueError('Explicit versioned phase policy is required')
     if policy.get('data_origin')!='SYNTHETIC_FIXTURE' or policy.get('operational_approval') is not False:
         raise ValueError('This policy version is synthetic and never operationally approved')
@@ -36,7 +37,7 @@ def validate_policy(policy,berth_ids):
         else:
             for cid,parts in by_call.items():
                 if not isinstance(parts,dict):raise ValueError('Invalid call pilotage windows')
-                for phase in ('berthing','unberthing'):window_groups[cid+'.'+phase]=parts.get(phase)
+                for phase in (('berthing',) if user_v5(policy) else ('berthing','unberthing')):window_groups[cid+'.'+phase]=parts.get(phase)
         for key,windows in window_groups.items():
             if not isinstance(windows,list) or not windows:raise ValueError('Missing '+bid+'.'+key)
             parsed=[]
@@ -50,7 +51,7 @@ def validate_policy(policy,berth_ids):
     if not (policy['schema_version']==VERSION_V2 and policy.get('tug_capacity') is None):
         if type(policy.get('tug_capacity')) is not int or policy['tug_capacity']<0:raise ValueError('Explicit tug capacity required')
     if policy.get('cargo_duration_policy','BERTH_RATE_V1') not in ('BERTH_RATE_V1','VESSEL_BERTH_RATE_V1'):raise ValueError('Invalid cargo duration policy')
-    if policy.get('dock_4142_version') not in ('DISABLED','SYNTHETIC_WORK_END_V1','SYNTHETIC_HOSE_END_V1'):
+    if policy.get('dock_4142_version') not in ('DISABLED','SYNTHETIC_WORK_END_V1','SYNTHETIC_HOSE_END_V1',USER_DOCK_VERSION):
         raise ValueError('Explicit 4142 switching interpretation required')
     if policy['dock_4142_version']!='DISABLED' and (not isinstance(policy.get('dock_4142_berths'),list) or len(set(policy['dock_4142_berths']))!=2 or not set(policy['dock_4142_berths'])<=set(berth_ids)):
         raise ValueError('4142 needs two explicit existing berth IDs')
@@ -61,11 +62,13 @@ def validate_policy(policy,berth_ids):
         allowed={'BERTHING','HOSE_CONNECT','CARGO','HOSE_DISCONNECT','SWITCHING','UNBERTHING'}
         if not isinstance(resources,dict) or not resources or not any('CARGO' in phases for phases in resources.values()):raise ValueError('Explicit 4142 shared phase resources required')
         if any(not isinstance(phases,list) or not phases or len(phases)!=len(set(phases)) or not set(phases)<=allowed for phases in resources.values()):raise ValueError('Invalid shared resource phase map')
+    if user_v5(policy):verify_v5_policy(policy,berth_ids)
     return policy
 
 
 def event_definition_issues(snapshot,policy):
     """Record the disputed ETU relation, never reinterpret it silently."""
+    if user_v5(policy):return []  # User rule explicitly makes ETU = hose disconnect end
     if not any(g.get('rule_type')=='PHASE_RESOURCE_MUTEX_WITH_120MIN_OVERLAP' for g in snapshot['workbook_tables']['groups']['rows']):return []
     from .phases import seconds_from_minutes
     reference=policy.get('legacy_etu_after_work_seconds')

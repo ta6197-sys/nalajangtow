@@ -4,6 +4,8 @@ Only the lookup is accelerated. No release timestamp is discarded, and
 same-call releases are excluded exactly as in the original nested scan.
 """
 from bisect import bisect_right
+from datetime import timedelta
+from .v5_user_rules import enabled as user_v5
 from collections import defaultdict
 from ..integrated_input.validator import timestamp
 
@@ -20,7 +22,15 @@ class ReleaseEventIndex:
         for row in sources:
             berth = row['berth_id']
             scope = ('DOCK_4142',) if berth in self.dock else ('BERTH', berth)
-            events[scope][timestamp(row['switching_end_at'])].add(row['call_id'])
+            if user_v5(policy):
+                # The dock's hose becomes available at ETU, even during the
+                # special 120-minute occupancy overlap. Ordinary berths use
+                # a *conditional* inter-vessel switching release.
+                release = (timestamp(row['etu_at']) if berth in self.dock else
+                           timestamp(row['etu_at']) + timedelta(seconds=policy['berths'][berth]['switching_seconds']))
+            else:
+                release = timestamp(row['switching_end_at'])
+            events[scope][release].add(row['call_id'])
         self.events = {
             scope: (sorted(values), values)
             for scope, values in events.items()

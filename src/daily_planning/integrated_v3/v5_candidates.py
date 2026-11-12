@@ -4,6 +4,7 @@ from datetime import timedelta
 import time
 from ..integrated_input.validator import timestamp,tokens
 from ..physical_scheduling.phases import replay
+from ..physical_scheduling.v5_user_rules import enabled as user_v5, eligible_4x_overlap, DOCK_PAIR
 from ..physical_scheduling.validator import validate_result,pair_conflicts
 from ..physical_scheduling.compatibility import vessel_berth_duration_seconds
 from ..physical_scheduling.conflict_index import iter_potential_pairs
@@ -36,7 +37,7 @@ class CandidatePool:
         self.attempts[key].add(at)
         if len(self.accepted[key])>=self.pair_limit or self.count()>=self.total_limit:return False
         cfg=self.policy['berths'][bid]
-        if _unresolved_0200(at,cfg['berthing_seconds']):
+        if not user_v5(self.policy) and _unresolved_0200(at,cfg['berthing_seconds']):
             self.rejected.append({'call_id':cid,'berth_id':bid,'etb_at':at.isoformat(),'code':'POLICY_UNRESOLVED','reason':'02:00–08:00 berthing restriction unresolved','source':reason,'round':round_no});return False
         try:
             row=replay(call,berth,at.isoformat(),self.policy,restrictions=self.snapshot['workbook_tables']['restrictions']['rows'])
@@ -68,8 +69,11 @@ class CandidatePool:
                         anchors.append((timestamp(block['start_local'])-timedelta(seconds=cfg['hose_connection_seconds']+vessel_berth_duration_seconds(call,berth)),'BERTH_RESTRICTION_START'))
                 for r in self.commitments:
                     if r['berth_id']==bid:
-                        anchors.append((timestamp(r['physical_clearance_at'])+maneuver,'PROTECTED_BERTH_CLEARANCE'))
-                        anchors.append((timestamp(r['switching_end_at']),'PROTECTED_SWITCH_RELEASE'))
+                        anchors.append((timestamp(r['physical_clearance_at'])+(timedelta(seconds=self.policy['berths'][bid]['switching_seconds']) if user_v5(self.policy) else maneuver),'PROTECTED_BERTH_CLEARANCE'))
+                        if not user_v5(self.policy):
+                            anchors.append((timestamp(r['switching_end_at']),'PROTECTED_SWITCH_RELEASE'))
+                    if user_v5(self.policy) and bid in DOCK_PAIR and r['berth_id'] in DOCK_PAIR and r['berth_id']!=bid and eligible_4x_overlap(r,call):
+                        anchors.append((timestamp(r['work_end_at']),'DOCK4142_EXACT_OVERLAP_ETB'))
                 # Keep event seconds exactly; a single grid point supplies exploration.
                 grid=earliest.replace(minute=0,second=0,microsecond=0)
                 while grid<earliest:grid+=timedelta(minutes=30)
@@ -94,7 +98,9 @@ class CandidatePool:
                 for row in rows+self.commitments:
                     if row['call_id']==cid:continue
                     if row['berth_id']==bid:
-                        anchors.append((timestamp(row['physical_clearance_at'])+maneuver,'OTHER_BERTH_CLEARANCE:'+row['call_id']))
+                        anchors.append((timestamp(row['physical_clearance_at'])+(timedelta(seconds=cfg['switching_seconds']) if user_v5(self.policy) else maneuver),'OTHER_BERTH_CLEARANCE:'+row['call_id']))
+                    if user_v5(self.policy) and bid in DOCK_PAIR and row['berth_id'] in DOCK_PAIR and row['berth_id']!=bid and eligible_4x_overlap(row,call):
+                        anchors.append((timestamp(row['work_end_at']),'DOCK4142_EXACT_OVERLAP_ETB:'+row['call_id']))
                     for group in groups:
                         members=tokens(group.get('berth_ids'))
                         if group.get('rule_type')=='SAME_CARGO_NOT_CONCURRENT' and bid in members and row['berth_id'] in members and row['berth_id']!=bid and row.get('cargo_group')==call.get('cargo_group'):
@@ -128,7 +134,9 @@ class CandidatePool:
                     for offset in (-30,30):anchors.append((timestamp(selected['etb_at'])+timedelta(minutes=offset),f'INCUMBENT_OFFSET_{offset:+d}M'))
                 for other in schedule:
                     if other['call_id']!=cid and other['berth_id']==bid:
-                        anchors.append((timestamp(other['physical_clearance_at'])+maneuver,'INCUMBENT_BERTH_RELEASE:'+other['call_id']))
+                        anchors.append((timestamp(other['physical_clearance_at'])+(timedelta(seconds=cfg['switching_seconds']) if user_v5(self.policy) else maneuver),'INCUMBENT_BERTH_RELEASE:'+other['call_id']))
+                    if user_v5(self.policy) and other['call_id']!=cid and bid in DOCK_PAIR and other['berth_id'] in DOCK_PAIR and other['berth_id']!=bid and eligible_4x_overlap(other,self.calls[cid]):
+                        anchors.append((timestamp(other['work_end_at']),'DOCK4142_INCUMBENT_OVERLAP:'+other['call_id']))
                 for at,reason in sorted(anchors,key=lambda x:(x[0],x[1])):self.add(cid,bid,at,reason,round_no)
         self.expansion_events.append({'round':round_no,'reason':'COST_AWARE_INCUMBENT_AND_RELEASE','affected_call_ids':order,'added':self.count()-before})
         return self.count()-before

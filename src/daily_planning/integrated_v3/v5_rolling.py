@@ -11,6 +11,7 @@ from ..physical_scheduling.validator import validate_result
 from ..tank.v5_inventory import validate_v5_inventory
 from . import v5_physical
 from .coordinator import validate_v5_candidate
+from ..physical_scheduling.v5_user_rules import VERSION as USER_V5_VERSION
 from .v5_cost_search import optimize_v5
 from .v5_settlement import price_v5_schedule
 from .v5_locks import apply_overrides,resolve_locks
@@ -43,7 +44,7 @@ def _transition(snapshot, *, at, prior, rows, tank, pricing,settlement_snapshot,
     if ordered(tank.get('carried_transfers',[]))!=ordered(endstate['carried_transfers']):raise ValueError('CARRYOVER_TRANSFER_MISMATCH')
     completed={r['call_id']:deepcopy(r) for r in prior.get('completed_rows',[])}
     for row in rows:
-        if max(timestamp(row['physical_clearance_at']),timestamp(row['switching_end_at']))<=boundary:completed[row['call_id']]=deepcopy(row)
+        if (timestamp(row['etu_at'])<=boundary if row.get('phase_policy_version')==USER_V5_VERSION else max(timestamp(row['physical_clearance_at']),timestamp(row['switching_end_at']))<=boundary):completed[row['call_id']]=deepcopy(row)
     pending_rows=[deepcopy(r) for r in rows if r['call_id'] not in completed]
     qty=deepcopy(prior.get('cargo_progress',{}))
     for d in defs:
