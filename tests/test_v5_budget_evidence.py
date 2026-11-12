@@ -14,6 +14,7 @@ from src.daily_planning.integrated_v3.v5_budget_evidence import (
 def win(etb='2026-11-12T10:00:00+09:00', berth='BERTH-01', cost=100, initial='i', final='f', status='OPTIMAL'):
     return {'window_id':1, 'first_domain_hash':initial, 'final_domain_hash':final,
             'schedule_hash':etb + ':' + berth, 'cost_cents':cost,
+            'physical_schedule_hash':'physical', 'canonical_status':'PROVEN_CANONICAL_SELECTION',
             'schedule':{'A':{'etb_utc':utc(etb).isoformat(), 'berth_id':berth}},
             'final_domain_optimality_proven':status=='OPTIMAL', 'solver_status':status,
             'stopping_reason':'NO_NEW_CANDIDATES'}
@@ -30,6 +31,33 @@ def trial(i, *, budget=60, **kwargs):
 
 
 class BudgetEvidenceTest(unittest.TestCase):
+    def test_missing_hashes_are_incomplete_and_never_match(self):
+        rows=[trial(i) for i in range(20)]
+        rows[0]['windows'][0]['first_domain_hash']=None
+        result=budget_report(rows,expected=20,budget=60)
+        self.assertEqual(result['status'],'INCOMPLETE_EVIDENCE')
+        self.assertEqual(result['windows'][0]['missing_initial_domain_count'],1)
+        self.assertIn('MISSING_DOMAIN_EVIDENCE', result['windows'][0]['diagnostic_flags'])
+        for row in rows: row['windows'][0]['final_domain_hash']=None
+        self.assertEqual(budget_report(rows,expected=20,budget=60)['windows'][0]['missing_final_domain_count'],20)
+        cross=compare_budgets({60:[rows[0]],120:[rows[0]]})
+        self.assertEqual(cross['pairs'][0]['windows'][0]['same_final_domain_pairs'],0)
+
+    def test_no_work_missing_domains_exempt(self):
+        row=trial(1); row['windows'][0].update(schedule={},first_domain_hash=None,final_domain_hash=None,physical_schedule_hash=None)
+        result=budget_report([row],expected=1,budget=60)
+        self.assertEqual(result['status'],'OBSERVED_REPEATABLE_AT_THIS_BUDGET')
+        self.assertEqual(result['windows'][0]['missing_initial_domain_count'],0)
+
+    def test_canonical_fallback_and_missing_physical_block_recommendation(self):
+        row=trial(1); row['windows'][0]['canonical_status']='INCOMPLETE_TIME_BUDGET_FALLBACK'
+        result=budget_report([row],expected=1,budget=60)
+        self.assertEqual(audit.recommend_next({60:result}),'INVESTIGATE_UNPROVEN_CANONICAL_OR_FINITE_DOMAIN_STATUS')
+        row['windows'][0]['physical_schedule_hash']=None
+        result=budget_report([row],expected=1,budget=60)
+        self.assertEqual(result['status'],'INCOMPLETE_EVIDENCE')
+        self.assertEqual(audit.recommend_next({60:result}),'INVESTIGATE_FAILED_OR_INCOMPLETE_EVIDENCE_FIRST')
+
     def test_trial_checks_nested_source_metadata_and_replays(self):
         meta = {'source': {'source_fingerprint': 's', 'scope_call_ids': ['A']},
                 'candidates_per_pair': 6, 'total_candidates': 240,

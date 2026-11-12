@@ -40,17 +40,35 @@ def read_window(cp: dict) -> dict:
     final_hash = final_domain.get('candidate_domain_fingerprint') or optimizer.get('candidate_domain_fingerprint')
     rows = cp.get('selected_schedule') or []
     schedule = {}
+    physical_schedule = {}
+    physical_fields = ('hose_connection_start_at', 'hose_connection_end_at',
+                       'work_intervals', 'work_start_at', 'work_end_at', 'etu_at')
+    missing_physical = []
     for row in rows:
         cid = row['call_id']
         if cid in schedule:
             raise ValueError('Duplicate call in checkpoint window: ' + cid)
         schedule[cid] = {'berth_id': row['berth_id'], 'etb_utc': iso_utc(row['etb_at'])}
+        missing = [key for key in physical_fields if row.get(key) is None]
+        if missing:
+            missing_physical.append({'call_id': cid, 'fields': missing})
+            continue
+        intervals = row['work_intervals']
+        if not isinstance(intervals, list) or not intervals or any(not isinstance(x, (list, tuple)) or len(x) != 2 for x in intervals):
+            missing_physical.append({'call_id': cid, 'fields': ['work_intervals']})
+            continue
+        physical_schedule[cid] = {'berth_id': row['berth_id'], 'etb_at': iso_utc(row['etb_at']),
+            **{key: iso_utc(row[key]) for key in physical_fields if key != 'work_intervals'},
+            'work_intervals': [[iso_utc(start), iso_utc(end)] for start, end in intervals]}
     cost = summary.get('window_demurrage_cents')
     if type(cost) is not int or cost < 0:
         raise ValueError('Invalid or unresolved window cost in validated checkpoint')
     return {
         'window_id': cp['window_id'], 'as_of_at': cp['as_of_at'],
         'has_work': bool(rows), 'schedule': schedule, 'schedule_hash': digest(schedule),
+        'physical_schedule': physical_schedule if not missing_physical else None,
+        'physical_schedule_hash': digest(physical_schedule) if not missing_physical else None,
+        'missing_physical_evidence': missing_physical,
         'cost_cents': cost, 'first_domain_hash': first_hash,
         'final_domain_hash': final_hash,
         'initial_candidate_count': optimizer.get('initial_candidate_count'),
@@ -134,6 +152,10 @@ def compare_runs(runs: list[dict], *, expected_repetitions: int = 20) -> dict:
         reference = selected[0][1]
         hashes_first = sorted({w.get('first_domain_hash') for _, w in selected if w.get('first_domain_hash')})
         hashes_final = sorted({w.get('final_domain_hash') for _, w in selected if w.get('final_domain_hash')})
+        missing_first = sum(1 for _, w in selected if w.get('has_work') and not w.get('first_domain_hash'))
+        missing_final = sum(1 for _, w in selected if w.get('has_work') and not w.get('final_domain_hash'))
+        missing_physical = sum(1 for _, w in selected if w.get('has_work') and not w.get('physical_schedule_hash'))
+        physical_hashes = {w.get('physical_schedule_hash') for _, w in selected if w.get('has_work') and w.get('physical_schedule_hash')}
         schedules = sorted({w['schedule_hash'] for _, w in selected})
         costs = [w['cost_cents'] for _, w in selected]
         keyset = sorted({cid for _, w in selected for cid in w['schedule']})
@@ -167,13 +189,18 @@ def compare_runs(runs: list[dict], *, expected_repetitions: int = 20) -> dict:
         if len(hashes_final) > 1: classifications.append('EXPANDED_DOMAIN_DIFFERENCE')
         if len(set(costs)) > 1: classifications.append('COST_DIFFERENCE')
         if len(schedules) > 1: classifications.append('SCHEDULE_DIFFERENCE')
-        if any(w.get('has_work') for _, w in selected) and (not hashes_first or not hashes_final):
+        if missing_first or missing_final:
             classifications.append('MISSING_DOMAIN_EVIDENCE')
-        if len(schedules) > 1 and len(hashes_final) == 1 and len(set(costs)) == 1:
+        if missing_physical: classifications.append('MISSING_PHYSICAL_EVIDENCE')
+        if len(physical_hashes) > 1: classifications.append('PHYSICAL_SCHEDULE_DIFFERENCE')
+        if len(schedules) > 1 and not missing_final and len(hashes_final) == 1 and len(set(costs)) == 1:
             classifications.append('POSSIBLE_TIE_IF_ALL_SOLVES_PROVEN' if all_optimal else 'CANNOT_DISTINGUISH_TIE_FROM_EARLY_STOP')
         if not classifications: classifications.append('REPEATED_WINDOW_IDENTICAL')
         comparisons.append({'window_id': wid, 'comparisons': len(selected), 'initial_domain_unique_hashes': len(hashes_first),
                             'final_domain_unique_hashes': len(hashes_final), 'schedule_unique_hashes': len(schedules),
+                            'missing_initial_domain_count': missing_first, 'missing_final_domain_count': missing_final,
+                            'missing_physical_evidence_count': missing_physical, 'physical_schedule_unique_hashes': len(physical_hashes),
+                            'schedule_hash_values': schedules, 'physical_schedule_hash_values': sorted(physical_hashes),
                             'cost_cents_min_max': _range(costs), 'all_final_domains_optimal_proven': all_optimal,
                             'solver_status_counts': dict(Counter(w.get('solver_status') for _, w in selected)),
                             'stopping_reason_counts': dict(Counter(w.get('stopping_reason') for _, w in selected)),
@@ -185,7 +212,8 @@ def compare_runs(runs: list[dict], *, expected_repetitions: int = 20) -> dict:
                                          and c['schedule_unique_hashes']==1
                                          and c['cost_cents_min_max'][0]==c['cost_cents_min_max'][1]
                                          for c in comparisons)
-    status = 'REPEATABLE_IN_TESTED_WINDOWS' if complete and all_same else 'INCOMPLETE_OR_UNREPLAYED' if not complete else 'VARIATION_DETECTED'
+    missing_evidence = any('MISSING_DOMAIN_EVIDENCE' in c['diagnostic_flags'] or 'MISSING_PHYSICAL_EVIDENCE' in c['diagnostic_flags'] for c in comparisons)
+    status = 'REPEATABLE_IN_TESTED_WINDOWS' if complete and all_same else 'INCOMPLETE_OR_UNREPLAYED' if not complete or missing_evidence else 'VARIATION_DETECTED'
     return {'version': VERSION, 'status': status, 'expected_repetitions': expected_repetitions,
             'run_count': len(runs), 'validated_and_replayed': n_ok, 'source_fingerprint': expected_source,
             'scope_call_ids': expected_scope, 'effective_policy_fingerprint': expected_policy,
@@ -202,10 +230,12 @@ def compare_series(name: str, observations: list[dict], *, count: int = 20) -> d
     costs = [o['cost_cents'] for o in valid if type(o.get('cost_cents')) is int]
     schedules = sorted({o.get('schedule_hash') for o in valid if o.get('schedule_hash')})
     solver_statuses = dict(Counter(o.get('solver_status') for o in valid if o.get('solver_status')))
+    missing_domains = sum(1 for o in valid if not o.get('domain_hash'))
     status = ('INCOMPLETE' if len(observations) != count or len(valid) != count
+              else 'INCOMPLETE' if missing_domains
               else 'VARIATION_DETECTED' if len(hashes) > 1 or len(set(costs)) > 1 or len(schedules) > 1
                    or len(solver_statuses) > 1
               else 'REPEATED' if hashes else 'INCOMPLETE')
     return {'experiment': name, 'status': status, 'requested': count, 'observed': len(observations),
-            'passed': len(valid), 'domain_hashes': len(hashes), 'cost_cents_min_max': _range(costs),
+            'passed': len(valid), 'domain_hashes': len(hashes), 'missing_domain_count': missing_domains, 'cost_cents_min_max': _range(costs),
             'schedule_hashes': len(schedules), 'solver_status_counts': solver_statuses, 'errors': [o for o in observations if o.get('status') != 'PASS']}
