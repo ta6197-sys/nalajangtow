@@ -48,7 +48,7 @@ def _event_matches_work(row,events,clock):
 def settle_v5_call(snapshot,row,*,as_of_at,evidence=None,pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK'):
     cid=row.get('call_id')
     try:
-        if snapshot.get('scenario_id')!='V5_3TANK':return _unresolved(cid,'INVALID_V5_INPUT','V5 scenario required')
+        if snapshot.get('scenario_id') not in ('V5_3TANK','V5_BALANCED_154'):return _unresolved(cid,'INVALID_V5_INPUT','V5 scenario required')
         calls=[c for c in snapshot['calls'] if c.get('call_id')==cid];records=[c for c in snapshot['workbook_tables']['contracts']['rows'] if c.get('case_id')==cid]
         if len(calls)!=1 or len(records)!=1 or calls[0].get('vessel_id')!=records[0].get('vessel_id'):return _unresolved(cid,'CONTRACT_REFERENCE_UNRESOLVED','Call and source contract identity mismatch')
         if pricing_policy not in ('EXPLICIT_EVENTS_V1','CLEAR_WEATHER_BASELINE_V1'):return _unresolved(cid,'UNSUPPORTED_SETTLEMENT_POLICY','Unknown pricing policy')

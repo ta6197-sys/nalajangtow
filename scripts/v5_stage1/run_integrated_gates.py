@@ -30,6 +30,10 @@ S5_SUCCESS = 'PASS_S5_ALL_FIVE_COMPLETED_SETTLED_AND_REPLAYED'
 RULE_VERSION = 'V5_USER_ETU_SWITCHING_20261112_V1'
 
 
+def scenario_order(config):
+    return tuple(g for g in GATE_ORDER if g != ('FULL140' if config.get('scenario')=='V5_BALANCED_154' else 'FULL154'))
+
+
 def read(path):
     p = Path(path)
     if p.is_symlink() or not p.is_file() or p.stat().st_size > 80_000_000:
@@ -107,10 +111,12 @@ def validated_context(config_path, scope_directory=None):
     if not preflight.get('data_preflight_pass'):
         raise ValueError('Source V5 preflight did not pass')
     n_fix = sum(c.get('fixed_etb_is_hard') is True for c in snapshot['calls'])
-    if (len(snapshot['calls']), len(snapshot['berths']), len(snapshot['tanks']), n_fix) != (140, 11, 3, 15):
-        raise ValueError('Expected original 140 calls, 11 berths, 3 tanks, and 15 FIX ETBs')
+    expected=154 if config.get('scenario')=='V5_BALANCED_154' else 140
+    if (len(snapshot['calls']), len(snapshot['berths']), len(snapshot['tanks']), n_fix) != (expected, 11, 3, 15):
+        raise ValueError(f'Expected {expected} calls, 11 berths, 3 tanks, and 15 FIX ETBs')
     scopes = {}
-    for gate, (count, _) in GATES.items():
+    for gate in scenario_order(config):
+        count,_=GATES[gate]
         supplied = None
         if scope_directory is not None:
             path = Path(scope_directory)/f'{gate}.json'
@@ -142,7 +148,9 @@ def safe_study_root(study_root, config):
 
 
 def plan(config, snapshot, scopes, through, s5_start, s5_max):
-    selected = GATE_ORDER[:GATE_ORDER.index(through) + 1]
+    order=scenario_order(config)
+    if through not in order:raise ValueError('Gate does not belong to selected scenario')
+    selected = order[:order.index(through) + 1]
     rows = []
     for gate in selected:
         c, windows = GATES[gate]
@@ -360,13 +368,15 @@ def main(argv=None):
             raise ValueError('Run mode requires a new --study-root')
         config_path = args.config.expanduser().resolve()
         config, snapshot, preflight, scopes, source_fp = validated_context(config_path, args.scope_directory)
-        for gate in GATE_ORDER[:GATE_ORDER.index(args.through) + 1]:
+        order=scenario_order(config)
+        if args.through not in order:raise ValueError('Gate does not belong to selected scenario')
+        for gate in order[:order.index(args.through) + 1]:
             count, windows = GATES[gate]
             bounded_parameters(count=count, windows=windows,
                                time_limit_seconds=args.seconds_per_window,
                                candidates_per_pair=args.candidates_per_pair,
                                total_candidates=args.total_candidates,
-                               improvement_rounds=args.improvement_rounds)
+                               improvement_rounds=args.improvement_rounds,scenario=config.get('scenario','V5_3TANK'))
         report = plan(config, snapshot, scopes, args.through,
                       args.s5_start_windows, args.s5_max_windows)
         report['source_fingerprint'] = source_fp
@@ -375,9 +385,9 @@ def main(argv=None):
             return 0 if all(x['status']=='COVERAGE_PRECHECK_PASS' for x in report['gates']) else 2
         root = safe_study_root(args.study_root, config)
         root.mkdir(parents=True)
-        for gate in GATE_ORDER:
+        for gate in order:
             write_new(root/'scopes'/f'{gate}.json', scopes[gate])
-        write_new(root/'stage1_manifest.json', {
+        stage_manifest = {
             'version': VERSION, 'git': git_metadata(), 'config_path': str(config_path),
             'source_fingerprint': source_fp, 'as_of_at': config['as_of_at'],
             'policy_version': RULE_VERSION, 'tie_break_mode': TIE_BREAK,
@@ -385,7 +395,9 @@ def main(argv=None):
             'candidate_settings': {'per_pair': args.candidates_per_pair,
                                    'total': args.total_candidates, 'improvement_rounds': args.improvement_rounds},
             'created_at': datetime.now(timezone.utc).isoformat(),
-            'simulation_only': True, 'operational_approval': False})
+            'simulation_only': True, 'operational_approval': False}
+        if config.get('scenario')=='V5_BALANCED_154':stage_manifest['scenario_id']='V5_BALANCED_154'
+        write_new(root/'stage1_manifest.json', stage_manifest)
         write_new(root/'preflight_report.json', report)
         history = []
         stage2b = run_stage2b(root, args, config_path, source_fp, scopes, config['as_of_at'], config)
@@ -400,7 +412,7 @@ def main(argv=None):
             if s5['status'] != 'PASS_S5_FULL_COMPLETION':
                 blocked = 'S5'
         if not blocked:
-            selected = GATE_ORDER[1:GATE_ORDER.index(args.through) + 1]
+            selected = order[1:order.index(args.through) + 1]
             for gate in selected:
                 result = run_scaled_gate(root, gate, config_path, config,
                                          snapshot, args, scopes, source_fp)

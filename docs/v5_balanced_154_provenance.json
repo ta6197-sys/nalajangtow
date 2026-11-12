@@ -1,0 +1,11 @@
+{
+  "scenario_id": "V5_BALANCED_154",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "operational_approval": false,
+  "archive_sha256": "34f1bc859c0a312a8e29e21529ee517c5c728e25ec848699fe23f95751a2ed55",
+  "files": {
+    "Docktimize_v5_선박입력_BALANCED.json": "bec4bd04fd2780369925b80574a1be57fc7852915b898ddfd8bc45f2d6b22969",
+    "Docktimize_공정유량_6h_3탱크_1000만bbl_BALANCED.json": "9c0d3ee063f54f93af03c122b1d8ee9608ee1a6e6e36c34ba3bdb3589c6ba763"
+  },
+  "workbook_sha256_claim_not_runtime_verified": "2fb362123bdfcd2e4089b9a14904e7e5e2f053fa3c2327d1179f25875e3bdc00"
+}

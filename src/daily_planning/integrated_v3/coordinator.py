@@ -21,7 +21,7 @@ def validate_candidate(snapshot, rows, *, policy, as_of_at, initial_inventory=No
     Input rows must be the existing physical scheduler's full replay format.
     This interface does not optimize ETB, price demurrage, or approve operation.
     """
-    if snapshot.get('scenario_id')=='V5_3TANK':
+    if snapshot.get('scenario_id') in ('V5_3TANK','V5_BALANCED_154'):
         return validate_v5_candidate(snapshot,rows,as_of_at=as_of_at,projection_end_at=projection_end_at,
             initial_inventory=initial_inventory,carried_transfers=carried_transfers,
             tank_commitments=tank_commitments,protected_call_ids=protected_call_ids,same_tank_policy='ALLOW' if same_tank_policy is None else same_tank_policy)

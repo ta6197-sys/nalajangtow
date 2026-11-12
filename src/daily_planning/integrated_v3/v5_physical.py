@@ -25,11 +25,14 @@ VERSION='V5_PHYSICAL_INVENTORY_CHECKPOINT_V1'
 
 
 def _verified_snapshot(snapshot,data_dir):
-    bundle=load_inputs(data_dir,scenario='V5_3TANK')
+    scenario=snapshot.get('scenario_id')
+    if scenario not in ('V5_3TANK','V5_BALANCED_154'):raise ValueError('Unknown V5 scenario')
+    bundle=load_inputs(data_dir,scenario=scenario)
     expected=normalize(bundle)
     if canonical(snapshot)!=canonical(expected):raise ValueError('Snapshot differs from verified original inputs')
     preflight=validate_v5(snapshot)
     if not preflight['data_preflight_pass']:raise ValueError('V5 preflight failed: '+str(preflight['errors']))
+    if scenario=='V5_BALANCED_154':return deepcopy(snapshot)
     root=Path(data_dir);item=bundle['artifacts'][0];path=root/item['filename'];raw=path.read_bytes()
     if digest(raw)!=item['sha256']:raise ValueError('Workbook fingerprint changed during loading')
     from openpyxl import load_workbook
@@ -59,7 +62,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE',candidate_improvement_mode='NONE',max_improvement_rounds=2,tie_break_mode='NONE'):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
     started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
-    result={'scenario_id':'V5_3TANK','model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
+    result={'scenario_id':snapshot.get('scenario_id'),'model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
             'policy_fingerprint':digest(canonical(policy).encode()),'candidate_domain_fingerprint':digest(canonical(domain).encode()),
             'solver_status':'NOT_RUN','physical_validation':'NOT_EVALUATED','inventory_validation':'NOT_EVALUATED',
             'combined_validation':'NOT_VALIDATED','scheduled_calls':[],'unscheduled_calls':[],
@@ -96,7 +99,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
         if type(max_inventory_reoptimizations) is not int or max_inventory_reoptimizations<0:return finish('INVALID_INPUT','INVALID_REOPTIMIZATION_LIMIT','Nonnegative integer reoptimization limit required')
         if candidate_generation_mode not in ('MANUAL_CANDIDATES','AUTO_ADAPTIVE_CANDIDATES'):return finish('INVALID_INPUT','INVALID_CANDIDATE_MODE','Unknown candidate generation mode')
         if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and (any(type(x) is not int or x<1 for x in (max_candidates_per_pair,max_total_candidates)) or type(max_expansion_rounds) is not int or max_expansion_rounds<0):return finish('INVALID_INPUT','INVALID_CANDIDATE_LIMIT','Invalid candidate limits')
-        if snapshot.get('scenario_id')!='V5_3TANK' or snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V5':return finish('INVALID_INPUT','INVALID_V5_INPUT','Expected normalized V5 input')
+        if snapshot.get('scenario_id') not in ('V5_3TANK','V5_BALANCED_154') or snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V5':return finish('INVALID_INPUT','INVALID_V5_INPUT','Expected normalized V5 input')
         work=_verified_snapshot(snapshot,data_dir)
         option_cache={}
         def price_option(row):
@@ -115,7 +118,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             if initial_inventory is None and begin!=timestamp(work['fixed_process_flows']['inventory_as_of_at']):raise ValueError('Carry-in inventory required')
             if set(inventory)!={t['tank_id'] for t in work['tanks']}:raise ValueError('Carry-in inventory required for all tanks')
             for t in work['tanks']:
-                if not number(t['min_inventory_bbl'])<=number(inventory[t['tank_id']])<=number(t['capacity_bbl']):raise ValueError('Invalid carry-in inventory: '+t['tank_id'])
+                if not number(t['min_inventory_bbl'])<=number(inventory[t['tank_id']])<=number(t.get('effective_max_inventory_bbl',t['capacity_bbl'])):raise ValueError('Invalid carry-in inventory: '+t['tank_id'])
             prepared=prepare_inventory_events(work,options+locked,start_at=as_of_at,end_at=end.isoformat(),carried_transfers=carried_transfers or (),commitments=tank_commitments or (),physical_commitments=locked)
             return add_inventory_constraints(model,variables,prepared,work['tanks'],initial_inventory=inventory,option_count=len(options))
         objective_args={'objective_mode':objective_mode,'option_pricer':price_option if objective_mode=='MIN_TOTAL_DEMURRAGE' else None,'inventory_builder':inventory_builder if inventory_constraint_mode!='NONE' else None}

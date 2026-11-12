@@ -6,7 +6,7 @@ from .validator import timestamp
 
 
 def normalize(bundle):
-    if bundle.get('scenario_id')=='V5_3TANK':
+    if bundle.get('scenario_id') in ('V5_3TANK','V5_BALANCED_154'):
         from .v5 import normalize_v5
         return normalize_v5(bundle)
     source=bundle['source']; tables=bundle['tables']

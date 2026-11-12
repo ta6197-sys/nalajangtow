@@ -17,11 +17,11 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
     started=perf_counter(); issues=[]
     def issue(code, reason, **ids):issues.append({'code':code,'reason':str(reason),**ids})
     def fail():
-        return {'scenario_id':'V5_3TANK','status':'INVALID','issues':issues,'solver_bypassed':True,
+        return {'scenario_id':snapshot.get('scenario_id'),'status':'INVALID','issues':issues,'solver_bypassed':True,
                 'runtime_seconds':perf_counter()-started,'scheduling_feasibility':'NOT_EVALUATED',
                 'operational_approval':False}
     try:
-        if snapshot.get('scenario_id')!='V5_3TANK':raise ValueError('Expected V5_3TANK scenario')
+        if snapshot.get('scenario_id') not in ('V5_3TANK','V5_BALANCED_154'):raise ValueError('Expected V5 scenario')
         start,end=timestamp(start_at),timestamp(end_at)
         if end<=start:raise ValueError('Invalid projection horizon')
         calls={c['call_id']:c for c in snapshot['calls']};berths={b['berth_id']:b for b in snapshot['berths']};tanks={t['tank_id']:t for t in snapshot['tanks']}
@@ -35,7 +35,7 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
             else:
                 for tid,t in tanks.items():
                     try:
-                        if not number(t['min_inventory_bbl'])<=number(initial_inventory[tid])<=number(t['capacity_bbl']):issue('INVALID_CARRYOVER_STATE','Carry-in inventory outside bounds',tank_id=tid,at=start.isoformat())
+                        if not number(t['min_inventory_bbl'])<=number(initial_inventory[tid])<=number(t.get('effective_max_inventory_bbl',t['capacity_bbl'])):issue('INVALID_CARRYOVER_STATE','Carry-in inventory outside bounds',tank_id=tid,at=start.isoformat())
                     except (ValueError,KeyError,TypeError):issue('INVALID_CARRYOVER_STATE','Invalid carry-in inventory',tank_id=tid,at=start.isoformat())
         if initial_inventory is None and start!=timestamp(snapshot['fixed_process_flows']['inventory_as_of_at']):issue('INVALID_CARRYOVER_STATE','Carry-in inventory required',at=start.isoformat())
         mapped=[];seen=set()
@@ -58,8 +58,16 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
                 if old.get('transfer_fingerprint')!=digest(canonical(x).encode()):
                     issue('INVALID_CARRYOVER_STATE','Protected carried transfer was modified',call_id=x['call_id'],tank_id=x['tank_id'],at=start.isoformat())
         if issues:return fail()
-        result=validate_v3_inventory(snapshot,mapped,start_at=start_at,end_at=end_at,initial_inventory=initial_inventory,
+        replay_snapshot=deepcopy(snapshot) if snapshot.get('scenario_id')=='V5_BALANCED_154' else snapshot
+        if snapshot.get('scenario_id')=='V5_BALANCED_154':
+            for t in replay_snapshot['tanks']:
+                effective=number(t['effective_max_inventory_bbl'])
+                if effective!=number(t['capacity_bbl'])*Fraction(95,100):raise ValueError('Invalid BALANCED operating inventory maximum')
+                t['capacity_bbl']=str(effective)
+        result=validate_v3_inventory(replay_snapshot,mapped,start_at=start_at,end_at=end_at,initial_inventory=initial_inventory,
             same_tank_policy=same_tank_policy,carried_transfers=carried_transfers,commitments=commitments)
+        if snapshot.get('scenario_id')=='V5_BALANCED_154':
+            result['source_fingerprint']=digest(canonical(snapshot).encode())
         if result['status']=='INVALID_INPUT':
             for e in result['issues']:
                 reason=e.get('reason','');low=reason.lower()
@@ -116,7 +124,7 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
                 pieces=[{'start_at':x['start_at'],'end_at':x['end_at'],'rate_bbl_per_hour':str(rate)}]
             done=sum((number(p['rate_bbl_per_hour'])*Fraction(int((min(timestamp(p['end_at']),end)-timestamp(p['start_at'])).total_seconds()),3600) for p in pieces if timestamp(p['start_at'])<end),Fraction(0))
             end_carry.append({'at':end.isoformat(),'call_id':x['call_id'],'berth_id':x['berth_id'],'tank_id':x['tank_id'],'remaining_bbl':str(number(c['cargo_volume_bbl'])-done),'transfer_fingerprint':digest(canonical(x).encode())})
-        result.update(scenario_id='V5_3TANK',status='VALID' if not issues else 'INVALID',issues=issues,solver_bypassed=True,
+        result.update(scenario_id=snapshot.get('scenario_id'),status='VALID' if not issues else 'INVALID',issues=issues,solver_bypassed=True,
             gross_vessel_rate_maxima=maxima,quantity_reconciliation=reconciliation,
             end_state=({'at':end.isoformat(),'inventory_bbl':{tid:points[-1]['inventory_bbl'] for tid,points in result['inventories'].items()},'carried_transfers':end_carry} if not issues else None),
             carryover_state_valid=not issues,

@@ -123,8 +123,15 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
     if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':config.update(rolling_optimizer_mode=rolling_optimizer_mode,objective_mode='MIN_TOTAL_DEMURRAGE',inventory_constraint_mode='EXACT_EVENT_BALANCE_V1',candidate_generation_mode='AUTO_ADAPTIVE_CANDIDATES',candidate_improvement_mode='COST_AWARE_V1',max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates)
     if tie_break_mode!='NONE':config['tie_break_mode']=tie_break_mode
     manifest={'run_fingerprint':_fingerprint(config),'config':config,'operational_approval':False};manifest_path=folder/'manifest.json'
+    if snapshot.get('scenario_id')=='V5_BALANCED_154':manifest['scenario_id']='V5_BALANCED_154'
     if resume:
-        if not manifest_path.is_file() or _read(manifest_path)!=manifest:raise ValueError('Resume source, policy or configuration fingerprint mismatch')
+        if not manifest_path.is_file():raise ValueError('Resume source, policy or configuration fingerprint mismatch')
+        saved_manifest=_read(manifest_path)
+        # Early BALANCED checkpoints predate the explicit manifest label; their
+        # source fingerprint still binds the complete normalized scenario.
+        legacy_balanced=(snapshot.get('scenario_id')=='V5_BALANCED_154' and 'scenario_id' not in saved_manifest and
+                         saved_manifest=={k:v for k,v in manifest.items() if k!='scenario_id'})
+        if saved_manifest!=manifest and not legacy_balanced:raise ValueError('Resume source, policy or configuration fingerprint mismatch')
     else:
         if folder.exists() and any(folder.iterdir()):raise FileExistsError('Use a new output directory or resume')
         _write(manifest_path,manifest)

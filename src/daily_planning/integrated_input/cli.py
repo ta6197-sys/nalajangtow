@@ -13,8 +13,8 @@ from .provenance import canonical,digest,VERSION,KST
 
 
 def run(data_dir,output_dir,dry_run=False,*,scenario='V3_ORIGINAL'):
-    if scenario=='V5_3TANK':
-        return run_v5(data_dir,output_dir,dry_run)
+    if scenario in ('V5_3TANK','V5_BALANCED_154'):
+        return run_v5(data_dir,output_dir,dry_run,scenario=scenario)
     try:
         bundle=load_inputs(data_dir,scenario=scenario);snapshot=normalize(bundle);report=validate(snapshot)
     except (InputError,ValueError,KeyError,TypeError) as exc:
@@ -51,14 +51,14 @@ def run(data_dir,output_dir,dry_run=False,*,scenario='V3_ORIGINAL'):
     return report,manifest
 
 
-def run_v5(data_dir,output_dir,dry_run=False):
+def run_v5(data_dir,output_dir,dry_run=False,*,scenario='V5_3TANK'):
     from .v5 import validate_v5
     try:
-        bundle=load_inputs(data_dir,scenario='V5_3TANK')
+        bundle=load_inputs(data_dir,scenario=scenario)
         snapshot=normalize(bundle);report=validate_v5(snapshot)
     except (InputError,ValueError,KeyError,TypeError) as exc:
         return {'status':'INPUT_INVALID','data_preflight_pass':False,'errors':[{'message':str(exc)}]},None
-    manifest={'scenario_id':'V5_3TANK','source_fingerprints':report['source_fingerprints'],
+    manifest={'scenario_id':scenario,'source_fingerprints':report['source_fingerprints'],
               'normalized_snapshot_sha256':digest(canonical(snapshot).encode())}
     run_id=digest(canonical(manifest).encode())[:24];manifest['run_id']=run_id
     if not dry_run:
@@ -76,7 +76,7 @@ def run_v5(data_dir,output_dir,dry_run=False):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--data-dir',required=True,type=Path)
     parser.add_argument('--output-dir',type=Path,default=Path('results/v3_preflight'));parser.add_argument('--dry-run',action='store_true')
-    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3','V5_3TANK'),default='V3_ORIGINAL')
+    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3','V5_3TANK','V5_BALANCED_154'),default='V3_ORIGINAL')
     args=parser.parse_args()
     try:report,manifest=run(args.data_dir,args.output_dir,args.dry_run,scenario=args.scenario)
     except (ValueError,OSError) as exc:

@@ -7,7 +7,8 @@ from .provenance import cell,digest
 
 FILES=('Docktimize_11선석_ETA_NOR_FIX_외부공정유량_v3.xlsx','Docktimize_최적화입력_ETA_NOR_FIX_v3.json','Docktimize_공정유량_6h_v3.json')
 V5_FILES=('Docktimize_v5_FIX_ETB15_SOF정리_선박제원연결.xlsx','Docktimize_v5_FIX_ETB15_선박제원포함.json','Docktimize_공정유량_6h_3탱크_1000만bbl.json','Docktimize_v5_입력정리_변경검증.txt')
-SCENARIO_FILES={'V3_ORIGINAL':FILES,'V3_CRUDE_PLUS_3':('Docktimize_11선석_ETA_NOR_FIX_외부공정유량_v3_CRUDE_PLUS.xlsx','Docktimize_최적화입력_ETA_NOR_FIX_v3_CRUDE_PLUS.json',FILES[2]),'V5_3TANK':V5_FILES}
+BALANCED_FILES=('Docktimize_v5_선박입력_BALANCED.json','Docktimize_공정유량_6h_3탱크_1000만bbl_BALANCED.json')
+SCENARIO_FILES={'V3_ORIGINAL':FILES,'V3_CRUDE_PLUS_3':('Docktimize_11선석_ETA_NOR_FIX_외부공정유량_v3_CRUDE_PLUS.xlsx','Docktimize_최적화입력_ETA_NOR_FIX_v3_CRUDE_PLUS.json',FILES[2]),'V5_3TANK':V5_FILES,'V5_BALANCED_154':BALANCED_FILES}
 V5_SHEETS={'contracts':('03_계약조건',{'case_id','vessel_id','quantity_mt'}), 'sof':('04_SOF이력',{'event_id','case_id','event_code'}), 'labels':('05_정답라벨',{'case_id','allowed_hours'}), 'eta':('12_ETA_입력',{'case_id','eta_local','fix_etb_local'}), 'tanks':('13_탱크입력',{'tank_id','capacity_bbl','initial_inventory_bbl'}), 'berths':('14_선석정보',{'berth_id','min_pbl_m','connected_tank_ids'}), 'profiles':('17_선박제원',{'case_id','vessel_id','bbl_per_mt'}), 'calls':('24_최적화입력_항차',{'call_id','vessel_id','eta_local'}), 'flows':('25_공정유량_6h',{'tank_id','start_local','end_local','fixed_net_flow_bbl_h'})}
 SHEETS={'contracts':('03_계약조건',{'case_id','contract_clause_ko','nor_tender_local'}),
  'sof':('04_SOF이력',{'event_id','case_id','event_code'}),
@@ -38,6 +39,24 @@ def load_inputs(data_dir, *, scenario='V3_ORIGINAL'):
         paths[name]=matches[0]
     raw={name:path.read_bytes() for name,path in paths.items()}
     artifacts=[{'filename':paths[name].name,'logical_filename':name,'sha256':digest(raw[name]),'bytes':len(raw[name])} for name in files]
+    if scenario=='V5_BALANCED_154':
+        def unique_object(pairs):
+            result={}
+            for key,value in pairs:
+                if key in result:raise InputError('INVALID_SCHEMA','Duplicate JSON key: '+key)
+                result[key]=value
+            return result
+        try:
+            source=json.loads(raw[files[0]],parse_float=str,object_pairs_hook=unique_object)
+            flows=json.loads(raw[files[1]],parse_float=str,object_pairs_hook=unique_object)
+            if not isinstance(source,dict) or not isinstance(flows,dict):raise InputError('INVALID_SCHEMA','JSON roots must be objects')
+            for key in ('cargo_calls','berths','tanks','vessel_profiles'):
+                if not isinstance(source.get(key),list) or any(not isinstance(row,dict) for row in source[key]):raise InputError('INVALID_SCHEMA','Invalid '+key+' array')
+            if not isinstance(flows.get('segments'),list) or any(not isinstance(row,dict) for row in flows['segments']):raise InputError('INVALID_SCHEMA','Invalid flow segments')
+            if not isinstance(source.get('planning_policy'),dict) or not isinstance(source.get('operational_rules'),dict):raise InputError('INVALID_SCHEMA','Missing policy objects')
+            return {'scenario_id':scenario,'source':source,'flows':flows,'tables':None,'artifacts':artifacts}
+        except InputError:raise
+        except (ValueError,TypeError,UnicodeDecodeError) as exc:raise InputError('INVALID_SCHEMA',str(exc)) from exc
     try:
         source=json.loads(raw[files[1]],parse_float=str)
         flows=json.loads(raw[files[2]],parse_float=str)
