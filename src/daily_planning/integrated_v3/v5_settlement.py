@@ -12,14 +12,53 @@ from .optimizer import _clear_baseline_record
 AUDIT=Path(__file__).resolve().parents[3]/'docs/risk_settlement_golden_audit_v3.json'
 
 
+
 def clock_audit(snapshot):
-    """Prior audit is a different workbook; V5 lacks a historical effective-start field."""
-    raw=AUDIT.read_bytes();audit=json.loads(raw)
-    ids={r['contract_id'] for r in audit['clock_start_divergences']};current={c['call_id'] for c in snapshot['calls']}
-    return {'audit_sha256':digest(raw),'audit_source_workbook_sha256':audit['source_workbook_sha256'],
-            'v5_workbook_sha256':snapshot.get('source_input',{}).get('source_workbook_sha256'),
-            'historical_divergence_ids_in_v5':sorted(ids&current),'v5_effective_start_available':False,
-            'status':'NOT_REVALIDATABLE_WITH_AVAILABLE_V5_FIELDS'}
+    """Apply historical clock audit only to the matching source dataset."""
+    raw = AUDIT.read_bytes()
+    audit = json.loads(raw)
+
+    old_hash = audit["source_workbook_sha256"]
+    current_hash = snapshot.get("source_input", {}).get(
+        "source_workbook_sha256"
+    )
+
+    old_error_ids = {
+        row["contract_id"]
+        for row in audit["clock_start_divergences"]
+    }
+    current_ids = {
+        call["call_id"]
+        for call in snapshot["calls"]
+    }
+
+    # Apply the historical audit only when the source matches.
+    # If the current fingerprint is missing, retain the old
+    # fail-closed behavior rather than silently bypassing the audit.
+    same_source = bool(current_hash) and current_hash == old_hash
+    audit_applicable = same_source or not current_hash
+
+    affected_ids = (
+        sorted(old_error_ids & current_ids)
+        if audit_applicable
+        else []
+    )
+
+    if not current_hash:
+        status = "CURRENT_SOURCE_FINGERPRINT_MISSING"
+    elif same_source:
+        status = "NOT_REVALIDATABLE_WITH_AVAILABLE_V5_FIELDS"
+    else:
+        status = "HISTORICAL_AUDIT_NOT_APPLICABLE_DIFFERENT_SOURCE"
+
+    return {
+        "audit_sha256": digest(raw),
+        "audit_source_workbook_sha256": old_hash,
+        "v5_workbook_sha256": current_hash,
+        "historical_divergence_ids_in_v5": affected_ids,
+        "v5_effective_start_available": False,
+        "status": status,
+    }
 
 
 def _unresolved(cid,code,reason):
