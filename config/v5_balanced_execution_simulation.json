@@ -1,0 +1,11 @@
+{
+  "version": "V5_STAGED_EXECUTION_V1",
+  "scenario": "V5_BALANCED_154",
+  "data_dir": "/Users/k/수업자료/team_project/requirement/input/v5_balanced",
+  "policy_file": "/Users/k/수업자료/team_project/requirement/config/v5_user_policy_20261112.synthetic.json",
+  "pilotage_context_file": "v5_balanced_pilotage_context.json",
+  "as_of_at": "2026-11-03T00:00:00+09:00",
+  "pricing_policy": "CLEAR_WEATHER_BASELINE_V1",
+  "clock_policy": "SIMULATION_DERIVED_CONTRACT_TERMS",
+  "settlement_records": []
+}
