@@ -27,8 +27,13 @@ def window_evidence(valid_trials: list[dict]) -> list[dict]:
             windows[row["window_id"]].append((trial["iteration"], row))
     result = []
     for window_id, entries in sorted(windows.items()):
-        first_hashes = {r.get("first_domain_hash") for _, r in entries}
-        final_hashes = {r.get("final_domain_hash") for _, r in entries}
+        active = [r for _, r in entries if r.get('schedule')]
+        first_hashes = {r.get('first_domain_hash') for r in active if r.get('first_domain_hash')}
+        final_hashes = {r.get('final_domain_hash') for r in active if r.get('final_domain_hash')}
+        missing_first = sum(not r.get('first_domain_hash') for r in active)
+        missing_final = sum(not r.get('final_domain_hash') for r in active)
+        missing_physical = sum(not r.get('physical_schedule_hash') for r in active)
+        physical_hashes = {r['physical_schedule_hash'] for r in active if r.get('physical_schedule_hash')}
         schedules = {r.get("schedule_hash") for _, r in entries}
         costs = [r["cost_cents"] for _, r in entries]
         if not all(type(x) is int and x >= 0 for x in costs):
@@ -69,16 +74,29 @@ def window_evidence(valid_trials: list[dict]) -> list[dict]:
             flags.append("COST_VARIATION")
         if len(schedules) > 1:
             flags.append("SCHEDULE_VARIATION")
-        active = [r for _, r in entries if r.get('schedule')]
+        if missing_first or missing_final:
+            flags.append('MISSING_DOMAIN_EVIDENCE')
+        if missing_physical:
+            flags.append('MISSING_PHYSICAL_EVIDENCE')
+        if len(physical_hashes) > 1:
+            flags.append('PHYSICAL_SCHEDULE_VARIATION')
         if active and not all(r.get("final_domain_optimality_proven") is True for r in active):
             warnings.append("FINITE_DOMAIN_OPTIMALITY_NOT_PROVEN_IN_ALL_RUNS")
+        if active and any(r.get('canonical_status') != 'PROVEN_CANONICAL_SELECTION' for r in active):
+            warnings.append('CANONICAL_SELECTION_NOT_PROVEN_IN_ALL_RUNS')
         if any(v["missing_runs"] for v in vessels):
             flags.append("SCHEDULE_MEMBERSHIP_VARIATION")
-        if len(schedules) > 1 and len(final_hashes) == len(set(costs)) == 1:
+        if len(schedules) > 1 and not missing_final and len(final_hashes) == len(set(costs)) == 1:
             flags.append("EQUAL_COST_SCHEDULE_VARIATION_CHECK_SECONDARY_STATUS")
         result.append({"window_id": window_id, "compared_runs": len(entries),
                        "initial_domain_hashes": len(first_hashes),
                        "final_domain_hashes": len(final_hashes),
+                       "missing_initial_domain_count": missing_first,
+                       "missing_final_domain_count": missing_final,
+                       "missing_physical_evidence_count": missing_physical,
+                       "physical_schedule_hashes": len(physical_hashes),
+                       "schedule_hash_values": sorted(x for x in schedules if x),
+                       "physical_schedule_hash_values": sorted(physical_hashes),
                        "schedule_hashes": len(schedules),
                        "cost_min_cents": min(costs), "cost_max_cents": max(costs),
                        "solver_status_counts": dict(Counter(str(r.get("solver_status")) for _, r in entries)),
@@ -118,6 +136,8 @@ def budget_report(records: list[dict], *, expected: int, budget: int) -> dict:
         status = "INCOMPLETE_OR_FAILED"
     elif not context_consistent:
         status = "CONTEXT_MISMATCH"
+    elif any('MISSING_DOMAIN_EVIDENCE' in w['diagnostic_flags'] or 'MISSING_PHYSICAL_EVIDENCE' in w['diagnostic_flags'] for w in windows):
+        status = 'INCOMPLETE_EVIDENCE'
     elif consistent:
         status = "OBSERVED_REPEATABLE_AT_THIS_BUDGET"
     else:
@@ -166,9 +186,10 @@ def compare_budgets(records_by_budget: dict[int, list[dict]]) -> dict:
                     changes += int(aa["berth_id"] != bb["berth_id"])
                 by_window[w_a["window_id"]].append({"iteration": i,
                     "cost_delta_cents": w_b["cost_cents"] - w_a["cost_cents"],
-                    "same_initial_domain": w_a["first_domain_hash"] == w_b["first_domain_hash"],
-                    "same_final_domain": w_a["final_domain_hash"] == w_b["final_domain_hash"],
+                    "same_initial_domain": bool(w_a.get("first_domain_hash") and w_b.get("first_domain_hash") and w_a["first_domain_hash"] == w_b["first_domain_hash"]),
+                    "same_final_domain": bool(w_a.get("final_domain_hash") and w_b.get("final_domain_hash") and w_a["final_domain_hash"] == w_b["final_domain_hash"]),
                     "same_schedule": w_a["schedule_hash"] == w_b["schedule_hash"],
+                    "same_physical_schedule": bool(w_a.get('physical_schedule_hash') and w_b.get('physical_schedule_hash') and w_a['physical_schedule_hash'] == w_b['physical_schedule_hash']),
                     "max_etb_delta_minutes": max(deltas, default=0), "berth_or_membership_changes": changes})
         windows = []
         for k, rows in sorted(by_window.items()):
@@ -177,6 +198,7 @@ def compare_budgets(records_by_budget: dict[int, list[dict]]) -> dict:
                             "same_initial_domain_pairs": sum(r["same_initial_domain"] for r in rows),
                             "same_final_domain_pairs": sum(r["same_final_domain"] for r in rows),
                             "same_schedule_pairs": sum(r["same_schedule"] for r in rows),
+                            "same_physical_schedule_pairs": sum(r["same_physical_schedule"] for r in rows),
                             "max_etb_delta_minutes": max(r["max_etb_delta_minutes"] for r in rows),
                             "total_berth_or_membership_changes": sum(r["berth_or_membership_changes"] for r in rows)})
         comparisons.append({"reference_budget_seconds": reference, "compared_budget_seconds": budget,

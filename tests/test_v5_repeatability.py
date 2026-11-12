@@ -11,7 +11,13 @@ def window(etb='2026-11-10T10:00:00+09:00', cost=0, init='init', final='final',
            berth='BERTH-01', proven=True, wid=1):
     return {
         'window_id': wid, 'as_of_at': '2026-11-10T00:00:00+09:00',
-        'selected_schedule': [{'call_id':'DEM-001','berth_id':berth,'etb_at':etb}],
+        'selected_schedule': [{'call_id':'DEM-001','berth_id':berth,'etb_at':etb,
+            'hose_connection_start_at':'2026-11-10T10:00:00+09:00',
+            'hose_connection_end_at':'2026-11-10T11:00:00+09:00',
+            'work_start_at':'2026-11-10T11:00:00+09:00',
+            'work_end_at':'2026-11-10T12:00:00+09:00',
+            'work_intervals':[['2026-11-10T11:00:00+09:00','2026-11-10T12:00:00+09:00']],
+            'etu_at':'2026-11-10T14:00:00+09:00'}],
         'summary': {'window_demurrage_cents':cost,'solver_status':'OPTIMAL' if proven else 'FEASIBLE'},
         'candidate': {'optimizer_result': {'initial_candidate_count':4,'final_candidate_count':5,
              'stopping_reason':'IMPROVEMENT_ROUND_LIMIT',
@@ -33,6 +39,52 @@ def run(rid, *, etb='2026-11-10T10:00:00+09:00', cost=0, init='init', final='fin
 
 
 class RepeatabilityTests(unittest.TestCase):
+    def test_physical_phase_variations_separate_from_etb_berth(self):
+        for field, value in [('hose_connection_start_at','2026-11-10T10:30:00+09:00'),
+                             ('work_intervals', [['2026-11-10T11:15:00+09:00','2026-11-10T12:00:00+09:00']]),
+                             ('etu_at','2026-11-10T14:30:00+09:00')]:
+            with self.subTest(field=field):
+                first, second = window(), window()
+                second['selected_schedule'][0][field] = value
+                a, b = read_window(first), read_window(second)
+                self.assertEqual(a['schedule_hash'], b['schedule_hash'])
+                self.assertNotEqual(a['physical_schedule_hash'], b['physical_schedule_hash'])
+                runs=[run('a'),run('b')]; runs[0]['windows'][0]=a; runs[1]['windows'][0]=b
+                self.assertIn('PHYSICAL_SCHEDULE_DIFFERENCE', compare_runs(runs,expected_repetitions=2)['windows'][0]['diagnostic_flags'])
+
+    def test_physical_timezone_equivalence_and_missing(self):
+        first, second = window(), window()
+        row = second['selected_schedule'][0]
+        for field in ('etb_at','hose_connection_start_at','hose_connection_end_at','work_start_at','work_end_at','etu_at'):
+            row[field] = datetime.fromisoformat(row[field]).astimezone(timezone.utc).isoformat()
+        row['work_intervals'] = [[datetime.fromisoformat(t).astimezone(timezone.utc).isoformat() for t in pair] for pair in row['work_intervals']]
+        self.assertEqual(read_window(first)['physical_schedule_hash'], read_window(second)['physical_schedule_hash'])
+        del row['etu_at']
+        self.assertIsNone(read_window(second)['physical_schedule_hash'])
+
+    def test_interval_order_and_missing_physical_are_not_silently_identical(self):
+        first, second = window(), window()
+        intervals = [['2026-11-10T11:00:00+09:00','2026-11-10T11:30:00+09:00'],
+                     ['2026-11-10T11:45:00+09:00','2026-11-10T12:00:00+09:00']]
+        first['selected_schedule'][0]['work_intervals'] = intervals
+        second['selected_schedule'][0]['work_intervals'] = list(reversed(intervals))
+        self.assertNotEqual(read_window(first)['physical_schedule_hash'],read_window(second)['physical_schedule_hash'])
+        runs=[run(str(i)) for i in range(20)]
+        runs[0]['windows'][0]['physical_schedule_hash']=None
+        result=compare_runs(runs)
+        self.assertEqual(result['status'],'INCOMPLETE_OR_UNREPLAYED')
+        self.assertEqual(result['windows'][0]['missing_physical_evidence_count'],1)
+
+    def test_missing_domains_among_twenty_and_all(self):
+        runs=[run(str(i)) for i in range(20)]
+        runs[0]['windows'][0]['first_domain_hash']=None
+        result=compare_runs(runs)
+        self.assertEqual(result['status'],'INCOMPLETE_OR_UNREPLAYED')
+        self.assertEqual(result['windows'][0]['missing_initial_domain_count'],1)
+        self.assertIn('MISSING_DOMAIN_EVIDENCE',result['windows'][0]['diagnostic_flags'])
+        for item in runs: item['windows'][0]['final_domain_hash']=None
+        self.assertEqual(compare_runs(runs)['windows'][0]['missing_final_domain_count'],20)
+
     def test_utc_normalization(self):
         self.assertEqual(iso_utc('2026-11-10T10:00:00+09:00'), iso_utc('2026-11-10T01:00:00Z'))
         self.assertNotEqual(iso_utc('2026-11-10T10:00:00.000001+09:00'), iso_utc('2026-11-10T10:00:00Z'))

@@ -272,36 +272,46 @@ def load_records(root:Path,meta:dict):
     return result
 
 
+def recommend_next(summaries):
+    if any(x['status'] in ('INCOMPLETE_OR_FAILED', 'INCOMPLETE_EVIDENCE', 'CONTEXT_MISMATCH') for x in summaries.values()):
+        return 'INVESTIGATE_FAILED_OR_INCOMPLETE_EVIDENCE_FIRST'
+    windows = [w for value in summaries.values() for w in value['windows']]
+    flags = {flag for w in windows for flag in w['diagnostic_flags']}
+    warnings = {warning for w in windows for warning in w.get('warnings', [])}
+    if 'INITIAL_DOMAIN_VARIATION' in flags:
+        return 'INSPECT_CANDIDATE_GENERATION_AND_SHARED_TIME_BUDGET'
+    if 'FINAL_DOMAIN_VARIATION' in flags:
+        return 'INSPECT_COST_AWARE_EXPANSION_AND_STOPPING_BUDGET'
+    if 'COST_VARIATION' in flags:
+        return 'INSPECT_SOLVER_STATUS_BOUNDS_AND_TIME_BUDGET'
+    if flags.intersection({'SCHEDULE_VARIATION', 'PHYSICAL_SCHEDULE_VARIATION'}):
+        return 'INSPECT_CANONICAL_SELECTION_PROOF_AND_FALLBACK'
+    if warnings:
+        return 'INVESTIGATE_UNPROVEN_CANONICAL_OR_FINITE_DOMAIN_STATUS'
+    return 'PROCEED_TO_STAGE2C_S5_COMPLETION_GATE'
+
+
 def mode_analyze(args):
     root=args.study_root.resolve()
+    output = args.report_root.resolve() if args.report_root else root
+    if args.report_root and (output == root or root in output.parents or output in root.parents):
+        raise ValueError('Report root must be separate from the source study')
     meta=read(root/'study_meta.json')
     if meta.get('version')!=VERSION:
         raise ValueError('Unexpected study version')
     runs=load_records(root,meta)
     summaries={b:budget_report(records,expected=meta['repetitions'],budget=b) for b,records in runs.items()}
     cross=compare_budgets(runs)
-    flags=set(flag for v in summaries.values() for window in v['windows'] for flag in window['diagnostic_flags'])
-    if any(x['status'] in ('INCOMPLETE_OR_FAILED','CONTEXT_MISMATCH') for x in summaries.values()):
-        recommendation='INVESTIGATE_FAILED_OR_UNREPLAYED_RUNS_FIRST'
-    elif 'INITIAL_DOMAIN_VARIATION' in flags:
-        recommendation='INSPECT_CANDIDATE_GENERATION_AND_SHARED_TIME_BUDGET'
-    elif 'FINAL_DOMAIN_VARIATION' in flags:
-        recommendation='INSPECT_COST_AWARE_EXPANSION_AND_STOPPING_BUDGET'
-    elif 'COST_VARIATION' in flags:
-        recommendation='INSPECT_SOLVER_STATUS_BOUNDS_AND_TIME_BUDGET'
-    elif 'SCHEDULE_VARIATION' in flags:
-        recommendation='INSPECT_CANONICAL_SELECTION_PROOF_AND_FALLBACK'
-    else:
-        recommendation='PROCEED_TO_STAGE2C_S5_COMPLETION_GATE'
+    recommendation=recommend_next(summaries)
     result={'version':VERSION,'scope':'SOURCE_VERIFIED_S5_2_WINDOWS_BUDGET_EVIDENCE_ONLY',
-            'status':'COMPLETE_DIAGNOSTIC' if all(x['status'] not in ('INCOMPLETE_OR_FAILED','CONTEXT_MISMATCH') for x in summaries.values()) else 'PARTIAL_DIAGNOSTIC',
+            'status':'COMPLETE_DIAGNOSTIC' if all(x['status'] not in ('INCOMPLETE_OR_FAILED','INCOMPLETE_EVIDENCE','CONTEXT_MISMATCH') for x in summaries.values()) else 'PARTIAL_DIAGNOSTIC',
             'metadata':meta,'budgets':{str(b):v for b,v in summaries.items()},
             'cross_budget':cross,'recommendation':recommendation,
             'limitations':['No full five-call completion requirement in S5 two-window gate',
                            'Overlapping window costs are not cumulative',
                            'These findings do not establish global 140-call optimality',
                            'No optimizer algorithms or operational rules changed']}
-    write_new(root/'stage2b_report.json',result)
+    write_new(output/'stage2b_report.json',result)
     lines=['# Docktimize Stage 2B — S5 Budget Evidence','',
            f'Analysis status: **{result["status"]}**','',
            f'Recommended next action: **{recommendation}**','',
@@ -312,9 +322,9 @@ def mode_analyze(args):
         for w in v['windows']:
             lines.append(f'\nBudget {b}s, window {w["window_id"]}: {w["diagnostic_flags"]}, ETB max spread {w["max_etb_span_minutes"]} minutes, cost {w["cost_min_cents"]}..{w["cost_max_cents"]} cents; canonical proof {w["canonical_proven_runs"]}/{w["compared_runs"]}.')
     lines += ['','**No global optimality claim. No overlapping projected window cost summation.**','']
-    path=root/'stage2b_report.md'
+    path=output/'stage2b_report.md'
     path.write_text('\n'.join(lines),encoding='utf-8') if not path.exists() else (_ for _ in ()).throw(FileExistsError('Report already exists'))
-    print(json.dumps({'status':result['status'],'recommendation':recommendation,'json':str(root/'stage2b_report.json'),
+    print(json.dumps({'status':result['status'],'recommendation':recommendation,'json':str(output/'stage2b_report.json'),
                       'markdown':str(path)},ensure_ascii=False,indent=2))
     return 0 if result['status']=='COMPLETE_DIAGNOSTIC' else 2
 
@@ -324,6 +334,7 @@ def main(argv=None):
     p.add_argument('--mode',choices=('run','analyze'),required=True)
     p.add_argument('--config',type=Path)
     p.add_argument('--study-root',type=Path,required=True)
+    p.add_argument('--report-root',type=Path,help='Separate output directory for reanalysis; never overwrites the study')
     p.add_argument('--call-ids-file',type=Path)
     p.add_argument('--budget',type=int,action='append',default=[])
     p.add_argument('--repetitions',type=int,default=20)
