@@ -56,7 +56,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 candidate_generation_mode='MANUAL_CANDIDATES',max_expansion_rounds=3,
                 max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=(),max_inventory_reoptimizations=3,
                 initial_forbidden_schedules=(),frozen_candidate_domain=None,objective_mode='FEASIBILITY',
-                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE',candidate_improvement_mode='NONE',max_improvement_rounds=2):
+                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE',candidate_improvement_mode='NONE',max_improvement_rounds=2,tie_break_mode='NONE'):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
     started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
     result={'scenario_id':'V5_3TANK','model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
@@ -81,6 +81,10 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
     try:
         if not valid_budget:return finish('INVALID_INPUT','INVALID_TIME_BUDGET','Positive finite time budget required')
         result['candidate_improvement_mode']=candidate_improvement_mode
+        if tie_break_mode not in ('NONE','CANONICAL_ETB_BERTH_V1'):return finish('INVALID_INPUT','INVALID_TIE_BREAK_MODE','Unknown tie-break mode')
+        if tie_break_mode!='NONE' and (objective_mode!='MIN_TOTAL_DEMURRAGE' or inventory_constraint_mode!='EXACT_EVENT_BALANCE_V1' or policy.get('schema_version')!='V5_USER_ETU_SWITCHING_20261112_V1'):
+            return finish('INVALID_INPUT','INVALID_TIE_BREAK_MODE','Tie-break requires integrated cost and exact inventory')
+        if tie_break_mode!='NONE':result['tie_break_mode']=tie_break_mode
         if candidate_improvement_mode not in ('NONE','COST_AWARE_V1'):return finish('INVALID_INPUT','INVALID_IMPROVEMENT_MODE','Unknown candidate improvement mode')
         if candidate_improvement_mode=='COST_AWARE_V1' and (candidate_generation_mode!='AUTO_ADAPTIVE_CANDIDATES' or objective_mode!='MIN_TOTAL_DEMURRAGE' or inventory_constraint_mode!='EXACT_EVENT_BALANCE_V1' or frozen_candidate_domain is not None or type(max_improvement_rounds) is not int or not 0<=max_improvement_rounds<=2):return finish('INVALID_INPUT','INVALID_IMPROVEMENT_MODE','Cost-aware expansion requires automatic candidates, integrated cost mode, an unfrozen domain, and at most two rounds')
         if candidate_improvement_mode=='COST_AWARE_V1' and (type(max_candidates_per_pair) is not int or not 1<=max_candidates_per_pair<=24):return finish('INVALID_INPUT','INVALID_CANDIDATE_LIMIT','Cost-aware per-pair limit must be between 1 and 24')
@@ -115,6 +119,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             prepared=prepare_inventory_events(work,options+locked,start_at=as_of_at,end_at=end.isoformat(),carried_transfers=carried_transfers or (),commitments=tank_commitments or (),physical_commitments=locked)
             return add_inventory_constraints(model,variables,prepared,work['tanks'],initial_inventory=inventory,option_count=len(options))
         objective_args={'objective_mode':objective_mode,'option_pricer':price_option if objective_mode=='MIN_TOTAL_DEMURRAGE' else None,'inventory_builder':inventory_builder if inventory_constraint_mode!='NONE' else None}
+        if tie_break_mode!='NONE':objective_args['tie_break_mode']=tie_break_mode
         if time.perf_counter()>=deadline:raise TimeoutError('Overall execution time budget exhausted during input validation')
         calls={c['call_id']:c for c in work['calls']}
         if not call_ids or len(set(call_ids))!=len(call_ids) or not set(call_ids)<=set(calls):return finish('INVALID_INPUT','INVALID_V5_INPUT','Invalid selected call IDs')
@@ -252,6 +257,8 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             if candidate_improvement_mode=='COST_AWARE_V1' and time.perf_counter()>=deadline:return finish('TIME_LIMIT_NO_INCUMBENT','TIME_BUDGET_EXHAUSTED','Budget exhausted during baseline validation')
             if candidate_improvement_mode=='COST_AWARE_V1':
                 def domain_hash():return digest(canonical({'as_of_at':as_of_at,'call_ids':sorted(call_ids),'pair_candidate_etbs':pool.domain(),'physical_commitments':list(physical_commitments)}).encode())
+                if tie_break_mode!='NONE':
+                    from ..physical_scheduling.v5_stable_choice import schedule_key as schedule_key_for_ties
                 best=physical;best_eval=evaluation;best_price=check_price;best_round=0;best_domain=domain_hash();initial_cost=physical['total_projected_demurrage_cents'];final_domain=best_domain
                 history=[{'round':0,'candidate_count':pool.count(),'physical_option_count':physical['option_count'],'solver_status':physical['solver_status'],'validated_cost_cents':initial_cost,'candidate_domain_fingerprint':best_domain,'elapsed_seconds':time.perf_counter()-started}]
                 stop='IMPROVEMENT_ROUND_LIMIT';last_status=physical['solver_status'];final_proven=last_status=='OPTIMAL';final_solver_result=physical
@@ -272,7 +279,11 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                         if time.perf_counter()>=deadline:stop='TIME_BUDGET_EXHAUSTED';break
                         if checked['status']!='PHYSICAL_AND_INVENTORY_VALID' or priced['status']!='SETTLED' or priced['total_demurrage_cents']!=candidate['total_projected_demurrage_cents']:stop='INDEPENDENT_VALIDATION_FAILED';break
                         entry['validated_cost_cents']=priced['total_demurrage_cents'];final_proven=last_status=='OPTIMAL'
-                        if priced['total_demurrage_cents']<best['total_projected_demurrage_cents']:
+                        if (priced['total_demurrage_cents']<best['total_projected_demurrage_cents'] or
+                            (tie_break_mode!='NONE' and priced['total_demurrage_cents']==best['total_projected_demurrage_cents'] and
+                             candidate.get('schedule_tiebreak',{}).get('status')=='PROVEN_CANONICAL_SELECTION' and
+                             (best.get('schedule_tiebreak',{}).get('status')!='PROVEN_CANONICAL_SELECTION' or
+                              schedule_key_for_ties(candidate['schedule'])<schedule_key_for_ties(best['schedule'])))):
                             best,best_eval,best_price,best_round,best_domain=candidate,checked,priced,round_no,final_domain
                     except TimeoutError:
                         if domain_hash()!=final_domain or final_domain!=best_domain:final_proven=False
@@ -283,6 +294,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 physical,evaluation,check_price=best,best_eval,best_price
                 result.update(initial_total_demurrage_cents=initial_cost,best_total_demurrage_cents=physical['total_projected_demurrage_cents'],best_incumbent_round=best_round,best_incumbent_domain_fingerprint=best_domain,candidate_expansion_rounds=len(history)-1,cost_improvement_history=history,final_solver_status=last_status,final_solver_result=final_solver_result,final_domain_optimality_proven=final_proven,stopping_reason=stop)
                 result['physical_solver_result']=physical;result['solver_status']=physical['solver_status']
+            if tie_break_mode!='NONE':result['schedule_tiebreak']=physical.get('schedule_tiebreak',{'status':'NOT_REPORTED'})
             result.update(optimization_status=physical['solver_status'],selected_schedule=physical['schedule'],
                 total_projected_demurrage_cents=physical['total_projected_demurrage_cents'],
                 option_cost_breakdown=physical['option_cost_breakdown'],best_objective_bound_cents=physical['best_objective_bound_cents'],

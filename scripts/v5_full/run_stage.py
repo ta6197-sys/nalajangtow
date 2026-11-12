@@ -19,6 +19,7 @@ def main(argv=None):
     p.add_argument('--candidates-per-pair', type=int, default=6)
     p.add_argument('--total-candidates', type=int, default=240)
     p.add_argument('--improvement-rounds', type=int, default=2)
+    p.add_argument('--tie-break-mode', choices=['NONE','CANONICAL_ETB_BERTH_V1'], default='NONE')
     p.add_argument('--preflight-only', action='store_true')
     p.add_argument('--call-ids-file', type=Path, help='JSON list of explicit IDs; length must match gate count')
     args = p.parse_args(argv)
@@ -42,7 +43,8 @@ def main(argv=None):
                                candidates_per_pair=args.candidates_per_pair,
                                total_candidates=args.total_candidates,
                                improvement_rounds=args.improvement_rounds,
-                               call_ids=call_ids, snapshot=snapshot, preflight=preflight)
+                               call_ids=call_ids, snapshot=snapshot, preflight=preflight,
+                               **({'tie_break_mode':args.tie_break_mode} if args.tie_break_mode!='NONE' else {}))
         print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
         if report['status'] != 'REQUESTED_WINDOWS_VALIDATED':
             return 2
