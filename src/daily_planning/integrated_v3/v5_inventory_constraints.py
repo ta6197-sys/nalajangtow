@@ -42,7 +42,7 @@ def add_inventory_constraints(model, variables, prepared, tanks, *, initial_inve
             base=number(initial_inventory[tid])+data['external_cumulative_bbl'][j]
             base+=sum((p['signed_cumulative_bbl'][j] for p in profiles[option_count:] if p['tank_id']==tid),Fraction(0))
             coeff=[p['signed_cumulative_bbl'][j] if p['tank_id']==tid else Fraction(0) for p in profiles[:option_count]]
-            add(coeff,number(tank['min_inventory_bbl'])-base,number(tank['capacity_bbl'])-base);balances+=1
+            add(coeff,number(tank['min_inventory_bbl'])-base,number(tank.get('effective_max_inventory_bbl',tank['capacity_bbl']))-base);balances+=1
         for j in range(len(points)-1):
             for key,field in [('receipt_rates_bbl_per_hour','max_receipt_rate_bbl_per_hour'),('dispatch_rates_bbl_per_hour','max_dispatch_rate_bbl_per_hour')]:
                 fixed=sum((p[key][j] for p in profiles[option_count:] if p['tank_id']==tid),Fraction(0))

@@ -13,7 +13,7 @@ from pathlib import Path
 
 VERSION = 'V5_STAGE1_FINAL_GATES_EVIDENCE_V1'
 GATES = {'S5': (5, 2), 'S10': (10, 3), 'S20': (20, 3),
-         'R7': (20, 7), 'R14': (20, 14), 'FULL140': (140, 60)}
+         'R7': (20, 7), 'R14': (20, 14), 'FULL140': (140, 60), 'FULL154': (154, 60)}
 TIE_BREAK = 'CANONICAL_ETB_BERTH_V1'
 
 
@@ -309,7 +309,7 @@ def audit_gate(report, manifest, checkpoints, evidence_windows, *, gate, scope,
             issues.append('UNRESOLVED_ACCOUNTING_REMAINS')
 
     # S5 and FULL140 are completion gates; S10/S20/R7/R14 are window-validity diagnostics.
-    must_finish = gate in ('S5', 'FULL140')
+    must_finish = gate in ('S5', 'FULL140', 'FULL154')
     if not issues and must_finish and not full:
         issues.append('SCOPE_NOT_FULLY_COMPLETED')
     status = ('BLOCKED_' + issues[0]) if issues else ('PASS_SCOPE_COMPLETE' if full else 'PASS_VALIDATED_WINDOWS_ONLY')

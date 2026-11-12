@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 VERSION = 'V5_STAGED_EXECUTION_V1'
 KST = ZoneInfo('Asia/Seoul')
 GATES = {'S5': (5, 2), 'S10': (10, 3), 'S20': (20, 3), 'R7': (20, 7), 'R14': (20, 14), 'FULL140': (140, 60)}
+BALANCED_GATES = {**{k:v for k,v in GATES.items() if k!='FULL140'}, 'FULL154': (154,60)}
 MAX_WINDOWS = 65
 MAX_CALLS = 140
 
@@ -70,6 +71,9 @@ def load_execution_config(path: str | Path) -> dict:
     raw = read_json(config_path)
     if raw.get('version') != VERSION:
         raise ScaleInputError('Expected configuration version ' + VERSION)
+    scenario=raw.get('scenario','V5_3TANK')
+    if scenario not in ('V5_3TANK','V5_BALANCED_154'):
+        raise ScaleInputError('Unknown V5 scenario')
     base = config_path.parent
     for key in ('data_dir', 'policy_file', 'pilotage_context_file', 'as_of_at'):
         if key not in raw:
@@ -99,7 +103,7 @@ def load_execution_config(path: str | Path) -> dict:
     settlement_records = raw.get('settlement_records', [])
     if not isinstance(settlement_records, list):
         raise ScaleInputError('settlement_records must be an array')
-    return dict(data_dir=data_dir, policy=policy, pilotage_context=pilotage,
+    return dict(data_dir=data_dir, policy=policy, pilotage_context=pilotage, scenario=scenario,
                 as_of_at=at.isoformat(), pricing_policy=price,
                 clock_policy=raw.get('clock_policy', 'BLOCK_UNVERIFIED_CLOCK'),
                 settlement_records=settlement_records,
@@ -114,13 +118,16 @@ def preflight_sources(config: dict) -> tuple[dict, dict]:
     from ..integrated_input.loader import load_inputs
     from ..integrated_input.normalizer import normalize
     from ..integrated_input.v5 import validate_v5
-    bundle = load_inputs(config['data_dir'], scenario='V5_3TANK')
+    scenario=config.get('scenario','V5_3TANK')
+    if scenario not in ('V5_3TANK','V5_BALANCED_154'):raise ScaleInputError('Unknown V5 scenario')
+    bundle = load_inputs(config['data_dir'], scenario=scenario)
     snapshot = normalize(bundle)
     report = validate_v5(snapshot)
     if not report['data_preflight_pass']:
         raise ScaleInputError('V5 source preflight failed: ' + str(report.get('errors')))
-    if len(snapshot['calls']) != MAX_CALLS or len(snapshot['berths']) != 11 or len(snapshot['tanks']) != 3:
-        raise ScaleInputError('Expected 140 calls, 11 berths and 3 tanks')
+    expected=154 if scenario=='V5_BALANCED_154' else 140
+    if len(snapshot['calls']) != expected or len(snapshot['berths']) != 11 or len(snapshot['tanks']) != 3:
+        raise ScaleInputError(f'Expected {expected} calls, 11 berths and 3 tanks')
     return snapshot, report
 
 
@@ -137,11 +144,11 @@ def select_scope(snapshot: dict, count: int, explicit_ids: list[str] | None = No
         if (not isinstance(explicit_ids, list) or not explicit_ids or
                 len(explicit_ids) != len(set(explicit_ids)) or not set(explicit_ids) <= set(by_id)):
             raise ScaleInputError('Invalid call_ids scope')
-        if len(explicit_ids) > MAX_CALLS:
+        if len(explicit_ids) > (154 if snapshot.get('scenario_id')=='V5_BALANCED_154' else MAX_CALLS):
             raise ScaleInputError('Too many call IDs')
         return sorted(explicit_ids)
-    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= MAX_CALLS:
-        raise ScaleInputError('call_count must be 1..140')
+    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= (154 if snapshot.get('scenario_id')=='V5_BALANCED_154' else MAX_CALLS):
+        raise ScaleInputError('call_count outside scenario bounds')
     from ..integrated_input.validator import timestamp
     order = sorted(calls, key=lambda c: (timestamp(c['eta_at']), c['call_id']))
     return sorted(c['call_id'] for c in order[:count])
@@ -149,10 +156,10 @@ def select_scope(snapshot: dict, count: int, explicit_ids: list[str] | None = No
 
 def bounded_parameters(*, count: int, windows: int, time_limit_seconds: float,
                        candidates_per_pair: int, total_candidates: int,
-                       improvement_rounds: int) -> None:
+                       improvement_rounds: int, scenario: str = 'V5_3TANK') -> None:
     if any(isinstance(x, bool) or not isinstance(x, int) for x in (count, windows, candidates_per_pair, total_candidates, improvement_rounds)):
         raise ScaleInputError('Integer bounds required')
-    if not 1 <= count <= MAX_CALLS or not 1 <= windows <= MAX_WINDOWS:
+    if scenario not in ('V5_3TANK','V5_BALANCED_154') or not 1 <= count <= (154 if scenario=='V5_BALANCED_154' else MAX_CALLS) or not 1 <= windows <= MAX_WINDOWS:
         raise ScaleInputError('Scope exceeds supported diagnostic bound')
     if not 1 <= candidates_per_pair <= 24 or not 1 <= total_candidates <= 12000:
         raise ScaleInputError('Invalid candidate limits')
@@ -204,7 +211,7 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
         raise ScaleInputError('Invalid stable tie-break mode')
     bounded_parameters(count=call_count, windows=windows, time_limit_seconds=time_limit_seconds,
                        candidates_per_pair=candidates_per_pair, total_candidates=total_candidates,
-                       improvement_rounds=improvement_rounds)
+                       improvement_rounds=improvement_rounds,scenario=config.get('scenario','V5_3TANK'))
     if snapshot is None:
         snapshot, preflight = preflight_sources(config)
     scope = select_scope(snapshot, call_count, call_ids)
@@ -224,13 +231,14 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
     source_fingerprint = digest(canonical(snapshot).encode('utf-8'))
     report = {'run_id': run_id, 'source_fingerprint': source_fingerprint,
               'scope_call_ids': scope, 'excluded_call_count': len(snapshot['calls']) - len(scope),
-              'restricted_scope': len(scope) < MAX_CALLS,
+              'restricted_scope': len(scope) < len(snapshot['calls']),
               'preflight_status': (preflight or {}).get('status', 'INJECTED_TEST_ONLY'),
               'preflight_warnings': (preflight or {}).get('warnings', []),
               'rolling_optimizer_mode': 'INTEGRATED_COST_AWARE_V1',
               'pricing_policy': config['pricing_policy'], 'simulation_only': True,
               'operational_approval': False, 'requested_windows': windows,
               'time_budget_seconds_per_window': time_limit_seconds}
+    if snapshot.get('scenario_id')=='V5_BALANCED_154':report['scenario_id']='V5_BALANCED_154'
     if tie_break_mode!='NONE':report['tie_break_mode']=tie_break_mode
     try:
         # Source-derived read-only metadata for preview. Never expose contracts or
@@ -262,10 +270,9 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
         report.update(summary)
         # Only a successful *rolling status* gives validated windows; success of
         # the entire call scope is a separate assertion.
-        if len(scope) == MAX_CALLS and not summary['all_scope_calls_completed']:
-            report['full_140_completion_status'] = 'INCOMPLETE'
-        elif len(scope) == MAX_CALLS:
-            report['full_140_completion_status'] = 'COMPLETED_SYNTHETIC'
+        if len(scope) == len(snapshot['calls']):
+            label='full_154_completion_status' if snapshot.get('scenario_id')=='V5_BALANCED_154' else 'full_140_completion_status'
+            report[label]='COMPLETED_SYNTHETIC' if summary['all_scope_calls_completed'] else 'INCOMPLETE'
         atomic_json(directory / 'execution_report.json', report)
         return report
     except Exception as exc:

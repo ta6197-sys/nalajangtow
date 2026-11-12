@@ -26,14 +26,28 @@ def normalize_v5(bundle):
         matches = profiles.get(call.get('call_id'), [])
         call['physical'] = copy.deepcopy(matches[0]) if len(matches) == 1 else None
         call['eligible_berth_ids'] = eligible_berth_ids(call, source['berths'], source['tanks'])
-    return {'schema_version':'DOCKTIMIZE_NORMALIZED_INPUT_V5', 'scenario_id':'V5_3TANK',
+    scenario=bundle.get('scenario_id','V5_3TANK')
+    tables=copy.deepcopy(bundle['tables'])
+    tanks=copy.deepcopy(source['tanks'])
+    if scenario=='V5_BALANCED_154':
+        tables={'groups':{'sheet':'JSON:berth_group_rules','rows':copy.deepcopy(source.get('berth_group_rules',[]))},
+                'restrictions':{'sheet':'JSON:berth_restrictions','rows':copy.deepcopy(source.get('berth_restrictions',[]))},
+                'contracts':{'sheet':'JSON:cargo_calls','rows':[]}}
+        for c in source['cargo_calls']:
+            row=copy.deepcopy(c);row.update(case_id=c['call_id'],quantity_mt=c.get('cargo_quantity_mt'),nor_tender_local=c.get('nor_tender_at'),demurrage_usd_day=c.get('daily_demurrage_usd'))
+            tables['contracts']['rows'].append(row)
+        for t in tanks:t['effective_max_inventory_bbl']=str(number(t['capacity_bbl'])*95/100)
+    return {'schema_version':'DOCKTIMIZE_NORMALIZED_INPUT_V5', 'scenario_id':scenario,
             'source_input':source, 'calls':calls, 'berths':copy.deepcopy(source['berths']),
-            'tanks':copy.deepcopy(source['tanks']), 'fixed_process_flows':copy.deepcopy(bundle['flows']),
-            'workbook_tables':copy.deepcopy(bundle['tables']), 'artifacts':copy.deepcopy(bundle['artifacts']),
+            'tanks':tanks, 'fixed_process_flows':copy.deepcopy(bundle['flows']),
+            'workbook_tables':tables, 'artifacts':copy.deepcopy(bundle['artifacts']),
             'units':{'tank_flow':'bbl/hour','timezone':'Asia/Seoul'}, 'operational_approval':False}
 
 
 def validate_v5(s):
+    if s.get('scenario_id') == 'V5_BALANCED_154':
+        from .v5_balanced import validate_balanced
+        return validate_balanced(s)
     source=s['source_input']; flow=s['fixed_process_flows']; tables=s['workbook_tables']
     calls=s['calls']; berths=s['berths']; tanks=s['tanks']; segments=flow.get('segments',[])
     errors=[]; connection=[]; coverage=[]; invalid=set()

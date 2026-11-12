@@ -173,7 +173,7 @@ def audit_s5_completion(report, manifest, checkpoints, *, source_calls,
             'settled_cents_sum': sum(amounts.values()) if set(amounts) == scope_ids else None,
             'issues': issues,
             'limitations': [
-                'Only five selected source calls; other 135 source calls excluded.',
+                f'Only five selected source calls; other {max(0, len(source_calls)-len(scope_ids))} source calls excluded.',
                 'Contract amounts under synthetic pricing/policy are not operational invoices.',
                 'Overlapping 72h window projected costs must not be summed.',
                 'No continuous-time or full-140 global optimality proof.',

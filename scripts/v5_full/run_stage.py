@@ -7,13 +7,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from src.daily_planning.integrated_v3.v5_scale import (
-    GATES, ScaleInputError, execute_scale, load_execution_config, preflight_sources)
+    GATES, BALANCED_GATES, ScaleInputError, execute_scale, load_execution_config, preflight_sources)
 
 
 def main(argv=None):
     p = argparse.ArgumentParser(description='Execute one bounded Stage-4 V5 scale gate.')
     p.add_argument('--config', required=True, type=Path, help='Administrator-provided V5 input/policy configuration')
-    p.add_argument('--gate', choices=tuple(GATES), default='S5')
+    p.add_argument('--gate', choices=tuple(GATES)+('FULL154',), default='S5')
     p.add_argument('--output-root', type=Path, default=ROOT / 'results' / 'v5_preview_runs')
     p.add_argument('--seconds-per-window', type=float, default=60)
     p.add_argument('--candidates-per-pair', type=int, default=6)
@@ -25,6 +25,8 @@ def main(argv=None):
     args = p.parse_args(argv)
     try:
         config = load_execution_config(args.config)
+        gates=BALANCED_GATES if config.get('scenario')=='V5_BALANCED_154' else GATES
+        if args.gate not in gates:raise ScaleInputError('Gate does not belong to selected scenario')
         snapshot, preflight = preflight_sources(config)
         if args.preflight_only:
             print(json.dumps({'preflight_status': preflight.get('status'),
@@ -34,7 +36,7 @@ def main(argv=None):
                               'tank_count': len(snapshot['tanks']),
                               'pricing_policy': config['pricing_policy']}, ensure_ascii=False, indent=2))
             return 0
-        count, windows = GATES[args.gate]
+        count, windows = gates[args.gate]
         call_ids = None
         if args.call_ids_file:
             call_ids = json.loads(args.call_ids_file.read_text(encoding='utf-8'))
@@ -48,7 +50,7 @@ def main(argv=None):
         print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
         if report['status'] != 'REQUESTED_WINDOWS_VALIDATED':
             return 2
-        if args.gate == 'FULL140' and not report.get('all_scope_calls_completed'):
+        if args.gate in ('FULL140','FULL154') and not report.get('all_scope_calls_completed'):
             return 3
         return 0
     except (ScaleInputError, ValueError, KeyError, OSError, ImportError) as exc:
