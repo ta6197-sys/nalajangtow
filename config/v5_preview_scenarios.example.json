@@ -1,0 +1,7 @@
+{
+  "scenarios": {
+    "verified_v5_small": {
+      "execution_config": "v5_execution.json"
+    }
+  }
+}
