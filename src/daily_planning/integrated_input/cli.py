@@ -13,7 +13,7 @@ from .provenance import canonical,digest,VERSION,KST
 
 
 def run(data_dir,output_dir,dry_run=False,*,scenario='V3_ORIGINAL'):
-    if scenario in ('V5_3TANK','V5_BALANCED_154'):
+    if scenario in ('V5_3TANK','V5_BALANCED_154','V5_BALANCED_154_EXT_20270109'):
         return run_v5(data_dir,output_dir,dry_run,scenario=scenario)
     try:
         bundle=load_inputs(data_dir,scenario=scenario);snapshot=normalize(bundle);report=validate(snapshot)
@@ -76,7 +76,7 @@ def run_v5(data_dir,output_dir,dry_run=False,*,scenario='V5_3TANK'):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--data-dir',required=True,type=Path)
     parser.add_argument('--output-dir',type=Path,default=Path('results/v3_preflight'));parser.add_argument('--dry-run',action='store_true')
-    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3','V5_3TANK','V5_BALANCED_154'),default='V3_ORIGINAL')
+    parser.add_argument('--scenario',choices=('V3_ORIGINAL','V3_CRUDE_PLUS_3','V5_3TANK','V5_BALANCED_154','V5_BALANCED_154_EXT_20270109'),default='V3_ORIGINAL')
     args=parser.parse_args()
     try:report,manifest=run(args.data_dir,args.output_dir,args.dry_run,scenario=args.scenario)
     except (ValueError,OSError) as exc:

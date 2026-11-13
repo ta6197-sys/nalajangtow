@@ -17,6 +17,7 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 VERSION = 'V5_STAGED_EXECUTION_V1'
+BALANCED_EXT_PROFILE='V5_BALANCED_154_EXT_20270109'
 KST = ZoneInfo('Asia/Seoul')
 GATES = {'S5': (5, 2), 'S10': (10, 3), 'S20': (20, 3), 'R7': (20, 7), 'R14': (20, 14), 'FULL140': (140, 60)}
 BALANCED_GATES = {**{k:v for k,v in GATES.items() if k!='FULL140'}, 'FULL154': (154,60)}
@@ -72,7 +73,7 @@ def load_execution_config(path: str | Path) -> dict:
     if raw.get('version') != VERSION:
         raise ScaleInputError('Expected configuration version ' + VERSION)
     scenario=raw.get('scenario','V5_3TANK')
-    if scenario not in ('V5_3TANK','V5_BALANCED_154'):
+    if scenario not in ('V5_3TANK','V5_BALANCED_154',BALANCED_EXT_PROFILE):
         raise ScaleInputError('Unknown V5 scenario')
     base = config_path.parent
     for key in ('data_dir', 'policy_file', 'pilotage_context_file', 'as_of_at'):
@@ -119,13 +120,13 @@ def preflight_sources(config: dict) -> tuple[dict, dict]:
     from ..integrated_input.normalizer import normalize
     from ..integrated_input.v5 import validate_v5
     scenario=config.get('scenario','V5_3TANK')
-    if scenario not in ('V5_3TANK','V5_BALANCED_154'):raise ScaleInputError('Unknown V5 scenario')
+    if scenario not in ('V5_3TANK','V5_BALANCED_154',BALANCED_EXT_PROFILE):raise ScaleInputError('Unknown V5 scenario')
     bundle = load_inputs(config['data_dir'], scenario=scenario)
     snapshot = normalize(bundle)
     report = validate_v5(snapshot)
     if not report['data_preflight_pass']:
         raise ScaleInputError('V5 source preflight failed: ' + str(report.get('errors')))
-    expected=154 if scenario=='V5_BALANCED_154' else 140
+    expected=154 if scenario in ('V5_BALANCED_154',BALANCED_EXT_PROFILE) else 140
     if len(snapshot['calls']) != expected or len(snapshot['berths']) != 11 or len(snapshot['tanks']) != 3:
         raise ScaleInputError(f'Expected {expected} calls, 11 berths and 3 tanks')
     return snapshot, report
@@ -159,7 +160,7 @@ def bounded_parameters(*, count: int, windows: int, time_limit_seconds: float,
                        improvement_rounds: int, scenario: str = 'V5_3TANK') -> None:
     if any(isinstance(x, bool) or not isinstance(x, int) for x in (count, windows, candidates_per_pair, total_candidates, improvement_rounds)):
         raise ScaleInputError('Integer bounds required')
-    if scenario not in ('V5_3TANK','V5_BALANCED_154') or not 1 <= count <= (154 if scenario=='V5_BALANCED_154' else MAX_CALLS) or not 1 <= windows <= MAX_WINDOWS:
+    if scenario not in ('V5_3TANK','V5_BALANCED_154',BALANCED_EXT_PROFILE) or not 1 <= count <= (154 if scenario in ('V5_BALANCED_154',BALANCED_EXT_PROFILE) else MAX_CALLS) or not 1 <= windows <= MAX_WINDOWS:
         raise ScaleInputError('Scope exceeds supported diagnostic bound')
     if not 1 <= candidates_per_pair <= 24 or not 1 <= total_candidates <= 12000:
         raise ScaleInputError('Invalid candidate limits')

@@ -54,7 +54,11 @@ class V5SettlementTest(unittest.TestCase):
         from pathlib import Path
         path=Path('results/v5_preflight/2207668409df0d34731476c5/normalized_snapshot.json')
         if not path.is_file():self.skipTest('V5 snapshot unavailable')
-        a=clock_audit(json.loads(path.read_text()));self.assertEqual(len(a['historical_divergence_ids_in_v5']),40);self.assertNotEqual(a['audit_source_workbook_sha256'],a['v5_workbook_sha256']);self.assertFalse(a['v5_effective_start_available'])
+        a=clock_audit(json.loads(path.read_text()))
+        self.assertNotEqual(a['audit_source_workbook_sha256'],a['v5_workbook_sha256'])
+        self.assertEqual(a['status'],'HISTORICAL_AUDIT_NOT_APPLICABLE_DIFFERENT_SOURCE')
+        self.assertEqual(a['historical_divergence_ids_in_v5'],[])
+        self.assertFalse(a['v5_effective_start_available'])
 
 class V5CostSearchTest(unittest.TestCase):
     def setUp(self):
