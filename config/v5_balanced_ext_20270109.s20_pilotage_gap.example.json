@@ -1,0 +1,16 @@
+{
+  "version": "V5_STAGED_EXECUTION_V1",
+  "scenario": "V5_BALANCED_154_EXT_20270109",
+  "data_dir": "../input/v5_balanced_ext_20270109",
+  "policy_file": "v5_user_policy_extended_20270109.synthetic.json",
+  "pilotage_context_file": "v5_balanced_pilotage_context_extended_20270109.json",
+  "as_of_at": "2026-11-03T00:00:00+09:00",
+  "pricing_policy": "CLEAR_WEATHER_BASELINE_V1",
+  "clock_policy": "BLOCK_UNVERIFIED_CLOCK",
+  "inventory_policy_version": "V5_PHYSICAL_BOUNDS_OPERATING_WARNINGS_V1",
+  "inventory_risk_policy_version": "V5_INVENTORY_RISK_20_80_10_90_V1",
+  "deferral_policy_version": "V5_ROLLING_SAFE_ADMISSION_V1",
+  "horizon_pilotage_policy_version": "V5_HORIZON_PILOTAGE_GAP_V1",
+  "max_deferral_probes": 8,
+  "settlement_records": []
+}

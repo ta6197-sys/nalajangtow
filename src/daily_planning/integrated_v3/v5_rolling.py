@@ -17,6 +17,7 @@ from .v5_settlement import price_v5_schedule
 from .v5_locks import apply_overrides,resolve_locks
 from .v5_inventory_risk import RISK_VERSION, classify_inventory_points
 from .v5_deferral import DEFERRAL_VERSION, choose_admission, advance_history, verify_history
+from .v5_pilotage_gap import PILOTAGE_GAP_VERSION, collect_certificates
 from .v5_failure_evidence import build_failure_evidence,write_failure_evidence_new
 from .resumable_rolling import _read,_write,_fingerprint
 
@@ -108,7 +109,8 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
                    settlement_records=(),approved_commitments=(),override_events=None,manual_overrides=None,
                    resume=False,max_new_windows=None,rolling_optimizer_mode='LEGACY_ENUMERATION',
                    max_improvement_rounds=2,max_candidates_per_pair=12,max_total_candidates=2000,tie_break_mode='NONE',inventory_policy_version=None,
-                   inventory_risk_policy_version=None,deferral_policy_version=None,max_deferral_probes=8):
+                   inventory_risk_policy_version=None,deferral_policy_version=None,max_deferral_probes=8,
+                   horizon_pilotage_policy_version=None):
     """Advance only verified 24h transitions; all produced state is synthetic."""
     started=monotonic();start=timestamp(as_of_at);folder=Path(output_dir)
     source_root=Path(data_dir).resolve();output_root=folder.resolve()
@@ -130,6 +132,8 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
         raise ValueError('Safe admission requires integrated BALANCED')
     if type(max_deferral_probes) is not int or not 1<=max_deferral_probes<=20:
         raise ValueError('Invalid deferral attempt count')
+    if horizon_pilotage_policy_version is not None and (horizon_pilotage_policy_version!=PILOTAGE_GAP_VERSION or deferral_policy_version!=DEFERRAL_VERSION):
+        raise ValueError('Horizon pilotage deferral requires explicitly opted-in Stage 2B safe deferral')
     work=policy_view(v5_physical._verified_snapshot(snapshot,data_dir),inventory_policy_version)
     inventory_snapshot=work if inventory_policy_version is not None else snapshot
     daylight_path=Path(pilotage_context['daylight_path']);daylight_sha=digest(daylight_path.read_bytes())
@@ -140,6 +144,7 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
     if inventory_risk_policy_version is not None:config['inventory_risk_policy_version']=inventory_risk_policy_version
     if deferral_policy_version is not None:
         config.update(deferral_policy_version=deferral_policy_version,max_deferral_probes=max_deferral_probes)
+    if horizon_pilotage_policy_version is not None:config['horizon_pilotage_policy_version']=horizon_pilotage_policy_version
     manifest={'run_fingerprint':_fingerprint(config),'config':config,'operational_approval':False};manifest_path=folder/'manifest.json'
     if snapshot.get('scenario_id')=='V5_BALANCED_154':manifest['scenario_id']='V5_BALANCED_154'
     if resume:
@@ -216,6 +221,15 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
             if saved.get('deferral_policy_version')!=deferral_policy_version or set(saved.get('due_call_ids',[]))!=expected_calls:
                 raise ValueError('Deferral version or due-call coverage mismatch')
             if admitted!={r['call_id'] for r in saved['selected_schedule']}:raise ValueError('Admitted rows mismatch')
+            if horizon_pilotage_policy_version is not None:
+                proof=collect_certificates(work,sorted(expected_calls),as_of_at=expected_at,policy=policy,
+                    pilotage_context=pilotage_context,protected_ids={r['call_id'] for r in expected},
+                    previously_scheduled_ids={r['call_id'] for r in previous['previous_schedule']})
+                if (saved.get('horizon_pilotage_policy_version')!=horizon_pilotage_policy_version or
+                    saved.get('horizon_pilotage_gap_certificates')!=proof['certificates'] or
+                    saved.get('horizon_pilotage_gap_unresolved')!=proof['unresolved'] or
+                    not set(proof['certificates'])<=deferred):
+                    raise ValueError('Pilotage gap checkpoint proof or deferred partition mismatch')
             updated=verify_history(calls,previous['deferral_history'],saved.get('deferral_history'),
                 at=expected_at,due=expected_calls,admitted=admitted,deferred=deferred,
                 protected={r['call_id'] for r in expected},
@@ -251,6 +265,13 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
         protected_ids={r['call_id'] for r in protected};previous['tank_commitments']=[d for d in previous['tank_commitments'] if d['call_id'] in protected_ids]
         selected=sorted({c['call_id'] for c in available if (timestamp(c['fix_etb_at']) if c['fixed_etb_is_hard'] else timestamp(c['eta_at']))<horizon}|{r['call_id'] for r in protected})
         due_call_ids=list(selected);admission=None
+        horizon_gap_certificates={};horizon_gap_unresolved={}
+        if horizon_pilotage_policy_version is not None and due_call_ids:
+            proof=collect_certificates(work,due_call_ids,as_of_at=at,policy=policy,
+                pilotage_context=pilotage_context,protected_ids=protected_ids,
+                previously_scheduled_ids={r['call_id'] for r in previous['previous_schedule']})
+            horizon_gap_certificates=proof['certificates'];horizon_gap_unresolved=proof['unresolved']
+            selected=sorted(set(selected)-set(horizon_gap_certificates))
         if selected:
             if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':
                 from .v5_rolling_optimizer import optimize_integrated_window
@@ -286,21 +307,25 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
             try:tank=_empty_tank(inventory_snapshot,at,previous)
             except (ValueError,KeyError,TypeError) as exc:return report('STOPPED_UNRESOLVED',{'code':'EMPTY_WINDOW_INVALID','reason':str(exc)})
             candidate=None;rows=[];pricing={};cost=0
+        window_deferred=sorted(set(horizon_gap_certificates)|set(admission['deferred'] if admission is not None else []))
         if deferral_policy_version is not None and due_call_ids:
             previous['deferral_history']=advance_history(calls,previous['deferral_history'],
-                at=at,due=due_call_ids,admitted=selected,
-                deferred=(admission['deferred'] if admission is not None else []))
+                at=at,due=due_call_ids,admitted=selected,deferred=window_deferred)
         try:nextstate,after=finalize_locks(_transition(inventory_snapshot,at=at,prior=previous,rows=rows,tank=tank,pricing=pricing,settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))
         except (ValueError,KeyError,TypeError,ZeroDivisionError) as exc:return report('STOPPED_UNRESOLVED',{'code':'CARRYOVER_INVALID','reason':str(exc)})
         summary={'window_id':i,'as_of_at':at,'status':'VALIDATED_SYNTHETIC','window_demurrage_cents':cost,'selected_call_ids':selected,'lock_decisions':locks['decisions'],'next_lock_decisions':after['decisions'],'cost_scope':'WINDOW_OVERLAP_NOT_CUMULATIVE','cost_search_scope':result['optimality_scope'] if selected else 'NO_WORK','cost_candidates_evaluated':(result['solver_attempt_count'] if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1' else result['evaluated_schedule_count']) if selected else 0,'optimization_runtime_seconds':(result['runtime_seconds'] if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1' else result['search_runtime_seconds']) if selected else 0}
         if selected and rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':summary.update(rolling_optimizer_mode=rolling_optimizer_mode,selected_etbs=result['selected_etbs'],initial_candidate_count=result['initial_candidate_count'],final_candidate_count=result['final_candidate_count'],initial_demurrage_cents=result['initial_total_demurrage_cents'],best_demurrage_cents=result['best_total_demurrage_cents'],candidate_expansion_rounds=result['candidate_expansion_rounds'],solver_status=result['solver_status'],final_domain_optimality_proven=result['final_domain_optimality_proven'])
         if deferral_policy_version is not None:
             summary.update(deferral_policy_version=deferral_policy_version,due_call_ids=due_call_ids,
-                admitted_call_ids=selected,deferred_call_ids=(admission['deferred'] if admission is not None else []),
+                admitted_call_ids=selected,deferred_call_ids=window_deferred,
                 admission_attempts=(admission['attempts'] if admission is not None else []),
                 deferral_warnings=[{'call_id':cid,**v} for cid,v in sorted(previous['deferral_history'].items())
                     if cid in due_call_ids and v['warnings']],
                 cost_scope='ADMITTED_ONLY_DEFERRED_LIABILITIES_UNPRICED')
+        if horizon_pilotage_policy_version is not None:
+            summary.update(horizon_pilotage_policy_version=horizon_pilotage_policy_version,
+                horizon_pilotage_gap_call_ids=sorted(horizon_gap_certificates),
+                horizon_pilotage_gap_unresolved_call_ids=sorted(horizon_gap_unresolved))
         if inventory_risk_policy_version is not None:summary['inventory_risk_v1']=risk_from(tank)
         if inventory_policy_version is not None:
             summary['inventory_policy_version']=inventory_policy_version
@@ -308,9 +333,13 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
         cp={'window_id':i,'as_of_at':at,'planning_horizon_end':horizon.isoformat(),'freeze_boundary':None,'dynamic_lock_horizon_hours':5,'input_fingerprint':config['source_fingerprint'],'policy_fingerprint':config['policy_fingerprint'],'optimization_configuration':config,'selected_schedule':rows,'completed_calls':[r['call_id'] for r in nextstate['completed_rows']],'protected_commitments_in':protected,'protected_commitments':after['physical_commitments'],'manual_overrides':applied_manual,'lock_state':nextstate['lock_state'],'cargo_progress':nextstate['cargo_progress'],'carried_transfers':nextstate['carried_transfers'],'carried_inventory':nextstate['inventory'],'contract_accounting_state':nextstate['contract_accounting_state'],'in_progress_contract_accounting':nextstate['in_progress_contract_accounting'],'validation_results':{'physical':'VALID' if rows else 'NO_WORK','inventory':'VALID','settlement':'SETTLED' if rows else 'NO_WORK','carryover':'VALID'},'prior_state_fingerprint':_fingerprint(state),'next_state_fingerprint':_fingerprint(nextstate),'next_state':nextstate,'run_fingerprint':manifest['run_fingerprint'],'candidate':candidate,'summary':summary}
         if deferral_policy_version is not None:
             cp.update(deferral_policy_version=deferral_policy_version,due_call_ids=due_call_ids,
-                admitted_call_ids=selected,deferred_call_ids=(admission['deferred'] if admission is not None else []),
+                admitted_call_ids=selected,deferred_call_ids=window_deferred,
                 deferral_history=deepcopy(previous['deferral_history']),
                 admission_attempts=(admission['attempts'] if admission is not None else []))
+        if horizon_pilotage_policy_version is not None:
+            cp.update(horizon_pilotage_policy_version=horizon_pilotage_policy_version,
+                horizon_pilotage_gap_certificates=horizon_gap_certificates,
+                horizon_pilotage_gap_unresolved=horizon_gap_unresolved)
         # Re-run independent physical, inventory, settlement and 24h replay before saving.
         try:verified=checked_transition(cp,previous)
         except (ValueError,KeyError,TypeError) as exc:return report('STOPPED_UNRESOLVED',{'code':'INDEPENDENT_REPLAY_FAILED','reason':str(exc)})
