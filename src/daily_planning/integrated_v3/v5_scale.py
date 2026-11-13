@@ -105,6 +105,19 @@ def load_execution_config(path: str | Path) -> dict:
     if not isinstance(settlement_records, list):
         raise ScaleInputError('settlement_records must be an array')
     inventory_policy=raw.get('inventory_policy_version')
+    risk_policy=raw.get('inventory_risk_policy_version')
+    deferral_policy=raw.get('deferral_policy_version')
+    if risk_policy is not None:
+        from .v5_inventory_risk import RISK_VERSION
+        if risk_policy!=RISK_VERSION or inventory_policy is None:
+            raise ScaleInputError('Risk policy requires opt-in physical bounds')
+    if deferral_policy is not None:
+        from .v5_deferral import DEFERRAL_VERSION
+        if deferral_policy!=DEFERRAL_VERSION or scenario not in ('V5_BALANCED_154',BALANCED_EXT_PROFILE):
+            raise ScaleInputError('Invalid rolling deferral policy')
+    max_probes=raw.get('max_deferral_probes',8)
+    if type(max_probes) is not int or not 1<=max_probes<=20:
+        raise ScaleInputError('Invalid deferral attempt count')
     if inventory_policy is not None:
         from .v5_inventory_policy import POLICY_VERSION
         if inventory_policy!=POLICY_VERSION or scenario not in ('V5_BALANCED_154',BALANCED_EXT_PROFILE):
@@ -114,7 +127,9 @@ def load_execution_config(path: str | Path) -> dict:
                 clock_policy=raw.get('clock_policy', 'BLOCK_UNVERIFIED_CLOCK'),
                 settlement_records=settlement_records,
                 config_file=str(config_path),
-                **({'inventory_policy_version':inventory_policy} if inventory_policy is not None else {}))
+                **({'inventory_policy_version':inventory_policy} if inventory_policy is not None else {}),
+                **({'inventory_risk_policy_version':risk_policy} if risk_policy is not None else {}),
+                **({'deferral_policy_version':deferral_policy,'max_deferral_probes':max_probes} if deferral_policy is not None else {}))
 
 
 def preflight_sources(config: dict) -> tuple[dict, dict]:
@@ -276,7 +291,9 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
                         max_candidates_per_pair=candidates_per_pair,
                         max_total_candidates=total_candidates,
                          **({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}),
-                         **({'inventory_policy_version':config['inventory_policy_version']} if config.get('inventory_policy_version') is not None else {}))
+                         **({'inventory_policy_version':config['inventory_policy_version']} if config.get('inventory_policy_version') is not None else {}),
+                         **({'inventory_risk_policy_version':config['inventory_risk_policy_version']} if config.get('inventory_risk_policy_version') is not None else {}),
+                         **({'deferral_policy_version':config['deferral_policy_version'],'max_deferral_probes':config['max_deferral_probes']} if config.get('deferral_policy_version') is not None else {}))
         atomic_json(directory / 'tanks_public.json', [
             {key: t.get(key) for key in ('tank_id', 'cargo_group',
               'min_inventory_bbl', 'initial_inventory_bbl', 'capacity_bbl',

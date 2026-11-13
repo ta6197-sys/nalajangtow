@@ -45,7 +45,9 @@ def main():
             max_candidates_per_pair=cfg['max_candidates_per_pair'],
             max_total_candidates=cfg['max_total_candidates'],
             **({'tie_break_mode':cfg['tie_break_mode']} if cfg.get('tie_break_mode','NONE')!='NONE' else {}),
-            **({'inventory_policy_version':config['inventory_policy_version']} if config.get('inventory_policy_version') is not None else {}))
+            **({'inventory_policy_version':config['inventory_policy_version']} if config.get('inventory_policy_version') is not None else {}),
+            **({'inventory_risk_policy_version':config['inventory_risk_policy_version']} if config.get('inventory_risk_policy_version') is not None else {}),
+            **({'deferral_policy_version':config['deferral_policy_version'],'max_deferral_probes':config['max_deferral_probes']} if config.get('deferral_policy_version') is not None else {}))
         result = {'status':outcome['status'],'validated_window_count':outcome['validated_window_count'],
                   'resume_status':outcome['resume_status'],
                   'independent_replay': 'PASS' if outcome['status']=='REQUESTED_WINDOWS_VALIDATED'
