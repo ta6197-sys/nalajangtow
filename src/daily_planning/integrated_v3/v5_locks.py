@@ -16,7 +16,7 @@ def apply_overrides(state, changes, call_ids):
 
 
 def resolve_locks(calls, *, as_of_at, previous_schedule=(), lock_state=None,
-                  approved_commitments=(), completed_call_ids=()):
+                  approved_commitments=(), completed_call_ids=(), allow_unscheduled_auto=False):
     """Return full-row hard commitments and pending missing-schedule decisions."""
     at=timestamp(as_of_at);by_id={c['call_id']:c for c in calls}
     rows={r['call_id']:r for r in previous_schedule};approved={r['call_id']:r for r in approved_commitments}
@@ -38,6 +38,9 @@ def resolve_locks(calls, *, as_of_at, previous_schedule=(), lock_state=None,
         elif mode=='MANUAL_UNLOCK':reason=None;origin='MANUAL_UNLOCK'
         elif timestamp(c['eta_at'])<=at+timedelta(hours=5):reason='ETA_WITHIN_5_HOURS';origin='SIMULATED_AUTOMATIC_LOCK'
         else:reason=None;origin='AUTO_CHANGEABLE'
+        if (allow_unscheduled_auto and reason=='ETA_WITHIN_5_HOURS' and row is None
+                and committed is None and mode=='AUTO'):
+            reason=None;origin='UNSCHEDULED_NOT_PRIOR_COMMITMENT'
         if reason:
             if row is None:missing.append({'code':'LOCK_REQUIRES_EXISTING_SCHEDULE','call_id':cid,'reason':reason});decisions[cid]={'mode':mode,'status':'LOCK_PENDING','origin':origin};continue
             locked.append(deepcopy(row));decisions[cid]={'mode':mode,'status':'LOCKED','reason':reason,'origin':origin,'hard_fix_etb_preserved':c.get('fixed_etb_is_hard') is True}
