@@ -44,7 +44,8 @@ def main():
             max_improvement_rounds=cfg['max_improvement_rounds'],
             max_candidates_per_pair=cfg['max_candidates_per_pair'],
             max_total_candidates=cfg['max_total_candidates'],
-            **({'tie_break_mode':cfg['tie_break_mode']} if cfg.get('tie_break_mode','NONE')!='NONE' else {}))
+            **({'tie_break_mode':cfg['tie_break_mode']} if cfg.get('tie_break_mode','NONE')!='NONE' else {}),
+            **({'inventory_policy_version':config['inventory_policy_version']} if config.get('inventory_policy_version') is not None else {}))
         result = {'status':outcome['status'],'validated_window_count':outcome['validated_window_count'],
                   'resume_status':outcome['resume_status'],
                   'independent_replay': 'PASS' if outcome['status']=='REQUESTED_WINDOWS_VALIDATED'

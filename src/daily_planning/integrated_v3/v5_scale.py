@@ -104,11 +104,17 @@ def load_execution_config(path: str | Path) -> dict:
     settlement_records = raw.get('settlement_records', [])
     if not isinstance(settlement_records, list):
         raise ScaleInputError('settlement_records must be an array')
+    inventory_policy=raw.get('inventory_policy_version')
+    if inventory_policy is not None:
+        from .v5_inventory_policy import POLICY_VERSION
+        if inventory_policy!=POLICY_VERSION or scenario not in ('V5_BALANCED_154',BALANCED_EXT_PROFILE):
+            raise ScaleInputError('Unsupported inventory policy or scenario')
     return dict(data_dir=data_dir, policy=policy, pilotage_context=pilotage, scenario=scenario,
                 as_of_at=at.isoformat(), pricing_policy=price,
                 clock_policy=raw.get('clock_policy', 'BLOCK_UNVERIFIED_CLOCK'),
                 settlement_records=settlement_records,
-                config_file=str(config_path))
+                config_file=str(config_path),
+                **({'inventory_policy_version':inventory_policy} if inventory_policy is not None else {}))
 
 
 def preflight_sources(config: dict) -> tuple[dict, dict]:
@@ -269,7 +275,8 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
                         max_improvement_rounds=improvement_rounds,
                         max_candidates_per_pair=candidates_per_pair,
                         max_total_candidates=total_candidates,
-                         **({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}))
+                         **({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}),
+                         **({'inventory_policy_version':config['inventory_policy_version']} if config.get('inventory_policy_version') is not None else {}))
         atomic_json(directory / 'tanks_public.json', [
             {key: t.get(key) for key in ('tank_id', 'cargo_group',
               'min_inventory_bbl', 'initial_inventory_bbl', 'capacity_bbl',

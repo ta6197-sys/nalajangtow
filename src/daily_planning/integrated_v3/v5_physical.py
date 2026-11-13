@@ -19,6 +19,7 @@ from ..physical_scheduling.validator import validate_result
 from ..physical_scheduling.policy import validate_policy
 from ..physical_scheduling.v5_user_rules import enabled as user_v5, DOCK_PAIR
 from .coordinator import validate_v5_candidate
+from .v5_inventory_policy import physical_bounds, policy_view
 from .v5_pilotage import prepare_pilotage_policy
 
 VERSION='V5_PHYSICAL_INVENTORY_CHECKPOINT_V1'
@@ -64,7 +65,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
                 candidate_generation_mode='MANUAL_CANDIDATES',max_expansion_rounds=3,
                 max_candidates_per_pair=12,max_total_candidates=2000,physical_commitments=(),max_inventory_reoptimizations=3,
                 initial_forbidden_schedules=(),frozen_candidate_domain=None,objective_mode='FEASIBILITY',
-                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE',candidate_improvement_mode='NONE',max_improvement_rounds=2,tie_break_mode='NONE'):
+                pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',settlement_records=(),inventory_constraint_mode='NONE',candidate_improvement_mode='NONE',max_improvement_rounds=2,tie_break_mode='NONE',inventory_policy_version=None):
     """Validate and schedule a finite V5 subset; no schedule-wide feasibility claim."""
     started=time.perf_counter();valid_budget=isinstance(time_limit_seconds,(int,float)) and not isinstance(time_limit_seconds,bool) and math.isfinite(time_limit_seconds) and time_limit_seconds>0;deadline=started+(float(time_limit_seconds) if valid_budget else 0);candidate_etbs=candidate_etbs or {};domain={'as_of_at':as_of_at,'call_ids':sorted(call_ids),'candidate_etbs':candidate_etbs}
     result={'scenario_id':snapshot.get('scenario_id'),'model_version':VERSION,'source_fingerprint':digest(canonical(snapshot).encode()),
@@ -105,7 +106,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
         if candidate_generation_mode not in ('MANUAL_CANDIDATES','AUTO_ADAPTIVE_CANDIDATES'):return finish('INVALID_INPUT','INVALID_CANDIDATE_MODE','Unknown candidate generation mode')
         if candidate_generation_mode=='AUTO_ADAPTIVE_CANDIDATES' and (any(type(x) is not int or x<1 for x in (max_candidates_per_pair,max_total_candidates)) or type(max_expansion_rounds) is not int or max_expansion_rounds<0):return finish('INVALID_INPUT','INVALID_CANDIDATE_LIMIT','Invalid candidate limits')
         if snapshot.get('scenario_id') not in ('V5_3TANK','V5_BALANCED_154') or snapshot.get('schema_version')!='DOCKTIMIZE_NORMALIZED_INPUT_V5':return finish('INVALID_INPUT','INVALID_V5_INPUT','Expected normalized V5 input')
-        work=_verified_snapshot(snapshot,data_dir)
+        work=policy_view(_verified_snapshot(snapshot,data_dir),inventory_policy_version)
         option_cache={}
         def price_option(row):
             from .v5_settlement import price_v5_schedule
@@ -123,7 +124,8 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
             if initial_inventory is None and begin!=timestamp(work['fixed_process_flows']['inventory_as_of_at']):raise ValueError('Carry-in inventory required')
             if set(inventory)!={t['tank_id'] for t in work['tanks']}:raise ValueError('Carry-in inventory required for all tanks')
             for t in work['tanks']:
-                if not number(t['min_inventory_bbl'])<=number(inventory[t['tank_id']])<=number(t.get('effective_max_inventory_bbl',t['capacity_bbl'])):raise ValueError('Invalid carry-in inventory: '+t['tank_id'])
+                lo,hi=physical_bounds(t)
+                if not lo<=number(inventory[t['tank_id']])<=hi:raise ValueError('Invalid carry-in inventory: '+t['tank_id'])
             prepared=prepare_inventory_events(work,options+locked,start_at=as_of_at,end_at=end.isoformat(),carried_transfers=carried_transfers or (),commitments=tank_commitments or (),physical_commitments=locked)
             return add_inventory_constraints(model,variables,prepared,work['tanks'],initial_inventory=inventory,option_count=len(options))
         objective_args={'objective_mode':objective_mode,'option_pricer':price_option if objective_mode=='MIN_TOTAL_DEMURRAGE' else None,'inventory_builder':inventory_builder if inventory_constraint_mode!='NONE' else None}
@@ -220,7 +222,7 @@ def schedule_v5(snapshot, *, data_dir, call_ids, as_of_at, candidate_etbs=None, 
         from .v5_reoptimization import search
         def evaluate(rows):
             independent=validate_result(work,rows,policy)
-            evaluation={'physical_validation':independent,'inventory_validation':'NOT_EVALUATED','inventory_result':None,'selected_berths':{},'selected_etbs':{},'issues':[], 'tank_limits':{t['tank_id']:{'min_inventory_bbl':t['min_inventory_bbl'],'capacity_bbl':t['capacity_bbl']} for t in work['tanks']}}
+            evaluation={'physical_validation':independent,'inventory_validation':'NOT_EVALUATED','inventory_result':None,'selected_berths':{},'selected_etbs':{},'issues':[], 'tank_limits':{t['tank_id']:{'min_inventory_bbl':str(physical_bounds(t)[0]),'capacity_bbl':str(physical_bounds(t)[1])} for t in work['tanks']}}
             if independent.get('status')!='VALID':
                 evaluation.update(status='PHYSICAL_VALIDATION_FAILED',issues=independent.get('issues',[]));return evaluation
             for row in rows:

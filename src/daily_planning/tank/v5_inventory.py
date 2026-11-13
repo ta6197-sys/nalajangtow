@@ -10,6 +10,7 @@ from time import perf_counter
 from .v3_inventory import validate_v3_inventory
 from ..integrated_input.validator import number, timestamp, tokens
 from ..integrated_input.provenance import canonical, digest
+from ..integrated_v3.v5_inventory_policy import POLICY_VERSION, physical_bounds, operating_warning_summary
 
 
 def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inventory=None,
@@ -35,7 +36,8 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
             else:
                 for tid,t in tanks.items():
                     try:
-                        if not number(t['min_inventory_bbl'])<=number(initial_inventory[tid])<=number(t.get('effective_max_inventory_bbl',t['capacity_bbl'])):issue('INVALID_CARRYOVER_STATE','Carry-in inventory outside bounds',tank_id=tid,at=start.isoformat())
+                        lo,hi=physical_bounds(t)
+                        if not lo<=number(initial_inventory[tid])<=hi:issue('INVALID_CARRYOVER_STATE','Carry-in inventory outside physical bounds',tank_id=tid,at=start.isoformat())
                     except (ValueError,KeyError,TypeError):issue('INVALID_CARRYOVER_STATE','Invalid carry-in inventory',tank_id=tid,at=start.isoformat())
         if initial_inventory is None and start!=timestamp(snapshot['fixed_process_flows']['inventory_as_of_at']):issue('INVALID_CARRYOVER_STATE','Carry-in inventory required',at=start.isoformat())
         mapped=[];seen=set()
@@ -63,11 +65,20 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
             for t in replay_snapshot['tanks']:
                 effective=number(t['effective_max_inventory_bbl'])
                 if effective!=number(t['capacity_bbl'])*Fraction(95,100):raise ValueError('Invalid BALANCED operating inventory maximum')
-                t['capacity_bbl']=str(effective)
+                lo,hi=physical_bounds(t)
+                t['min_inventory_bbl']=str(lo);t['capacity_bbl']=str(hi)
         result=validate_v3_inventory(replay_snapshot,mapped,start_at=start_at,end_at=end_at,initial_inventory=initial_inventory,
             same_tank_policy=same_tank_policy,carried_transfers=carried_transfers,commitments=commitments)
         if snapshot.get('scenario_id')=='V5_BALANCED_154':
-            result['source_fingerprint']=digest(canonical(snapshot).encode())
+            source_view=deepcopy(snapshot)
+            claimed=source_view.pop('_verified_source_fingerprint',None)
+            if claimed is not None:
+                for tank in source_view['tanks']:
+                    for key in ('inventory_policy_version','operational_min_inventory_bbl','operational_max_inventory_bbl'):
+                        tank.pop(key,None)
+            actual=digest(canonical(source_view).encode())
+            if claimed is not None and claimed!=actual:raise ValueError('Inventory policy source fingerprint mismatch')
+            result['source_fingerprint']=actual
         if result['status']=='INVALID_INPUT':
             for e in result['issues']:
                 reason=e.get('reason','');low=reason.lower()
@@ -131,6 +142,8 @@ def validate_v5_inventory(snapshot, transfers, *, start_at, end_at, initial_inve
             external_flow_capacity_policy='EXCLUDED_FROM_VESSEL_LIMITS_SHARED_FACILITY_POLICY_UNRESOLVED',
             same_tank_concurrency_policy=same_tank_policy,
             scheduling_feasibility='NOT_EVALUATED',runtime_seconds=perf_counter()-started)
+        if snapshot.get('scenario_id')=='V5_BALANCED_154' and result['status']=='VALID' and any(t.get('inventory_policy_version')==POLICY_VERSION for t in snapshot['tanks']):
+            result.update(operating_warning_summary(snapshot['tanks'],result['inventories']))
         return result
     except (ValueError,KeyError,TypeError,ZeroDivisionError,OverflowError) as exc:
         issue('INVALID_TRANSFER_QUANTITY',exc);return fail()
