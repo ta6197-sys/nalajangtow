@@ -241,6 +241,18 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
     if snapshot.get('scenario_id')=='V5_BALANCED_154':report['scenario_id']='V5_BALANCED_154'
     if tie_break_mode!='NONE':report['tie_break_mode']=tie_break_mode
     try:
+        from .v5_stage1_contract import classify_run, inspect_execution_coverage, SimulationContractError
+        # Injected runners are isolated fixtures and are not source preflights.
+        coverage = inspect_execution_coverage(snapshot, config, windows) if runner is None else None
+        if coverage is not None:
+            report['input_coverage_v1'] = coverage
+            if coverage['status'] != 'COVERAGE_PRECHECK_PASS':
+                report.update(status='INPUT_COVERAGE_BLOCKED', validated_window_count=0,
+                              requested_scope_count=len(scope), completed_scope_count=0,
+                              all_scope_calls_completed=False, all_requested_windows_validated=False)
+                report['execution_outcome_v1'] = classify_run(report, coverage=coverage)
+                atomic_json(directory / 'execution_report.json', report)
+                return report
         # Source-derived read-only metadata for preview. Never expose contracts or
         # raw source files to browsers; exact numeric fields remain strings.
         if runner is None:
@@ -268,6 +280,11 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
             for c in snapshot['calls'] if c['call_id'] in scope])
         summary = summarize_result(result, scope, seconds=monotonic()-start)
         report.update(summary)
+        try:
+            report['execution_outcome_v1'] = classify_run(report, coverage=coverage)
+        except SimulationContractError as exc:
+            report['execution_outcome_v1'] = {'execution_status': 'INVALID_EVIDENCE',
+                                              'completion_status': 'NOT_VERIFIED', 'detail': str(exc)}
         # Only a successful *rolling status* gives validated windows; success of
         # the entire call scope is a separate assertion.
         if len(scope) == len(snapshot['calls']):
@@ -280,5 +297,8 @@ def execute_scale(config: dict, *, output_root: str | Path, call_count: int = 5,
         # if any, remain for manual inspection and replay.
         report.update(status='EXECUTION_ERROR', error_code=type(exc).__name__,
                       error_message=str(exc), total_elapsed_seconds=monotonic()-start)
+        report['execution_outcome_v1'] = {'execution_status': 'EXECUTION_ERROR',
+                                          'completion_status': 'NOT_VERIFIED',
+                                          'reason_category': type(exc).__name__}
         atomic_json(directory / 'execution_report.json', report)
         return report
