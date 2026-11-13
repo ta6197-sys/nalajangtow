@@ -31,7 +31,7 @@ RULE_VERSION = 'V5_USER_ETU_SWITCHING_20261112_V1'
 
 
 def scenario_order(config):
-    return tuple(g for g in GATE_ORDER if g != ('FULL140' if config.get('scenario')=='V5_BALANCED_154' else 'FULL154'))
+    return tuple(g for g in GATE_ORDER if g != ('FULL140' if config.get('scenario') in ('V5_BALANCED_154','V5_BALANCED_154_EXT_20270109') else 'FULL154'))
 
 
 def read(path):
@@ -111,7 +111,7 @@ def validated_context(config_path, scope_directory=None):
     if not preflight.get('data_preflight_pass'):
         raise ValueError('Source V5 preflight did not pass')
     n_fix = sum(c.get('fixed_etb_is_hard') is True for c in snapshot['calls'])
-    expected=154 if config.get('scenario')=='V5_BALANCED_154' else 140
+    expected=154 if config.get('scenario') in ('V5_BALANCED_154','V5_BALANCED_154_EXT_20270109') else 140
     if (len(snapshot['calls']), len(snapshot['berths']), len(snapshot['tanks']), n_fix) != (expected, 11, 3, 15):
         raise ValueError(f'Expected {expected} calls, 11 berths, 3 tanks, and 15 FIX ETBs')
     scopes = {}
@@ -396,7 +396,8 @@ def main(argv=None):
                                    'total': args.total_candidates, 'improvement_rounds': args.improvement_rounds},
             'created_at': datetime.now(timezone.utc).isoformat(),
             'simulation_only': True, 'operational_approval': False}
-        if config.get('scenario')=='V5_BALANCED_154':stage_manifest['scenario_id']='V5_BALANCED_154'
+        if config.get('scenario') in ('V5_BALANCED_154','V5_BALANCED_154_EXT_20270109'):stage_manifest['scenario_id']='V5_BALANCED_154'
+        if config.get('scenario')=='V5_BALANCED_154_EXT_20270109':stage_manifest['source_profile_id']=config['scenario']
         write_new(root/'stage1_manifest.json', stage_manifest)
         write_new(root/'preflight_report.json', report)
         history = []

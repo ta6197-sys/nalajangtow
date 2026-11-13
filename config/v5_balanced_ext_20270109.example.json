@@ -1,0 +1,11 @@
+{
+  "version": "V5_STAGED_EXECUTION_V1",
+  "scenario": "V5_BALANCED_154_EXT_20270109",
+  "data_dir": "../input/v5_balanced_ext_20270109",
+  "policy_file": "v5_user_policy_20261112.synthetic.json",
+  "pilotage_context_file": "v5_balanced_pilotage_context.json",
+  "as_of_at": "2026-11-03T00:00:00+09:00",
+  "pricing_policy": "CLEAR_WEATHER_BASELINE_V1",
+  "clock_policy": "BLOCK_UNVERIFIED_CLOCK",
+  "settlement_records": []
+}

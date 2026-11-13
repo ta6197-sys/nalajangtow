@@ -27,7 +27,12 @@ VERSION='V5_PHYSICAL_INVENTORY_CHECKPOINT_V1'
 def _verified_snapshot(snapshot,data_dir):
     scenario=snapshot.get('scenario_id')
     if scenario not in ('V5_3TANK','V5_BALANCED_154'):raise ValueError('Unknown V5 scenario')
-    bundle=load_inputs(data_dir,scenario=scenario)
+    source_profile=snapshot.get('source_profile_id',scenario)
+    if scenario=='V5_BALANCED_154':
+        if source_profile not in ('V5_BALANCED_154','V5_BALANCED_154_EXT_20270109'):
+            raise ValueError('Unknown BALANCED input profile')
+    elif source_profile!=scenario:raise ValueError('V5 source profile/scenario mismatch')
+    bundle=load_inputs(data_dir,scenario=source_profile)
     expected=normalize(bundle)
     if canonical(snapshot)!=canonical(expected):raise ValueError('Snapshot differs from verified original inputs')
     preflight=validate_v5(snapshot)

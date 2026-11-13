@@ -41,6 +41,7 @@ def normalize_v5(bundle):
             'source_input':source, 'calls':calls, 'berths':copy.deepcopy(source['berths']),
             'tanks':tanks, 'fixed_process_flows':copy.deepcopy(bundle['flows']),
             'workbook_tables':tables, 'artifacts':copy.deepcopy(bundle['artifacts']),
+            **({'source_profile_id':bundle['source_profile_id']} if bundle.get('source_profile_id') else {}),
             'units':{'tank_flow':'bbl/hour','timezone':'Asia/Seoul'}, 'operational_approval':False}
 
 

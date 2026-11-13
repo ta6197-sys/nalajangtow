@@ -13,12 +13,19 @@ from .v5 import eligible_berth_ids
 
 SCENARIO = 'V5_BALANCED_154'
 FLOW_FILE = 'Docktimize_공정유량_6h_3탱크_1000만bbl_BALANCED.json'
+EXT_PROFILE = 'V5_BALANCED_154_EXT_20270109'
+EXT_FLOW_FILE = 'Docktimize_공정유량_6h_3탱크_1000만bbl_BALANCED_20270109.json'
+EXT_SOURCE_SHA256 = '4d587107a051e83bcc3b9e80e74cbd17585e2d2b555eac1dc5fcb5faae2a7850'
+EXT_FLOW_SHA256 = 'cabe3a7eab2d1e20333c02eb1d40dfb09b58796d7c4d865eb649994b426fbfe2'
+BASE_FLOW_SHA256 = '9c0d3ee063f54f93af03c122b1d8ee9608ee1a6e6e36c34ba3bdb3589c6ba763'
 
 
 def validate_balanced(snapshot):
     source = snapshot['source_input']; flow = snapshot['fixed_process_flows']
     calls = snapshot['calls']; berths = snapshot['berths']; tanks = snapshot['tanks']
     profiles = source.get('vessel_profiles', []); segments = flow.get('segments', [])
+    source_profile = snapshot.get('source_profile_id', SCENARIO)
+    is_extended = source_profile == EXT_PROFILE
     errors = []; invalid = set(); coverage = []; connections = []
 
     def check(condition, message, *, call_id=None, tank_id=None, category=None):
@@ -28,6 +35,8 @@ def validate_balanced(snapshot):
         if tank_id is not None:row['tank_id']=tank_id
         errors.append(row)
         if category is not None:category.append(row)
+
+    check(source_profile in (SCENARIO, EXT_PROFILE), 'Unknown BALANCED source profile')
 
     def valid(test):
         try:return bool(test())
@@ -43,18 +52,24 @@ def validate_balanced(snapshot):
     for name,actual,expected in (('calls',len(calls),154),('profiles',len(profiles),154),
             ('berths',len(berths),11),('tanks',len(tanks),3),
             ('hard FIX',sum(c.get('fixed_etb_is_hard') is True for c in calls),15),
-            ('flow records',len(segments),696)):
+            ('flow records',len(segments),816 if is_extended else 696)):
         check(actual==expected,f'{name}: expected {expected}, got {actual}')
     check(source.get('schema_version')=='DOCKTIMIZE_COORDINATOR_SYNTHETIC_INPUT_UNASSIGNED_V5','Unexpected input schema')
     check(flow.get('schema_version')=='FIXED_PROCESS_FLOW_TS_V1' and source.get('process_flow_schema_version')==flow.get('schema_version'),'Flow schema mismatch')
     for key in ('seed','timezone','data_origin','operational_approval'):
         check(source.get(key)==flow.get(key) and source.get(key) is not None,'Provenance mismatch: '+key)
     check(type(source.get('seed')) is int and source.get('timezone')=='Asia/Seoul' and source.get('data_origin')=='SYNTHETIC_FIXTURE' and source.get('operational_approval') is False,'Invalid synthetic origin')
-    check(source.get('process_flow_file')==FLOW_FILE,'Flow filename mismatch')
+    expected_flow_file = EXT_FLOW_FILE if is_extended else FLOW_FILE
+    check(source.get('process_flow_file')==expected_flow_file,'Flow filename mismatch')
     provenance=source.get('balanced_enrichment_provenance') or {}
     fingerprints={a['logical_filename']:a['sha256'] for a in snapshot.get('artifacts',[])}
-    check(len(snapshot.get('artifacts',[]))==2 and set(fingerprints)=={'Docktimize_v5_선박입력_BALANCED.json',FLOW_FILE},'Expected exactly two source fingerprints')
-    check(provenance.get('version')=='V5_BALANCED_154_TWO_JSON_SOURCE_ENRICHMENT_V1' and provenance.get('operational_approval') is False and provenance.get('source_workbook_sha256')==source.get('source_workbook_sha256') and provenance.get('external_flow_json_sha256')==fingerprints.get(FLOW_FILE) and isinstance(provenance.get('original_main_json_sha256'),str) and re.fullmatch(r'[0-9a-fA-F]{64}',provenance['original_main_json_sha256']) is not None,'Invalid enrichment provenance or flow fingerprint')
+    check(len(snapshot.get('artifacts',[]))==2 and set(fingerprints)=={'Docktimize_v5_선박입력_BALANCED.json',expected_flow_file},'Expected exactly two source fingerprints')
+    if is_extended:
+        # Immutable known synthetic fixture; old 696 SHA remains ancestry, not active input.
+        check(fingerprints.get('Docktimize_v5_선박입력_BALANCED.json')==EXT_SOURCE_SHA256,'Extended vessel source SHA mismatch')
+        check(fingerprints.get(EXT_FLOW_FILE)==EXT_FLOW_SHA256,'Extended process-flow SHA mismatch')
+        check(provenance.get('external_flow_json_sha256')==BASE_FLOW_SHA256,'Historical parent flow SHA mismatch')
+    check(provenance.get('version')=='V5_BALANCED_154_TWO_JSON_SOURCE_ENRICHMENT_V1' and provenance.get('operational_approval') is False and provenance.get('source_workbook_sha256')==source.get('source_workbook_sha256') and (provenance.get('external_flow_json_sha256')==BASE_FLOW_SHA256 if is_extended else provenance.get('external_flow_json_sha256')==fingerprints.get(FLOW_FILE)) and isinstance(provenance.get('original_main_json_sha256'),str) and re.fullmatch(r'[0-9a-fA-F]{64}',provenance['original_main_json_sha256']) is not None,'Invalid enrichment provenance or flow fingerprint')
     check(provenance.get('source_sheets')=={'contract_terms':'03_계약조건','berth_group_rules':'15_선석그룹제약','berth_restrictions':'16_선석제약시간','legacy_policy_reference_only':'28_운영정책_4142'},'Invalid enrichment source references')
     workbook_hash=source.get('source_workbook_sha256')
     check(isinstance(workbook_hash,str) and re.fullmatch(r'[0-9a-fA-F]{64}',workbook_hash) is not None,'Invalid declared workbook fingerprint')
@@ -122,7 +137,7 @@ def validate_balanced(snapshot):
     for p in profiles:check(p.get('case_id') in call_ids,'Profile references unknown call',call_id=p.get('case_id'))
 
     check(flow.get('record_count')==len(segments) and flow.get('tank_count')==len(tanks) and flow.get('interval_hours')==6,'Flow metadata mismatch',category=coverage)
-    check(valid(lambda:timestamp(flow['inventory_as_of_at'])==timestamp('2026-11-03T00:00:00+09:00') and timestamp(flow['flow_horizon_end_at'])==timestamp('2026-12-31T00:00:00+09:00')),'Unexpected fixed flow horizon',category=coverage)
+    check(valid(lambda:timestamp(flow['inventory_as_of_at'])==timestamp('2026-11-03T00:00:00+09:00') and timestamp(flow['flow_horizon_end_at'])==timestamp('2027-01-10T00:00:00+09:00' if is_extended else '2026-12-31T00:00:00+09:00')),'Unexpected fixed flow horizon',category=coverage)
     by=defaultdict(list)
     for seg in segments:
         tid=seg.get('tank_id');check(tid in tmap,'Unknown flow tank',tank_id=tid,category=coverage)
@@ -133,7 +148,7 @@ def validate_balanced(snapshot):
         except (KeyError,ValueError,TypeError,ZeroDivisionError):check(False,'Invalid flow record',tank_id=tid,category=coverage)
     for tid in tmap:
         try:
-            check(len(by[tid])==232,'Unexpected flow period count',tank_id=tid,category=coverage)
+            check(len(by[tid])==(272 if is_extended else 232),'Unexpected flow period count',tank_id=tid,category=coverage)
             start=timestamp(flow['inventory_as_of_at']); end=timestamp(flow['flow_horizon_end_at']); cursor=start
             for a,b in sorted(by[tid]):
                 check(a==cursor,'Flow gap or overlap at '+cursor.isoformat(),tank_id=tid,category=coverage);cursor=b
@@ -142,7 +157,9 @@ def validate_balanced(snapshot):
 
     pending=[{'code':'UNVERIFIED_WORKBOOK_PROVENANCE','message':'Workbook hash is a source provenance claim; workbook is not a runtime dependency.'},
              {'code':'LEGACY_DESCRIPTIVE_METADATA','message':'The source notes and historical policy references describe earlier versions; current V5 policy is separate.'}]
-    return {'scenario_id':SCENARIO,'source_fingerprints':{a['logical_filename']:a['sha256'] for a in snapshot['artifacts']},
+    return {'scenario_id':SCENARIO,'source_profile_id':source_profile,
+            'extension_prefix_comparison':'NOT_VERIFIED_WITHOUT_ORIGINAL_696_FILE' if is_extended else 'NOT_APPLICABLE',
+            'source_fingerprints':{a['logical_filename']:a['sha256'] for a in snapshot['artifacts']},
             'schema_version':source.get('schema_version'),'vessel_count':len(calls),'berth_count':len(berths),'tank_count':len(tanks),
             'hard_fix_count':sum(c.get('fixed_etb_is_hard') is True for c in calls),'ordinary_call_count':sum(c.get('fixed_etb_is_hard') is False for c in calls),
             'cargo_group_counts':dict(Counter(c.get('cargo_group') for c in calls)),

@@ -25,7 +25,7 @@ def main(argv=None):
     args = p.parse_args(argv)
     try:
         config = load_execution_config(args.config)
-        gates=BALANCED_GATES if config.get('scenario')=='V5_BALANCED_154' else GATES
+        gates=BALANCED_GATES if config.get('scenario') in ('V5_BALANCED_154','V5_BALANCED_154_EXT_20270109') else GATES
         if args.gate not in gates:raise ScaleInputError('Gate does not belong to selected scenario')
         snapshot, preflight = preflight_sources(config)
         if args.preflight_only:

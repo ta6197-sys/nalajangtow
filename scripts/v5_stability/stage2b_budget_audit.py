@@ -66,7 +66,7 @@ def source_context(path: Path, ids_file: Path | None):
     if not preflight.get('data_preflight_pass'):
         raise ValueError('Input preflight did not pass')
     fix=sum(c.get('fixed_etb_is_hard') is True for c in snap['calls'])
-    expected=154 if cfg.get('scenario')=='V5_BALANCED_154' else 140
+    expected=154 if cfg.get('scenario') in ('V5_BALANCED_154','V5_BALANCED_154_EXT_20270109') else 140
     if (len(snap['calls']),len(snap['berths']),len(snap['tanks']),fix)!=(expected,11,3,15):
         raise ValueError('Unexpected V5 source dimensions or FIX counts')
     ids=read(ids_file) if ids_file else None
