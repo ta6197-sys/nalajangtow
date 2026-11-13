@@ -1,0 +1,280 @@
+{
+  "schema_version": "V5_USER_ETU_SWITCHING_20261112_V1",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "operational_approval": false,
+  "source_reference": "USER_CONFIRMED_V5_RULES_20261112",
+  "cargo_duration_policy": "VESSEL_BERTH_RATE_V1",
+  "tug_capacity": 90,
+  "dock_4142_version": "USER_GRT3000_FIXED120_V1",
+  "berths": {
+    "BERTH-01": {
+      "berthing_seconds": 5400,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 5400,
+      "switching_seconds": 9000,
+      "reference_berth_label": "#6"
+    },
+    "BERTH-02": {
+      "berthing_seconds": 5400,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 5400,
+      "switching_seconds": 9000,
+      "reference_berth_label": "#7"
+    },
+    "BERTH-03": {
+      "berthing_seconds": 5400,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 5400,
+      "switching_seconds": 9000,
+      "reference_berth_label": "#8"
+    },
+    "BERTH-04": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 5400,
+      "reference_berth_label": "#1"
+    },
+    "BERTH-05": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 5400,
+      "reference_berth_label": "#1"
+    },
+    "BERTH-06": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 5400,
+      "reference_berth_label": "#2"
+    },
+    "BERTH-07": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 3600,
+      "reference_berth_label": "#4-1"
+    },
+    "BERTH-08": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 3600,
+      "reference_berth_label": "#4-2"
+    },
+    "BERTH-09": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 5400,
+      "reference_berth_label": "#3"
+    },
+    "BERTH-10": {
+      "berthing_seconds": 3600,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 3600,
+      "switching_seconds": 3600,
+      "reference_berth_label": "#5-5"
+    },
+    "BERTH-11": {
+      "berthing_seconds": 5400,
+      "hose_connection_seconds": 7200,
+      "unberthing_seconds": 0,
+      "pilot_boarding_to_berthing_seconds": 0,
+      "pilot_boarding_to_unberthing_seconds": 0,
+      "tug_units": 1,
+      "pilotage_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "work_windows": [
+        {
+          "start_at": "2026-11-03T00:00:00+09:00",
+          "end_at": "2026-11-09T00:00:00+09:00"
+        }
+      ],
+      "direction_seconds": 5400,
+      "switching_seconds": 9000,
+      "reference_berth_label": "#8"
+    }
+  },
+  "dock_4142_berths": [
+    "BERTH-07",
+    "BERTH-08"
+  ],
+  "hose_disconnect_seconds": 7200,
+  "dock_4142_shared_resources": {
+    "cargo": [
+      "CARGO"
+    ],
+    "hose_connect_disconnect": [
+      "HOSE_CONNECT",
+      "HOSE_DISCONNECT"
+    ]
+  },
+  "dock_4142_berthing_resource": "INDEPENDENT",
+  "event_definition_resolution": "EXPLICIT_USER_20261112_V1"
+}
