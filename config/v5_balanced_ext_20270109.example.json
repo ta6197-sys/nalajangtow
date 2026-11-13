@@ -7,5 +7,6 @@
   "as_of_at": "2026-11-03T00:00:00+09:00",
   "pricing_policy": "CLEAR_WEATHER_BASELINE_V1",
   "clock_policy": "BLOCK_UNVERIFIED_CLOCK",
+  "inventory_policy_version": "V5_PHYSICAL_BOUNDS_OPERATING_WARNINGS_V1",
   "settlement_records": []
 }

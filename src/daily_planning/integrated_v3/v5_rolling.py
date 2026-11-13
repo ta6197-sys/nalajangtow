@@ -104,7 +104,7 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
                    pricing_policy='EXPLICIT_EVENTS_V1',clock_policy='BLOCK_UNVERIFIED_CLOCK',
                    settlement_records=(),approved_commitments=(),override_events=None,manual_overrides=None,
                    resume=False,max_new_windows=None,rolling_optimizer_mode='LEGACY_ENUMERATION',
-                   max_improvement_rounds=2,max_candidates_per_pair=12,max_total_candidates=2000,tie_break_mode='NONE'):
+                   max_improvement_rounds=2,max_candidates_per_pair=12,max_total_candidates=2000,tie_break_mode='NONE',inventory_policy_version=None):
     """Advance only verified 24h transitions; all produced state is synthetic."""
     started=monotonic();start=timestamp(as_of_at);folder=Path(output_dir)
     source_root=Path(data_dir).resolve();output_root=folder.resolve()
@@ -118,11 +118,15 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
     calls={c['call_id']:c for c in snapshot['calls']};scope=list(call_ids) if call_ids is not None else sorted(calls)
     if not scope or len(scope)!=len(set(scope)) or not set(scope)<=set(calls):raise ValueError('Invalid call scope')
     if not {r['call_id'] for r in approved_commitments}<=set(scope):raise ValueError('Approved commitment outside call scope')
-    work=v5_physical._verified_snapshot(snapshot,data_dir)
+    from .v5_inventory_policy import policy_view
+    if inventory_policy_version is not None and rolling_optimizer_mode!='INTEGRATED_COST_AWARE_V1':raise ValueError('Inventory policy requires integrated rolling mode')
+    work=policy_view(v5_physical._verified_snapshot(snapshot,data_dir),inventory_policy_version)
+    inventory_snapshot=work if inventory_policy_version is not None else snapshot
     daylight_path=Path(pilotage_context['daylight_path']);daylight_sha=digest(daylight_path.read_bytes())
     config={'version':VERSION,'source_fingerprint':_fingerprint(snapshot),'policy_fingerprint':_fingerprint({'policy':policy,'pilotage_context':pilotage_context,'daylight_sha256':daylight_sha,'pricing_policy':pricing_policy,'clock_policy':clock_policy,'settlement_records':settlement_records}),'start_at':start.isoformat(),'scope':sorted(scope),'windows':windows,'time_limit_seconds':time_limit_seconds,'max_cost_candidates':max_cost_candidates,'pricing_policy':pricing_policy,'clock_policy':clock_policy,'approved_commitments':list(approved_commitments),'override_events':override_events or {},'planning_hours':72,'step_hours':24,'dynamic_lock_hours':5}
     if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':config.update(rolling_optimizer_mode=rolling_optimizer_mode,objective_mode='MIN_TOTAL_DEMURRAGE',inventory_constraint_mode='EXACT_EVENT_BALANCE_V1',candidate_generation_mode='AUTO_ADAPTIVE_CANDIDATES',candidate_improvement_mode='COST_AWARE_V1',max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates)
     if tie_break_mode!='NONE':config['tie_break_mode']=tie_break_mode
+    if inventory_policy_version is not None:config['inventory_policy_version']=inventory_policy_version
     manifest={'run_fingerprint':_fingerprint(config),'config':config,'operational_approval':False};manifest_path=folder/'manifest.json'
     if snapshot.get('scenario_id')=='V5_BALANCED_154':manifest['scenario_id']='V5_BALANCED_154'
     if resume:
@@ -167,9 +171,9 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
             pricing=price_v5_schedule(work,rows,as_of_at=at,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy)
             if pricing['status']!='SETTLED':raise ValueError('SETTLEMENT_REPLAY_UNRESOLVED: '+str(pricing['issues']))
             if pricing['total_demurrage_cents']!=data['total_demurrage_cents'] or pricing['vessel_demurrage_breakdown']!=data['vessel_demurrage_breakdown']:raise ValueError('SETTLEMENT_REPLAY_MISMATCH')
-            return finalize_locks(_transition(snapshot,at=at,prior=previous,rows=rows,tank=tank,pricing=pricing['vessel_demurrage_breakdown'],settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))[0]
-        tank=_empty_tank(snapshot,at,previous)
-        return finalize_locks(_transition(snapshot,at=at,prior=previous,rows=[],tank=tank,pricing={},settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))[0]
+            return finalize_locks(_transition(inventory_snapshot,at=at,prior=previous,rows=rows,tank=tank,pricing=pricing['vessel_demurrage_breakdown'],settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))[0]
+        tank=_empty_tank(inventory_snapshot,at,previous)
+        return finalize_locks(_transition(inventory_snapshot,at=at,prior=previous,rows=[],tank=tank,pricing={},settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))[0]
     for i in range(1,windows+1):
         path=folder/('window_%03d.json'%i)
         if not path.exists():
@@ -211,7 +215,7 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
         if selected:
             if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':
                 from .v5_rolling_optimizer import optimize_integrated_window
-                candidate=optimize_integrated_window(snapshot,work,data_dir=data_dir,call_ids=selected,as_of_at=at,policy=policy,pilotage_context=pilotage_context,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy,time_limit_seconds=time_limit_seconds,max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates,**({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}),initial_inventory=previous['inventory'],carried_transfers=previous['carried_transfers'],tank_commitments=previous['tank_commitments'],physical_commitments=protected)
+                candidate=optimize_integrated_window(snapshot,work,data_dir=data_dir,call_ids=selected,as_of_at=at,policy=policy,pilotage_context=pilotage_context,settlement_records=settlement_records,pricing_policy=pricing_policy,clock_policy=clock_policy,time_limit_seconds=time_limit_seconds,max_improvement_rounds=max_improvement_rounds,max_candidates_per_pair=max_candidates_per_pair,max_total_candidates=max_total_candidates,**({'tie_break_mode':tie_break_mode} if tie_break_mode!='NONE' else {}),**({'inventory_policy_version':inventory_policy_version} if inventory_policy_version is not None else {}),initial_inventory=previous['inventory'],carried_transfers=previous['carried_transfers'],tank_commitments=previous['tank_commitments'],physical_commitments=protected)
                 if candidate['status']!='VALIDATED':
                     details={'code':'WINDOW_NOT_VALIDATED','reason':candidate.get('reason'),'issues':candidate.get('issues',[])}
                     try:
@@ -230,13 +234,16 @@ def run_v5_rolling(snapshot, *, data_dir, policy, pilotage_context, as_of_at, ou
                 if result.get('optimization_status')!='PRICED_INCUMBENT' or result.get('stopping_reason') not in allowed_stops:return report('STOPPED_UNRESOLVED',{'code':'WINDOW_NOT_VALIDATED','optimization_status':result.get('optimization_status'),'reason':result.get('stopping_reason'),'unresolved_settlement_count':result.get('unresolved_settlement_count')})
                 candidate=result['best_candidate'];rows=candidate['schedule'];tank=candidate['schedule_result']['final_inventory_result']['tank_result'];pricing=candidate['vessel_demurrage_breakdown'];cost=candidate['total_demurrage_cents']
         else:
-            try:tank=_empty_tank(snapshot,at,previous)
+            try:tank=_empty_tank(inventory_snapshot,at,previous)
             except (ValueError,KeyError,TypeError) as exc:return report('STOPPED_UNRESOLVED',{'code':'EMPTY_WINDOW_INVALID','reason':str(exc)})
             candidate=None;rows=[];pricing={};cost=0
-        try:nextstate,after=finalize_locks(_transition(snapshot,at=at,prior=previous,rows=rows,tank=tank,pricing=pricing,settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))
+        try:nextstate,after=finalize_locks(_transition(inventory_snapshot,at=at,prior=previous,rows=rows,tank=tank,pricing=pricing,settlement_snapshot=work,pricing_policy=pricing_policy,clock_policy=clock_policy,settlement_records=settlement_records))
         except (ValueError,KeyError,TypeError,ZeroDivisionError) as exc:return report('STOPPED_UNRESOLVED',{'code':'CARRYOVER_INVALID','reason':str(exc)})
         summary={'window_id':i,'as_of_at':at,'status':'VALIDATED_SYNTHETIC','window_demurrage_cents':cost,'selected_call_ids':selected,'lock_decisions':locks['decisions'],'next_lock_decisions':after['decisions'],'cost_scope':'WINDOW_OVERLAP_NOT_CUMULATIVE','cost_search_scope':result['optimality_scope'] if selected else 'NO_WORK','cost_candidates_evaluated':(result['solver_attempt_count'] if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1' else result['evaluated_schedule_count']) if selected else 0,'optimization_runtime_seconds':(result['runtime_seconds'] if rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1' else result['search_runtime_seconds']) if selected else 0}
         if selected and rolling_optimizer_mode=='INTEGRATED_COST_AWARE_V1':summary.update(rolling_optimizer_mode=rolling_optimizer_mode,selected_etbs=result['selected_etbs'],initial_candidate_count=result['initial_candidate_count'],final_candidate_count=result['final_candidate_count'],initial_demurrage_cents=result['initial_total_demurrage_cents'],best_demurrage_cents=result['best_total_demurrage_cents'],candidate_expansion_rounds=result['candidate_expansion_rounds'],solver_status=result['solver_status'],final_domain_optimality_proven=result['final_domain_optimality_proven'])
+        if inventory_policy_version is not None:
+            summary['inventory_policy_version']=inventory_policy_version
+            summary['operational_warnings']=deepcopy(tank.get('operational_warnings',[]))
         cp={'window_id':i,'as_of_at':at,'planning_horizon_end':horizon.isoformat(),'freeze_boundary':None,'dynamic_lock_horizon_hours':5,'input_fingerprint':config['source_fingerprint'],'policy_fingerprint':config['policy_fingerprint'],'optimization_configuration':config,'selected_schedule':rows,'completed_calls':[r['call_id'] for r in nextstate['completed_rows']],'protected_commitments_in':protected,'protected_commitments':after['physical_commitments'],'manual_overrides':applied_manual,'lock_state':nextstate['lock_state'],'cargo_progress':nextstate['cargo_progress'],'carried_transfers':nextstate['carried_transfers'],'carried_inventory':nextstate['inventory'],'contract_accounting_state':nextstate['contract_accounting_state'],'in_progress_contract_accounting':nextstate['in_progress_contract_accounting'],'validation_results':{'physical':'VALID' if rows else 'NO_WORK','inventory':'VALID','settlement':'SETTLED' if rows else 'NO_WORK','carryover':'VALID'},'prior_state_fingerprint':_fingerprint(state),'next_state_fingerprint':_fingerprint(nextstate),'next_state':nextstate,'run_fingerprint':manifest['run_fingerprint'],'candidate':candidate,'summary':summary}
         # Re-run independent physical, inventory, settlement and 24h replay before saving.
         try:verified=checked_transition(cp,previous)
