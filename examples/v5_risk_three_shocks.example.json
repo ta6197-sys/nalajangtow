@@ -1,0 +1,25 @@
+{
+  "version": "V5_RISK_SCENARIO_V1",
+  "scenario_id": "S20_THREE_SHOCK_IMPACT_EXAMPLE",
+  "shock_events": [
+    {
+      "shock_id": "arrival-0030",
+      "type": "ETA_DELAY",
+      "call_id": "DEM-0030",
+      "delay_seconds": 7200
+    },
+    {
+      "shock_id": "work-0084",
+      "type": "WORK_DURATION_MULTIPLIER",
+      "call_id": "DEM-0084",
+      "multiplier": "6/5"
+    },
+    {
+      "shock_id": "weather-berth07",
+      "type": "WEATHER_CARGO_SHUTDOWN",
+      "start_at": "2026-11-06T08:00:00+09:00",
+      "end_at": "2026-11-06T12:00:00+09:00",
+      "berth_ids": ["BERTH-07"]
+    }
+  ]
+}
